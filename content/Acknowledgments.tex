@@ -1,0 +1,44 @@
+\begin{flushright}
+%	\Huge\textbf{前言} \\
+\zihao{0} 致谢
+\end{flushright}
+
+我们都是在他人工作的基础上取得新成就的。如同牛顿把他的成功归功于“站在巨人的肩膀上”一样。\par
+
+写一本关于SYCL和DPC++的开发新书并不容易。幸运的是，有一些人让这条路变得更容易——在此感谢他们的帮助!\par
+
+我们对所有为本书的出版做出贡献的人深表感谢，我们也衷心感谢我们能想起的所有人的名字。如果我们忘记了提您的名字，希望您能知道我们的感激之情，也请接受我们的歉意。\par
+
+少数人阅读了我们的早期手稿，并提供了深刻的反馈，我们非常感谢。 他们是Jefferson Amstutz, Thomas Applencourt, Alexey Bader, Gordon Brown, Konstantin Bobrovsky, Robert Cohn, Jessica Davies, Tom Deakin, Abhishek Deshmukh, Bill Dieter, Max Domeika, Todd Erdner, John Freeman, Joe Garvey, Nithin George, Milind Girkar, Sunny Gogar, Jeff Hammond, Tommy Hoffner, Zheming Jin, Paul Jurczak, Audrey Kertesz, Evgueny Khartchenko, Jeongnim Kim, Rakshith Krishnappa, Goutham Kalikrishna Reddy Kuncham, Victor Lomüller, Susan Meredith, Paul Petersen, Felipe De Azevedo Piovezan, Ruyman Reyes, Jason Sewall, Byron Sinclair, Philippe Thierry和Peter Žužek。 \par
+
+我们感谢Intel的整个开发团队，他们创建了DPC++，包括它的库和文档，没有他们的工作，本书就不可能完成。\par
+
+Khronos SYCL工作组和Codeplay是我们脚下的巨人。我们与他们共同的目标是为C++带来有效和可用的数据并行。我们感谢所有参与SYCL规范开发的人，他们孜孜不倦地为整个行业提出了一个开放的标准。SYCL团队一直忠于自己的使命，并保持这个标准的真正开放。我们也高度欣赏Codeplay所做的开拓性工作，在DPC++还没有出现的时候，就已经开始推广和支持SYCL了。当然，他们仍然是整个社区的重要资源。\par
+
+英特尔内部有很多人对DPC++和SYCL做出了巨大的贡献。我们感谢所有人的工作，无论是在语言部分和API部分，还有原型、编译器、库和工具的实现方面。虽然我们无法记得每个人的名字，但我们要特别感谢一些对DPC++和SYCL做出变革性贡献的架构师: Roland Schulz, Alexey Bader, Jason Sewall, Alex Wells, Ilya Burylov, Greg Lueck, Alexey Kukanov, Ruslan Arutyunyan, Jeff Hammond, Erich Keane和Konstantin Bobrovsky.\par
+
+我们感谢DPC++用户社区的耐心和奉献。美国阿贡国家实验室的开发人员在我们与DPC++的旅程中给予了极大的支持。\par
+
+合著的队友们，我们对彼此感激不尽。我们在2019年初聚在一起，我们的愿景是写一本书来教授SYCL和DPC++。在接下来的一年里，我们成为了一个团队，并学会了如何一起教学。我们面临着来自许多方面的挑战，这些挑战把我们从写书和讨论中拉出来，其中包括一些产品的最后期限和标准工作，同时COVID-19也席卷了全球。我们有点不好意思承认，“待在家里”的时光让我们有更多的注意力在这本书上。我们向所有受这一全球流行病影响的人表示慰问和祈祷。\par
+
+\textbf{James Reinders}:我要感谢Jefferson Amstutz对C++并行性的看法，以及提供一些非常有用的帮助，通过使用Jefferson的超级功能作为C++编译器错误消息耳语器可以直接获取一些C++代码。我感谢我的妻子Susan Meredith，感谢她的爱、支持、建议和评论。并感谢Intel让我参与这个项目！非常感谢其他合著者对这个雄心勃勃的项目的耐心(对我)和辛勤工作。\par
+
+\textbf{Ben Ashbaugh}:很感激我妻子Brenna和儿子Brenna对我的支持和鼓励。谢谢你给我不受干扰的写作时间，也谢谢你在我需要休息的时候找借口出去走走或玩游戏!对于Khronos SYCL和OpenCL工作组的每一个人，感谢你们的讨论、合作和启发。DPC++和这本书你们也功不可没。\par
+
+\textbf{James Brodman}:感谢家人和朋友给我的支持。感谢我在Intel和Khronos的所有同事。\par
+
+\textbf{Michael Kinsner}:我感谢我的妻子Jasmine，以及我的孩子Winston和Tilly，感谢他们在编写本书期间以及整个DPC++项目过程中的支持。这两件事都需要大量的时间和精力，如果没有这么多的支持，我也无法完成这两件事。也要感谢Intel和Khronos的许多人，他们为SYCL和DPC+投入了大量的精力和时间。是你们所有人早就了SYCL、OpenCL和DPC++，并参与了无数的讨论和实验，这些讨论和实验促成了DPC++和这本书的诞生。\par
+
+\textbf{John Pennycook}:非常感谢我的妻子Louise，感谢她的耐心、理解和支持，在写书的同时照顾我们刚出生的女儿Tamsyn。也要感谢Roland Schulz和Jason Sewall在DPC++所做的工作，以及他们在对于“C++编译器错误”方面的帮助!\par
+
+\textbf{Xinmin Tian}:感谢Alice S. Chan和Geoff Lowney，感谢他们在本书的编写过程和整个DPC++性能工作过程中的大力支持。衷心感谢Guei-Yuan Lueh, Konstantin Bobrovsky, Hideki Saito, Kaiyu Chen, Mikhail Loenko, Silvia Linares, Pavel Chupin, Oleg Maslov, Sergey Maslov, Vlad Romanov, Alexey Sotkin, Alexey Sachkov，以及整个DPC++编译器、运行时和工具团队，感谢他们在创建DPC++编译器和工具方面做出的巨大贡献和辛勤工作。\par
+
+我们感谢整个记者团队的努力工作，包括与我们的合作人:Natalie Pao, Jessica Vakili, C Dulcy Nirmala和Krishnan Sathyamurthy。\par
+
+我们有幸得到了经理们的支持和鼓励，包括Herb Hinstorff, Bill Savage, Alice S. Chan, Victor Lee, Ann Bynum, John Kreatsoulas, Geoff Lowney, Zack Waters, Sanjiv Shah, John Freeman和Kevin Stevens。\par
+
+许多同事提供了信息、建议和愿景。我们确信，有很多我们没有提到的人，也对本书项目产生了积极的影响。我们感谢所有为我们的图书计划提供帮助的人。我们向所有帮助过我们，但在这里没有被提及的人道歉。\par
+
+谢谢大家，希望你会发现这本书在你的努力中是值得的。\par
+
+\newpage
