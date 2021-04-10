@@ -1,0 +1,26 @@
+下面的代码是最简单的应用。如果不想手动输入代码，可以从GitHub库(\\www.apress.com/9781484255735——查找本书的服务:源代码)下载本书中的所有示例。库中包含了构建文件中的完整代码，大多数代码都省略了一些重复的或不必要的细节。库中有示例的最新版本，如果有更新，您就能获取到最新的例程。\par
+
+\begin{lstlisting}[caption={}]
+#include <CL/sycl.hpp>
+#include <iostream>
+using namespace sycl;
+
+const std::string secret {
+	"Ifmmp-!xpsme\"\012J(n!tpssz-!Ebwf/!"
+	"J(n!bgsbje!J!dbo(u!ep!uibu/!.!IBM\01"};
+const auto sz = secret.size();
+
+int main() {
+	queue Q;
+	
+	char*result = malloc_shared<char>(sz, Q);
+	std::memcpy(result,secret.data(),sz);
+	
+	Q.parallel_for(sz,[=](auto&i) {
+		result[i] -= 1;
+	}).wait();
+
+	std::cout << result << "\n";
+	return 0;
+}
+\end{lstlisting}
