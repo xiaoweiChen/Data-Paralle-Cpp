@@ -8,9 +8,10 @@
 
 主机设备在功能上类似于硬件加速器设备，可以绑定队列，可以执行设备代码。图2-8展示了主机设备中与其他加速器是对等的。它可以执行设备代码，就像CPU、GPU或FPGA一样，并且可以绑定一个或多个队列。\par
 
+\hspace*{\fill} \par %插入空行
 图2-8 主机设备可以像任何加速器一样执行设备代码
 \begin{center}
-	\includegraphics[width=1.\textwidth]{content/chapter-2/images/6}
+	\includegraphics[width=0.8\textwidth]{content/chapter-2/images/6}
 \end{center}
 
 应用程序可以显式地将host\_selector传递给队列构造，来选择创建一个绑定到主机设备的队列，如图2-9所示。\par
