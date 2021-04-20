@@ -1,0 +1,91 @@
+为数据管理提供的另一个方法的是缓冲区对象。缓冲区是一种数据抽象，表示给定C++类型的一个或多个对象。缓冲区对象可以是标量数据类型(如int、float或double)、向量数据类型(第11章)或用户定义的类或结构。缓冲区中的数据结构必须是可复制的，这意味着可以安全地逐个字节地复制对象，而不需要调用复制构造函数。\par
+
+虽然缓冲区本身是单个对象，但缓冲区封装的C++类型可以是包含多个对象的数组。缓冲区代表的是数据对象，而不是特定的内存地址，所以不能像常规C++数组那样直接访问。实际上，出于性能原因，缓冲区对象可能映射到多个不同设备上的多个不同内存位置，甚至是同一个设备上的多个内存位置。而我们只能使用访问器对象，来读取和写入缓冲区。\par
+
+在第7章有更多关于缓冲区的描述。\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{创建缓冲区}
+
+可以通过多种方式创建缓冲区。最简单的方法是构造新的缓冲区，指定缓冲区的大小。然而，以这种方式创建的缓冲区并不会初始化数据，这意味着试图从缓冲区中读取数据之前，必须通过其他方式初始化缓冲区。\par
+
+还可以以主机上的现有数据创建缓冲区。通过调用几个构造函数中的一个来实现，这些构造函数接受指向主机的内存指针、一组输入迭代器或具有某些属性的容器。构造缓冲区的过程中，数据从现有的主机内存复制到缓冲区对象的主机内存中。如果在OpenCL中使用SYCL互操作特性，也可以从现有的cl\_mem对象创建缓冲区。\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{访问缓存}
+
+不能主机和设备直接访问缓冲区(除非通过这里没有描述的高级和不经常使用的机制)，而必须创建访问器来读取和写入缓冲区。访问器向运行时提供如何使用缓冲区中的数据的信息，从而允许运行时正确地进行数据移动。\par
+
+\hspace*{\fill} \par %插入空行
+图3-6 缓冲区和访问器
+\begin{lstlisting}[caption={}]
+#include <CL/sycl.hpp>
+#include <array>
+using namespace sycl;
+constexpr int N = 42;
+
+int main() {
+	std::array<int,N> my_data;
+	for (int i = 0; i < N; i++)
+		my_data[i] = 0;
+	
+	{
+		queue q;
+		buffer my_buffer(my_data);
+		
+		q.submit([&](handler &h) {
+			// create an accessor to update
+			// the buffer on the device
+			accessor my_accessor(my_buffer, h);
+			
+			h.parallel_for(N, [=](id<1> i) {
+				my_accessor[i]++;
+			});
+		});
+	
+		// create host accessor
+		host_accessor host_accessor(my_buffer);
+		for (int i = 0; i < N; i++) {
+			// access myBuffer on host
+			std::cout << host_accessor[i] << " ";
+		}
+		std::cout << "\n";
+	}
+
+	// myData is updated when myBuffer is
+	// destroyed upon exiting scope
+	for (int i = 0; i < N; i++) {
+		std::cout << my_data[i] << " ";
+	}
+	std::cout << "\n";
+}
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+图3-7 缓冲区的访问模式
+\begin{table}[H]
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{访问模式} & \textbf{描述}                                \\ \hline
+		\textbf{read}        & 只能读                                   \\ \hline
+		\textbf{write}       & 只写访问。以前的内容不丢弃。 \\ \hline
+		\textbf{read\_write} & 可读写              \\ \hline
+	\end{tabular}
+\end{table}
+
+\hspace*{\fill} \par %插入空行
+\textbf{访问模式}
+
+创建访问器时，可以通知运行时来提供更多的优化信息，可以通过指定访问模式来实现这一点。图3-7中的Access::mode enum中定义了访问模式。图3-6所示的代码中，访问器myAccessor以默认的访问模式创建，access::mode::read\_write，这让运行时知道我们打算通过myAccessor对缓冲区进行读写操作。访问模式是运行时优化隐式数据移动的方式，例如：使用access::mode::read会在内核开始执行之前，需要数据在设备上可用。如果内核只通过访问器读取数据，那么在内核完成后就不需要将数据复制回主机，因为还没有修改。同样，access::mode::write让运行时知道我们将修改缓冲区的内容，并且需要在计算结束后将结果复制回来。\par
+
+创建适当模式的访问器，可以向运行时提供更多关于如何在程序中使用数据的信息。运行时使用访问器对数据的使用进行排序，但是它也可以使用这些数据来优化内核调度和数据移动。第7章中，将继续讨论访问模式和优化标记。\par
+
+
+
+
+
+
+
+
+
+

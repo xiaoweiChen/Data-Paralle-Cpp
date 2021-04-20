@@ -1,0 +1,143 @@
+USM是可供使用的数据管理工具。USM基于指针，对于使用malloc或new分配数据的C和C++开发者来说应该很熟悉。当移植大量使用指针时，USM可以简化工作。支持USM的设备支持统一虚拟地址空间，拥有统一虚拟地址空间意味着主机上的USM返回的指针都是设备上的有效指针。我们不需要手动转换主机指针来获得“设备版本”——可以在主机和设备上看到相同的指针。\par
+
+关于USM更详细的解读会在第6章继续。\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{通过指针访问内存}
+
+当系统包含主机内存和设备内存时，不是所有的内存都相同，所以USM定义了三种不同的分配类型:设备、主机和共享。所有类型的分配都在主机上执行。图3-3总结了各分配类型的特点。\par
+
+\hspace*{\fill} \par %插入空行
+图3-3 USM分配类型
+\begin{table}[H]
+	\begin{tabular}{|l|l|l|l|l|}
+		\hline
+		\textbf{分配类型} & \textbf{描述}                       & \textbf{可访问主机?} & \textbf{可访问设备?} & \textbf{位于}        \\ \hline
+		\textbf{设备}          & 设备内存的分配               & \XSolidBrush                       & \Checkmark                              & 设备                     \\ \hline
+		\textbf{主机}            & 主机内存的分配                & \Checkmark                            & \Checkmark                               & 主机                       \\ \hline
+		\textbf{共享}          & 主机和设备共享 & \Checkmark                            & \Checkmark                               & 可以随意迁移 \\ \hline
+	\end{tabular}
+\end{table}
+
+设备分配发生在设备内存中，分配的内存可以从设备上读取和写入，但不能直接从主机上访问。我们必须使用显式的复制操作，在主机内存和设备内存之间移动数据。\par
+
+在主机和设备上都可以访问主机内存，这意味着相同的指针在主机代码和设备内核中都有效。然而，访问这样的指针时，数据总是来自主机内存。当访问设备时，数据不会从主机迁移到设备内存。相反，数据通常通过总线发送，例如PCI-Express (PCI-E)将设备连接到主机。\par
+
+共享分配的内存在主机和设备上都可以访问，非常类似于主机分配，但不同之处在于数据可以在主机内存和设备本地内存之间迁移。在迁移之后，对设备的访问将在设备内存中进行，而不是远程访问主机内存。通常，这是通过运行时内部的机制和低层驱动实现。\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{USM和数据移动}
+
+USM支持显式和隐式的数据移动策略，不同的分配类型对应不同的策略。设备内存要求显式地在主机和设备之间移动数据，而主机和共享内存提供隐式的数据移动。\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{USM显式数据移动}
+
+使用USM的显式数据移动，是通过设备内存和在队列和处理程序中使用特殊的memcpy()完成的。我们将memcpy()操作(动作)放入队列，将数据从主机传输到设备，或从设备传输到主机。\par
+
+图3-4包含一个操作设备分配的内核。在内核执行前后使用memcpy()操作，hostArray和deviceArray之间复制数据。队列上调用wait()，确保在内核执行之前复制到设备的操作已经完成，并确保数据复制回主机之前内核已经完成。我们将在本章后面学习如何消除这些调用。\par
+
+\hspace*{\fill} \par %插入空行
+图3-4 显式地数据移动
+\begin{lstlisting}[caption={}]
+#include <CL/sycl.hpp>
+#include<array>
+using namespace sycl;
+constexpr int N = 42; 
+
+int main() {
+	queue Q;
+	
+	std::array<int,N> host_array;
+	int *device_array = malloc_device<int>(N, Q);
+	
+	for (int i = 0; i < N; i++)
+		host_array[i] = N;
+		
+	// We will learn how to simplify this example later
+	Q.submit([&](handler &h) {
+		// copy hostArray to deviceArray
+		h.memcpy(device_array, &host_array[0], N * sizeof(int));
+	});
+	Q.wait();
+	
+	
+	Q.submit([&](handler &h) {
+		h.parallel_for(N, [=](id<1> i) { device_array[i]++; }); 
+	});
+	Q.wait();
+	
+	Q.submit([&](handler &h) {
+		// copy deviceArray back to hostArray
+		h.memcpy(&host_array[0], device_array, N * sizeof(int)); 
+	});
+	Q.wait();
+	
+	free(device_array, Q);
+	return 0;
+}
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{USM隐式数据移动}
+
+使用USM的隐式数据移动是通过主机和共享内存完成的。使用这类型的内存，不需要显式地插入复制操作在主机和设备之间移动数据。相反，只需访问内核中的指针，任何数据移动都可以自动执行，无需程序员干预(只要设备支持这些内存分配)。这大大简化了代码的移植性:只需用适当的USM分配函数，替换malloc或new(以及free)，一切就都能正常工作了。\par
+
+\hspace*{\fill} \par %插入空行
+图3-5 USM隐式地数据移动
+\begin{lstlisting}[caption={}]
+#include <CL/sycl.hpp>
+using namespace sycl;
+constexpr int N = 42;
+
+int main() {
+	queue Q;
+	int *host_array = malloc_host<int>(N, Q);
+	int *shared_array = malloc_shared<int>(N, Q);
+	
+	for (int i = 0; i < N; i++) {
+		// Initialize hostArray on host
+		host_array[i] = i;
+	}
+
+	// We will learn how to simplify this example later
+	Q.submit([&](handler &h) {
+		h.parallel_for(N, [=](id<1> i) {
+			// access sharedArray and hostArray on device
+			shared_array[i] = host_array[i] + 1;
+		});
+	});
+	Q.wait();
+	
+	for (int i = 0; i < N; i++) {
+		// access sharedArray on host
+		host_array[i] = shared_array[i];
+	}
+
+	free(shared_array, Q);
+	free(host_array, Q);
+	return 0;
+}
+\end{lstlisting}
+
+图3-5中，我们创建了两个数组，hostArray和sharedArray，分别是主机内存和共享内存。虽然主机和共享内存都可以在主机代码中访问，但这里只初始化了hostArray。类似地，可以在内核内部直接访问，执行远程读取数据。运行时确保sharedArray在内核访问它之前，在设备上是可用的，并且在之后主机代码读取它时会回移，这些都不需要开发者干预。\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

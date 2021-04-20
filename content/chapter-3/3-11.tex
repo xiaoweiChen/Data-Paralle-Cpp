@@ -1,0 +1,115 @@
+我们已经展示了许多使用handler类的方法。图3-17和图3-18更详细地解释了这个非常重要的类的关键成员。我们目前还没有使用所有的成员，后续会对它们进行使用。这里对他们进行展示。\par
+
+另一个queue类在第2章的末尾也有类似的解释，在线oneAPI DPC++语言参考提供了对这两个类更详细的解释。\par
+
+\hspace*{\fill} \par %插入空行
+图3-17 简化了handler类的非访问器成员
+\begin{lstlisting}[caption={}]
+class handler {
+	...
+	// Specifies event(s) that must be complete before the action
+	// defined in this command group executes.
+	void depends_on({event / std::vector<event> & });
+	
+	// Enqueues a memset operation on the specified pointer.
+	// Writes the first byte of Value into Count bytes.
+	// Returns an event representing this operation.
+	event memset(void *Ptr, int Value, size_t Count);
+	
+	// Enqueues a memcpy from Src to Dest.
+	// Count bytes are copied.
+	// Returns an event representing this operation.
+	event memcpy(void *Dest, const void *Src, size_t Count);
+	
+	// Submits a kernel of one work-item for execution.
+	// Returns an event representing this operation.
+	template <typename KernelName, typename KernelType>
+	event single_task(KernelType KernelFunc);
+	
+	// Submits a kernel with NumWork-items work-items for execution.
+	// Returns an event representing this operation.
+	template <typename KernelName, typename KernelType, int Dims>
+	event parallel_for(range<Dims> NumWork-items, KernelType KernelFunc);
+	
+	// Submits a kernel for execution over the supplied nd_range.
+	// Returns an event representing this operation.
+	template <typename KernelName, typename KernelType, int Dims>
+	event parallel_for(nd_range<Dims> ExecutionRange, KernelType KernelFunc);
+	...
+};
+\end{lstlisting}
+
+
+\hspace*{\fill} \par %插入空行
+Figure 3-18. Simplified definition of the accessor members of the handler class
+\begin{lstlisting}[caption={}]
+class handler {
+	...
+	// Specifies event(s) that must be complete before the action
+	// Copy to/from an accessor.
+	// Valid combinations:
+	// Src: accessor, Dest: shared_ptr
+	// Src: accessor, Dest: pointer
+	// Src: shared_ptr Dest: accessor
+	// Src: pointer Dest: accessor
+	// Src: accesssor Dest: accessor
+	template <typename T_Src, typename T_Dst, 
+			int Dims, access::mode AccessMode,
+			access::target AccessTarget,
+			access::placeholder IsPlaceholder = 
+			access::placeholder::false_t>
+	void copy(accessor<T_Src, Dims, AccessMode, 
+			AccessTarget, IsPlaceholder> Src,
+			shared_ptr_class<T_Dst> Dst);
+	void copy(shared_ptr_class<T_Src> Src,
+			accessor<T_Dst, Dims, AccessMode, 
+				AccessTarget, IsPlaceholder> Dst);
+	void copy(accessor<T_Src, Dims, AccessMode, 
+				AccessTarget, IsPlaceholder> Src,
+				T_Dst *Dst);
+	void copy(const T_Src *Src,
+			accessor<T_Dst, Dims, AccessMode, 
+				AccessTarget, IsPlaceholder> Dst);
+	template <
+		typename T_Src, int Dims_Src, 
+		access::mode AccessMode_Src,
+		access::target AccessTarget_Src, 
+		typename T_Dst, int Dims_Dst,
+		access::mode AccessMode_Dst, 
+		access::target AccessTarget_Dst,
+		access::placeholder IsPlaceholder_Src = 
+			access::placeholder::false_t,
+		access::placeholder IsPlaceholder_Dst = 
+			access::placeholder::false_t>
+	void copy(accessor<T_Src, Dims_Src, AccessMode_Src, 
+					AccessTarget_Src, IsPlaceholder_Src>
+			Src,
+			accessor<T_Dst, Dims_Dst, AccessMode_Dst, 
+					AccessTarget_Dst, IsPlaceholder_Dst>
+			Dst);
+			
+	// Provides a guarantee that the memory object accessed by the accessor
+	// is updated on the host after this action executes.
+	template <typename T, int Dims, 
+			access::mode AccessMode,
+			access::target AccessTarget,
+			access::placeholder IsPlaceholder =
+				access::placeholder::false_t>
+	void update_host(accessor<T, Dims, AccessMode, 
+					AccessTarget, IsPlaceholder> Acc);
+	...
+};
+\end{lstlisting}
+
+
+
+
+
+
+
+
+
+
+
+
+
