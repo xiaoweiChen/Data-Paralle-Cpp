@@ -1,0 +1,39 @@
+When talking with developers who are getting started with FPGAs, we find that it often helps to understand at a high level the components that make up the device and also to mention clock frequency which seems to be a point of confusion. We close this chapter with these topics.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{FPGA Building Blocks}
+
+To help with an understanding of the tool flows (particularly compile time), it is worth mentioning the building blocks that make up an FPGA. These building blocks are abstracted away through DPC++ and SYCL, and knowledge of them plays no part in typical application development (at least in the sense of making code functional). Their existence does, however, factor into development of an intuition for spatial architecture optimization and tool flows, and occasionally in advanced optimizations when choosing the ideal data type for our application, for example.\par
+
+A very simplified modern FPGA device consists of five basic elements\par
+
+\begin{enumerate}
+	\item Look-up tables: Fundamental blocks that have a few binary input wires and produce a binary output. The output relative to the inputs is defined through the entries programmed into a look-up table. These are extremely primitive blocks, but there are many of them (millions) on a typical modern FPGA used for compute. These are the basis on which much of our design is implemented!
+	\item Math engines: For common math operations such as addition or multiplication of single-precision loatingpoint numbers, FPGAs have specialized hardware to make those operations very efficient. A modern FPGA has thousands of these blocks—some devices have more than 8000—such that at least these many floating-point primitive operations can be performed in parallel every clock cycle! Most FPGAs name these math engines Digital Signal Processors (DSPs).
+	\item On-chip memory: This is a distinguishing aspect of FPGAs vs. other accelerators, and memories come in two flavors (more actually, but we won’t get into 	those here): (1) registers that are used to pipeline 	between operations and some other purposes and (2) block memories that provide small random-access memories spread across the device. A modern FPGA can have on the order of millions of register bits and more than 10,000 20 Kbit RAM memory blocks. Since each of those can be active every clock cycle, the result is significant on-chip memory capacity and bandwidth, when used efficiently.
+	\item Interfaces to off-chip hardware: FPGAs have evolved in part because of their very flexible transceivers and input/output connectivity that allows communications with almost anything ranging from off-chip memories to network interfaces and beyond.
+	\item Routing fabric between all of the other elements: There are many of each element mentioned in the preceding text on a typical FPGA, and the connectivity between them is not fixed. A complex programmable routing fabric allows signals to pass between the fine-grained elements that make up an FPGA.
+\end{enumerate}
+
+Given the numbers of blocks on an FPGA of each specific type (some blocks are counted in the millions) and the fine granularity of those blocks such as look-up tables, the compile times seen when generating FPGA configuration bitstreams may make more sense. Not only does functionality need to be assigned to each fine-grained resource but routing needs to be configured between them. Much of the compile time comes from finding a first legal mapping of our design to the FPGA fabric, before optimizations even start!\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Clock Frequency}
+
+FPGAs are extremely flexible and configurable, and that configurability comes with some cost to the frequency that an FPGA runs at compared with an equivalent design hardened into a CPU or any other fixed compute architecture. But this is not a problem! The spatial architecture of an FPGA more than makes up for the clock frequency because there are so many independent operations occurring simultaneously, spread across the area of the FPGA. Simply put, the frequency of an FPGA is lower than other architectures because of the configurable design, but more happens per clock cycle which balances out the frequency. We should compare compute throughput (e.g., in operations per second) and not raw frequency when benchmarking and comparing accelerators.\par
+
+This said, as we approach 100\% utilization of the resources on an FPGA, operating frequency may start to decrease. This is primarily a result of signal routing resources on the device becoming overused. There are ways to remedy this, typically at the cost of increased compile time. But it’s best to avoid using more than 80–90\% of the resources on an FPGA for most applications unless we are willing to dive into details to counteract frequency decrease.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+Rule of thumb Try not to exceed 90\% of any resources on an FPGA and certainly not more than 90\% of multiple resources. Exceeding may lead to exhaustion of routing resources which leads to lower operating frequencies, unless we are willing to dive into lower-level FPGA details to counteract this.
+\end{tcolorbox}
+
+
+
+
+
+
+
+
+
+
