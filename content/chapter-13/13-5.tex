@@ -1,0 +1,111 @@
+This section conveys some modest debugging advice, to ease the challenges unique to debugging a parallel program, especially one targeting a heterogeneous machine.\par
+We should never forget that we have the option to debug our applications while they are running on the host device. This debugging tip is described as Method\#2 in Chapter 2. Because the architectures of devices often include fewer debugging hooks, tools can often probe code on a host more precisely. Another advantage of running everything on the host is that many errors relating to synchronization will disappear, including moving memory back and forth between the host and devices. While we eventually need to debug all such errors, this can allow incremental debugging so we can resolve some bugs before others.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+\textbf{Debugging tip} Running on the host device is a powerful debugging 
+tool.
+\end{tcolorbox}
+
+Parallel programming errors, specifically data races and deadlocks, are generally easier for tools to detect and eliminate when running all code on the host. Much to our chagrin, we will most often see program failures from such parallel programming errors when running on a combination of host and devices. When such issues strike, it is very useful to remember that pulling back to host-only is a powerful debugging tool. Thankfully, SYCL and DPC++ are carefully designed to keep this option available to us and easy to access.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+\textbf{Debugging tip} If a program is deadlocking, check that the host 
+accessors are being destroyed properly
+\end{tcolorbox}
+
+The following DPC++ compiler options are a good idea when we start debugging:\par
+
+\begin{itemize}
+	\item -g: Put debug information in the output.
+	\item -ferror-limit=1: Maintain sanity when using C++ with template libraries such as SYCL/DPC++.
+	\item -Werror -Wall -Wpedantic: Have the compiler enforce good coding to help avoid producing incorrect code to debug at runtime.
+\end{itemize}
+
+We really do not need to get bogged down fixing pedantic warnings just to use DPC++, so choosing to not use -Wpedantic is understandable.\par
+When we leave our code to be compiled just-in-time during runtime, there is code we can inspect. This is highly dependent on the layers used by our compiler, so looking at the compiler documentation for suggestions is a good idea.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Debugging Kernel Code}
+
+While debugging kernel code, start by running on the host device (as advised in Chapter 2). The code for device selectors in Chapter 2 can easily be modified to accept runtime options, or compiler-time options, to redirect work to the host device when we are debugging.\par
+
+When debugging kernel code, SYCL defines a C++-style stream that can be used within a kernel (Figure 13-4). DPC++ also offers an experimental implementation of a C-style printf that has useful capabilities, with some restrictions. Additional details are in the online oneAPI DPC++ language reference.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 13-4. sycl::stream
+\begin{lstlisting}[caption={}]
+Q.submit([&](handler &h){
+	stream out(1024, 256, h);
+	h.parallel_for(range{8}, [=](id<1> idx){
+		out << "Testing my sycl stream (this is work-item ID:" << idx << ")\n";
+	});
+});
+\end{lstlisting}
+
+When debugging kernel code, experience encourages that we put breakpoints before parallel\_for or inside parallel\_for, but not actually on the parallel\_for. A breakpoint placed on a parallel\_for can trigger a breakpoint multiple times even after performing the next operation. This C++ debugging advice applies to many template expansions like those in SYCL, where a breakpoint on the template call will translate into a complicated set of breakpoints when it is expanded by the compiler. There may be ways that implementations can ease this, but the key point here is that we can avoid some confusion on all implementations by not setting the breakpoint precisely on the parallel\_for itself.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Debugging Runtime Failures}
+
+When a runtime error occurs while compiling just-in-time, we are either dealing with a compiler/runtime bug, or we have accidentally programmed nonsense that was not detected until it tripped up the runtime and created difficult-to-understand runtime error messages. It can be a bit intimidating to dive into these bugs, but even a cursory look may allow us to get a better idea of what caused a particular issue. It might yield some additional knowledge that will guide us to avoid the issue, or it may just help us submit a short bug report to the compiler team. Either way, knowing that some tools exist to help can be important.\par
+
+Output from our program that indicates a runtime failure may look like this:\par
+
+\begin{tcolorbox}[colback=white,colframe=black]
+origin>: error: Invalid record (Producer: 'LLVM9.0.0' Reader: 'LLVM 9.0.0')\\
+terminate called after throwing an instance of 'cl::sycl::compile\_program\_error'
+\end{tcolorbox}
+
+Seeing this throw noted here lets us know that our host program could have been constructed to catch this error. While that may not solve our problem, it does mean that runtime compiler failures do not need to abort our application. Chapter 5 dives into this topic.\par
+
+When we see a runtime failure and have any difficulty debugging it quickly, it is worth simply trying a rebuild using ahead-of-time compilations. If the device we are targeting has an ahead-of-time compilation option, this can be an easy thing to try that may yield easierto-understand diagnostics. If our errors can be seen at compile time instead of JIT or runtime, often much more useful information will be found in the error messages from the compiler instead of the small amount of error information we usually see from a JIT or the runtime. For specific options, check the online oneAPI DPC++ documentation for ahead-of-time compilation.\par
+
+When our SYCL programs are running on top of an OpenCL runtime and using the OpenCL backend, we can run our programs with the OpenCL Intercept Layer: github.com/intel/opencl-intercept-layer. This is a tool that can inspect, log, and modify OpenCL commands that an application (or higher-level runtime) is generating. It supports a lot of controls, but good ones to set initially are ErrorLogging, BuildLogging, and maybe CallLogging (though it generates a lot of output). Useful dumps are possible with DumpProgramSPIRV. The OpenCL Intercept Layer is a separate utility and is not part of any specific OpenCL implementation, so it works with many SYCL compilers.\par
+
+For suspected compiler issues on Linux systems with Intel GPUs, we can dump intermediate compiler output from the Intel Graphics Compiler. We do this by setting the environment variable IGC\_ShaderDumpEnable equal to 1 (for some output) or the environment variable IGC\_ShaderDumpEnableAll to 1 (for lots and lots of output). The dumped output goes in /tmp/IntelIGC. This technique may not apply to all builds of the graphics drivers, but it is worth a try to see if it applies to our system.\par
+
+Figure 13-5 lists these and a few additional environment variables (supported on Windows and Linux) supported by compilers or runtimes to aid in advanced debugging. These are DPC++ implementation-dependent advanced debug options that exist to inspect and control the compilation model. They are not discussed or utilized in this book. The online oneAPI DPC++ language reference is a good place to learn more.\par
+
+These options are not described more within this book, but they are mentioned here to open up this avenue of advanced debugging as needed. These options may give us insight into how to work around an issue or bug. It is possible that our source code is inadvertently triggering an issue that can be resolved by correcting the source code. Otherwise, the use of these options is for very advanced debugging of the compiler itself. Therefore, they are associated more with compiler developers than with users of the compiler. Some advanced users find these options useful; therefore, they are mentioned here and never again in this book. To dig deeper, the GitHub for DPC++ has a document for all environment variables under llvm/sycl/doc/EnvironmentVariables.md.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+\textbf{Debugging tip} When other options are exhausted and we need to debug a runtime issue, we look for dump tools that might give us hints toward the cause.
+\end{tcolorbox}
+
+\hspace*{\fill} \par %插入空行
+Figure 13-5. DPC++ advanced debug options
+\begin{table}[H]
+	\begin{tabular}{|l|l|l|}
+		\hline
+		Environment variables         & Value                                                                                                                                                                                                                              & Description                                                                                                                                                                                                                                  \\ \hline
+		SYCL\_PI\_TRACE               & \begin{tabular}[c]{@{}l@{}}1(basic),\\ 2(advanced),\\ -1(all)\end{tabular}                                                                                                                                                         & \begin{tabular}[c]{@{}l@{}}Runtime:Value of 1 enables tracing of\\ Runtime Plugin Interface(PI) for plugin\\ and device discovery; Value of 2 enables\\ tracing of all PI calls. Value of -1 unleashes\\ all levels of tracing.\end{tabular} \\ \hline
+		SYCL\_PRINT\_EXECUTION\_GRAPH & \begin{tabular}[c]{@{}l@{}}always(\\ or ask to dump only select\\ files by specifying; \\ before\_addCG, after\_addGC,\\ before\_addCopyBack,\\ after\_addCopyBack,\\ before\_addHostAcc, or \\ after\_addHostAcc\\ )\end{tabular} & \begin{tabular}[c]{@{}l@{}}Runtime: create text files(with DOT extension)\\ tracing the execution graph. Relatively easy to\\ browse traces of what is happening during runtime.\end{tabular}                                                \\ \hline
+		CL\_CONFIG\_USE\_VBECTORIZER  & true or false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}Runtime:ask the Inter CPU compiler to\\ enable or disable vectorizer.\end{tabular}                                                                                                                                \\ \hline
+		CL\_CONFIG\_CPU\_TARGET\_ARCH & skx, core-avx2                                                                                                                                                                                                                     & \begin{tabular}[c]{@{}l@{}}Runtime: ask the Intel CPU compiler to\\ generate code for processors that support\\ Inter Advanced Vector Extensions(Intel\\ AVX512 ans AVX2).\end{tabular}                                                      \\ \hline
+		CL\_CONFIG\_DUMP\_ASM         & true or false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}Runtime:ask the Intel CPU compiler to\\ dump CPU assembly code.\end{tabular}                                                                                                                                      \\ \hline
+		IGC\_ShaderDumpEnable         & 0 or 1                                                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}Linux only.Runtime:ask the Intel Graphics\\ Compiler(JIT) to dump some information.\end{tabular}                                                                                                                  \\ \hline
+		IGC\_ShaderDumpEnableALL      & 0 or 1                                                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}Linux only.Runtime:ask the Intel Graphics\\ Compiler(JIT) to dump lots of information.\end{tabular}                                                                                                               \\ \hline
+		SYCL\_DUMP\_IMAGES            & true or false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}Compile time: Request via SYCL\_DUMP\_IMAGES=1\\ that compiler to dump a SPV file containing\\ the intermediate code which is passed to JIT\\ compiler during exectuion.\end{tabular}                             \\ \hline
+		SYCL\_USE\_KERNEL\_SPV        & \textless{}device binary\textgreater{}                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}Runtime:Load device image from the specified\\ file. If runtime is unable to read the file, \\ cl::sycl::runtime\_error exception is thrown.\end{tabular}                                                         \\ \hline
+	\end{tabular}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

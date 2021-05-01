@@ -1,0 +1,241 @@
+USM allows us to allocate memory in a variety of different ways that cater to different needs and preferences. However, before we go over all the methods in greater detail, we should discuss how USM allocations differ from regular C++ allocations.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{What Do We Need to Know?}
+
+Regular C++ programs can allocate memory in multiple ways: new, malloc, or allocators. No matter which syntax we prefer, memory allocation is ultimately performed by the system allocator in the host operating system. When we allocate memory in C++, the only concerns are “How much memory do we need?” and “How much memory is available to allocate?” However, USM requires extra information before an allocation can be performed.\par
+
+First, USM allocation needs to specify which type of allocation is desired: device, host, or shared. It is important to request the right type of allocation in order to obtain the desired behavior for that allocation. Next, every USM allocation must specify a context object against which the allocation will be made. The context object hasn’t had a lot of discussion yet, so it’s worth saying a little about it here. A context represents a device or set of devices on which we can execute kernels. We can think of a context as a convenient place for the runtime to stash some state about what it’s doing. Programmers are not likely to directly interact with contexts outside of passing them around in most DPC++ programs.\par
+
+USM allocations are not guaranteed to be usable across different contexts—it is important that all USM allocations, queues, and kernels share the same context object. Typically, we can obtain this context from the queue being used to submit work to a device. Finally, deviceallocations also require that we specify which device will provide the memory for the allocation. This is important since we do not want to oversubscribe the memory of our devices (unless the device is able to support this—we will say more about that later in the chapter when we discuss migration of data). USM allocation routines can be distinguished from their C++ analogues by the addition of these extra parameters.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Multiple Styles}
+
+Sometimes, trying to please everyone with a single option proves to be an impossible task, just as some people prefer coffee over tea, or emacs over vi. If we ask programmers what an allocation interface should look like, we will get several different answers back. USM embraces this diversity of choice and provides several different flavors of allocation interfaces. These different flavors are C-style, C++-style, and C++ allocator–style. We will now discuss each and point out their similarities and differences.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Allocations à la C}
+
+The first style of allocation functions (listed in Figure 6-2, later used in examples shown in Figures 6-6 and 6-7) is modeled after memory allocation in C: malloc functions that take a number of bytes to allocate and return a void * pointer. This style of function is type agnostic. We must specify the total number of bytes to allocate, which means if we want to allocate N objects of type X, one must ask for N * sizeof(X) total bytes. The returned pointer is of type void *, which means that we must then cast it to an appropriate pointer to type X. This style is very simple but can be verbose due to the size calculations and typecasting required.\par
+
+We can further divide this style of allocation into two categories: named functions and single function. The distinction between these two flavors is how we specify the desired type of USM allocation. With the named functions (malloc\_device, malloc\_host, and malloc\_shared), the type of USM allocation is encoded in the function name. The single function malloc requires the type of USM allocation to be specified as an additional parameter. Neither flavor is better than the other, and the choice of which to use is governed by our preference.\par
+
+We cannot move on without briefly mentioning alignment. Each version of malloc also has an aligned\_alloc counterpart. The malloc functions return memory aligned to the default behavior of our device. It will return a legal pointer with a valid alignment, but there may be cases where we would prefer to manually specify an alignment. In these cases, we should use one of the aligned\_alloc variants that also require us to specify the desired alignment for the allocation. Do not expect a program to work properly if we specify an illegal alignment! Legal alignments are powers of two. It’s worth noting that on many devices, allocations are maximally aligned to correspond to features of the hardware, so while we may ask for allocations to be 4-, 8-, 16-, or 32-byte aligned, we might in practice see larger alignments that give us what we ask for and then some.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 6-2. C-style USM allocation functions
+\begin{lstlisting}[caption={}]
+// Named Functions
+void *malloc_device(size_t size, const device &dev, const context &ctxt);
+void *malloc_device(size_t size, const queue &q);
+void *aligned_alloc_device(size_t alignment, size_t size,
+					const device &dev, const context &ctxt);
+
+void *aligned_alloc_device(size_t alignment, size_t size, const queue &q);
+
+void *malloc_host(size_t size, const context &ctxt);
+void *malloc_host(size_t size, const queue &q);
+void *aligned_alloc_host(size_t alignment, size_t size, const context
+&ctxt);
+void *aligned_alloc_host(size_t alignment, size_t size, const queue &q);
+
+void *malloc_shared(size_t size, const device &dev, const context &ctxt);
+void *malloc_shared(size_t size, const queue &q);
+void *aligned_alloc_shared(size_t alignment, size_t size,
+							const device &dev, const context &ctxt);
+void *aligned_alloc_shared(size_t alignment, size_t size, const queue &q);
+
+// Single Function
+void *malloc(size_t size, const device &dev, const context &ctxt,
+			 usm::alloc kind);
+void *malloc(size_t size, const queue &q, usm::alloc kind);
+void *aligned_alloc(size_t alignment, size_t size,
+					const device &dev, const context &ctxt,
+					usm::alloc kind);
+void *aligned_alloc(size_t alignment, size_t size, const queue &q,
+					usm::alloc kind);
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Allocations à la C++}
+
+The next flavor of USM allocation functions (listed in Figure 6-3) is very similar to the first but with more of a C++ look and feel. We once again have both named and single function versions of the allocation routines as well as our default and user-specified alignment versions. The difference is that now our functions are C++ templated functions that allocate Count objects of type T and return a pointer of type T *. Taking advantage of modern C++ simplifies things, since we no longer need to manually calculate the total size of the allocation in bytes or cast the returned pointer to the appropriate type. This also tends to yield a more compact and less error-prone expression in code. However, we should note that unlike “new” in C++, malloc-style interfaces do not invoke constructors for the objects being allocated—we are simply allocating enough bytes to fit that type.\par
+
+This flavor of allocation is a good place to start for new codes written with USM in mind. The previous C-style is a good starting point for existing C++ codes that already make heavy use of C or C++ malloc, to which we will add the use of USM.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 6-3. C++-style USM allocation functions
+\begin{lstlisting}[caption={}]
+// Named Functions
+template <typename T>
+T *malloc_device(size_t Count, const device &Dev, const context &Ctxt); 
+template <typename T> 
+T *malloc_device(size_t Count, const queue &Q); 
+template <typename T>
+T *aligned_alloc_device(size_t Alignment, size_t Count, const device &Dev,
+						const context &Ctxt); 
+
+template <typename T>
+T *aligned_alloc_device(size_t Alignment, size_t Count, const queue &Q); 
+
+template <typename T> T *malloc_host(size_t Count, const context &Ctxt);
+template <typename T> T *malloc_host(size_t Count, const queue &Q);
+template <typename T>
+T *aligned_alloc_host(size_t Alignment, size_t Count, const context &Ctxt);
+template <typename T>
+T *aligned_alloc_host(size_t Alignment, size_t Count, const queue &Q);、
+
+template <typename T>
+T *malloc_shared(size_t Count, const device &Dev, const context &Ctxt);
+template <typename T> T *malloc_shared(size_t Count, const queue &Q);
+template <typename T>
+T *aligned_alloc_shared(size_t Alignment, size_t Count, const device &Dev,
+						const context &Ctxt);				
+template <typename T>
+T *aligned_alloc_shared(size_t Alignment, size_t Count, const queue &Q);
+
+// Single Function
+template <typename T>
+T *malloc(size_t Count, const device &Dev, const context &Ctxt,
+			usm::alloc Kind);
+template <typename T> T *malloc(size_t Count, const queue &Q, usm::alloc
+Kind);
+template <typename T>
+T *aligned_alloc(size_t Alignment, size_t Count, const device &Dev,
+				const context &Ctxt, usm::alloc Kind);
+template <typename T>
+T *aligned_alloc(size_t Alignment, size_t Count, const queue &Q,
+				usm::alloc Kind);
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{C++ Allocators}
+
+The final flavor of USM allocation (Figure 6-4) embraces modern C++ even more than the previous flavor. This flavor is based on the C++ allocator interface, which defines objects that are used to perform memory allocations either directly or indirectly inside a container such as std::vector. This allocator flavor is most useful if our code makes heavy use of container objects that can hide the details of memory allocation and deallocation from the user, simplifying code and reducing the opportunity for bugs.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 6-4. C++ allocator–style USM allocation functions
+\begin{lstlisting}[caption={}]
+template <class T, usm::alloc AllocKind, size_t Alignment = 0>
+class usm_allocator {
+public:
+	using value_type = T;
+	template <typename U> struct rebind {
+		typedef usm_allocator<U, AllocKind, Alignment> other;
+	};
+
+	usm_allocator() noexcept = delete;
+	usm_allocator(const context &Ctxt, const device &Dev) noexcept;
+	usm_allocator(const queue &Q) noexcept;
+	usm_allocator(const usm_allocator &Other) noexcept;
+	template <class U> 
+		usm_allocator(usm_allocator<U, AllocKind, Alignment> const &) noexcept;
+		
+	T *allocate(size_t NumberOfElements); 
+	void deallocate(T *Ptr, size_t Size); 
+	
+	template <
+		usm::alloc AllocT = AllocKind,
+		typename std::enable_if<AllocT != usm::alloc::device, int>::type = 0,
+		class U, class... ArgTs>
+	void construct(U *Ptr, ArgTs &&... Args); 
+	
+	template <
+		usm::alloc AllocT = AllocKind,
+		typename std::enable_if<AllocT == usm::alloc::device, int>::type = 0,
+		class U, class... ArgTs>
+	void construct(U *Ptr, ArgTs &&... Args); 
+	
+	template <
+		usm::alloc AllocT = AllocKind,
+		typename std::enable_if<AllocT != usm::alloc::device, int>::type = 0>
+	void destroy(T *Ptr);
+	
+	template <
+		usm::alloc AllocT = AllocKind,
+		typename std::enable_if<AllocT == usm::alloc::device, int>::type = 0>
+	void destroy(T *Ptr);
+};
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Deallocating Memory}
+
+Whatever a program allocates must eventually be deallocated. USM defines a free method to deallocate memory allocated by one of the malloc or aligned\_malloc functions. This free method also takes the context in which the memory was allocated as an extra parameter. The queue can also be substituted for the context. If memory was allocated with a C++ allocator object, it should also be deallocated using that object.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 6-5. Three styles for allocation
+\begin{lstlisting}[caption={}]
+constexpr int N = 42;
+
+queue Q;
+
+// Allocate N floats
+
+// C-style
+float *f1 = static_cast<float*>(malloc_shared(N*sizeof(float),Q));
+
+// C++-style
+float *f2 = malloc_shared<float>(N, Q);
+
+// C++-allocator-style
+usm_allocator<float, usm::alloc::shared> alloc(Q);
+float *f3 = alloc.allocate(N);
+
+// Free our allocations
+free(f1, Q.get_context());
+free(f2, Q);
+alloc.deallocate(f3, N);
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Allocation Example}
+
+In Figure 6-5, we show how to perform the same allocation using the three styles just described. In this example, we allocate N single-precision floating-point numbers as shared allocations. The first allocation f1 uses the C-style void * returning malloc routines. For this allocation, we explicitly pass the device and context that we obtain from the queue. \par
+
+We must also cast the result back to a float *. The second allocation f2 does the same thing but using the C++-style templated malloc. Since we pass the type of our elements, float, to the allocation routine, we only need to specify how many floats we want to allocate, and we do not need to cast the result. We also use the form that takes the queue instead of the device and context, yielding a very simple and compact statement. The third allocation f3 uses the USM C++ allocator class. We instantiate an allocator object of the proper type and then perform the allocation using that object. Finally, we show how to properly deallocate each allocation.\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

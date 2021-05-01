@@ -1,0 +1,87 @@
+We will divide the specifics into information about necessary conditions (correctness) and information useful for tuning but not necessary for correctness.\par
+
+In this first correctness category, we will enumerate conditions that should be met in order for kernels to launch properly. Failure to abide by these device limitations will lead to program failures. Figure 12-7 shows how we can fetch a few of these parameters in a way that the values are available for use in host code and in kernel code (via lambda capture). We can modify our code to utilize this information; for instance, it could guide our code on buffer sizing or work-group sizing.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+Submitting a kernel that does not satisfy these conditions will generate an error.
+\end{tcolorbox}
+
+\hspace*{\fill} \par %插入空行
+Figure 12-7. Fetching parameters that can be used to shape a kernel
+\begin{lstlisting}[caption={}]
+std::cout << "We are running on:\n"
+		  << dev.get_info<info::device::name>() << "\n";
+
+// Query results like the following can be used to calculate how
+// large our kernel invocations should be.
+auto maxWG = dev.get_info<info::device::max_work_group_size>();
+auto maxGmem = dev.get_info<info::device::global_mem_size>();
+auto maxLmem = dev.get_info<info::device::local_mem_size>();
+
+std::cout << "Max WG size is " << maxWG
+		  << "\nMax Global memory size is " << maxGmem
+		  << "\nMax Local memory size is " << maxLmem << "\n";
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Device Queries}
+
+\textit{device\_type}: cpu, gpu, accelerator, custom,2 automatic, host, all. These are most often tested by is\_host(), is\_cpu, is\_gpu(), and so on (see Figure 12-6):\par
+
+\textit{max\_work\_item\_sizes}: The maximum number of work-items that are permitted in each dimension of the work-group of the nd\_range. The minimum value is (1, 1, 1) for non-custom devices.\par
+
+\textit{max\_work\_group\_size:} The maximum number of work-items that are permitted in a work-group executing a kernel on a single compute unit. The minimum value is 1.\par
+
+\textit{global\_mem\_size}: The size of global memory in bytes.\par
+
+\textit{local\_mem\_size}: The size of local memory in bytes. Except for custom devices, the minimum size is 32 K.\par
+
+\textit{extensions}: Device-specific information not specifically detailed in the SYCL specification, often vendor-specific, as illustrated in our verycurious program (Figure 12-6).\par
+
+\textit{max\_compute\_units}: Indicative of the amount of parallelism available on a device—implementationdefined, interpret with care!\par
+
+\textit{sub\_group\_sizes}: Returns the set of sub-group sizes supported by the device.\par
+
+\textit{usm\_device\_allocations}: Returns true if this device supports device allocations as described in explicit USM.\par
+
+\textit{usm\_host\_allocations}: Returns true if this device can access host allocations.\par
+
+\textit{usm\_shared\_allocations}: Returns true if this device supports shared allocations.\par
+
+\textit{usm\_restricted\_shared\_allocations}: Returns true if this device supports shared allocations as governed by the restrictions of “restricted USM” on the device. This property requires that property usm\_shared\_allocations returns true for this device.\par
+
+\textit{usm\_system\_allocator}: Returns true if the system allocator may be used instead of USM allocation mechanisms for shared allocations on this device.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+We advise avoiding max\_compute\_units in program logic
+\end{tcolorbox}
+
+We have found that querying the maximum number of compute units should be avoided, in part because the definition isn’t crisp enough to be useful in code tuning. Instead of using max\_compute\_units, most programs should express their parallelism and let the runtime map it onto available parallelism. Relying on max\_compute\_units for correctness only makes sense when augmented with implementation- and device-specific information. Experts might do that, but most developers do not and do not need to do so! Let the runtime do its job in this case!\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Kernel Queries}
+
+The mechanisms discussed in Chapter 10, under “Kernels in Program Objects,” are needed to perform these kernel queries:\par
+
+work\_group\_size: Returns the maximum workgroup size that can be used to execute a kernel on a specific device\par
+
+compile\_work\_group\_size: Returns the work-group size specified by a kernel if applicable; otherwise returns (0, 0, 0)\par
+
+compile\_sub\_group\_size: Returns the sub-group size specified by a kernel if applicable; otherwise returns 0\par
+
+compile\_num\_sub\_groups: Returns the number of sub-groups specified by a kernel if applicable; otherwise returns 0\par
+
+max\_sub\_group\_size: Returns the maximum subgroup size for a kernel launched with the specified work-group size\par
+
+max\_num\_sub\_groups: Returns the maximum number of sub-groups for a kernel\par
+
+
+
+
+
+
+
+
+
+
+

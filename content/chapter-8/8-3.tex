@@ -1,0 +1,86 @@
+Data movement is another very important aspect of graphs in DPC++ that is essential for understanding application performance. However, it can often be accidentally overlooked if data movement happens implicitly in a program, either using buffers and accessors or using USM shared allocations. Next, we will examine the different ways that data movement can affect graph execution in DPC++.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Explicit}
+
+Explicit data movement has the advantage that it appears explicitly in a graph, making it obvious for programmers what goes on within execution of a graph. We will separate explicit data operations into those for USM and those for buffers.\par
+
+As we learned in Chapter 6, explicit data movement in USM occurs when we need to copy data between device allocations and the host. This is done with the memcpy method, found in both the queue and handler classes. Submitting the action or command group returns an event that can be used to order the copy with other command groups.\par
+
+Explicit data movement with buffers occurs by invoking either the copy or update\_host method of the command group handler object. The copy method can be used to manually exchange data between host memory and an accessor object on a device. This can be done for a variety of reasons. A simple example is checkpointing a long-running sequence of computations. With the copy method, data can be written from the device to arbitrary host memory in a one-way fashion. If this were done using buffers, most cases (i.e., those where the buffer was not created with use\_host\_ptr) would require the data to first be copied to the host and then from the buffer’s memory to the desired host memory.\par
+
+The update\_host method is a very specialized form of copy. If a buffer was created around a host pointer, this method will copy the data represented by the accessor back to the original host memory. This can be useful if a program manually synchronizes host data with a buffer that was created with the special use\_mutex property. However, this use case is not likely to occur in most programs.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Implicit}
+
+Implicit data movement can have hidden consequences for command groups and task graphs in DPC++. With implicit data movement, data is copied between host and device either by the DPC++ runtime or by some combination of hardware and software. In either case, copying occurs without explicit input from the user. Let’s again look separately at the USM and buffer cases.\par
+
+With USM, implicit data movement occurs with host and shared allocations. As we learned in Chapter 6, host allocations do not really move data so much as access it remotely, and shared allocations may migrate between host and device. Since this migration happens automatically, there is really nothing to think about with USM implicit data movement and command groups. However, there are some nuances with shared allocations worth keeping in mind.\par
+
+The prefetch operation works in a similar fashion to memcpy in order to let the runtime begin migrating shared allocations before a kernel attempts to use them. However, unlike memcpy where data must be copied in order to ensure correct results, prefetches are often treated as hints to the runtime to increase performance, and prefetches do not invalidate pointer values in memory (as a copy would when copying to a new address range). The program will still execute correctly if a prefetch has not completed before a kernel begins executing, and so many codes may choose to make command groups in a graph not depend on prefetch operations since they are not a functional requirement.\par
+
+Buffers also carry some nuance. When using buffers, command groups must construct accessors for buffers that specify how the data will be used. These data dependences express the ordering between different command groups and allow us to construct task graphs. However, command groups with buffers sometimes fill another purpose: they specify the requirements on data movement.\par
+
+Accessors specify that a kernel will read or write to a buffer. The corollary from this is that the data must also be available on the device, and if it is not, the runtime must move it there before the kernel may begin executing. Consequently, the DPC++ runtime must keep track of where the current version of a buffer resides so that data movement operations can be scheduled. Accessor creation effectively creates an extra, hidden node in the graph. If data movement is necessary, the runtime must perform it first. Only then may the kernel being submitted execute.\par
+
+Let us take another look at Figure 8-8. In this example, our first two kernels will require buffers data1 and data2 to be copied to the device; the runtime implicitly creates extra graph nodes to perform the data movement. When the third kernel’s command group is submitted, it is likely that these buffers will still be on the device, so the runtime will not need to perform any extra data movement. The fourth kernel’s data is also likely to not require any extra data movement, but the creation of the host accessor requires the runtime to schedule a movement of buffer data1 back to the host before the accessor is available for use.\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

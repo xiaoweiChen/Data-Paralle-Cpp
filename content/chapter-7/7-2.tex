@@ -1,0 +1,221 @@
+Data represented by a buffer cannot be directly accessed through the buffer object. Instead, we must create accessor objects that allow us to safely access a buffer’s data. Accessors inform the runtime where and how we want to access data, allowing the runtime to ensure that the right data is in the right place at the right time. This is a very powerful concept, especially when combined with the task graph that schedules kernels for execution based in part on data dependences.\par
+
+Accessor objects are instantiated from the templated accessor class. This class has five template parameters. The first parameter is the type of the data being accessed. This should be the same as the type of data being stored by the corresponding buffer. Similarly, the second parameter describes the dimensionality of the data and buffer and defaults to a value of one.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 7-6. Access modes
+\begin{table}[H]
+	\begin{tabular}{|l|l|}
+		\hline
+		\multicolumn{1}{|c|}{Mode} & \multicolumn{1}{c|}{Description}               \\ \hline
+		read                       & Read-only access                               \\ \hline
+		write                      & Write-only access preserving previous contents \\ \hline
+		read\_write                & Read and write access                          \\ \hline
+	\end{tabular}
+\end{table}
+
+The next three template parameters are unique to accessors. The first of these is the access mode. The access mode describes how we intend to use an accessor in a program. The possible modes are listed in Figure 7-6. We will learn how these modes are used to order the execution of kernels and perform data movement in Chapter 8. The access mode parameter does have a default value if none is specified or automatically inferred. If we do not specify otherwise, accessors will default to read\_write access mode for non-const data types and read for const data types. These defaults are always correct, but providing more accurate information may improve a runtime’s ability to perform optimizations. When starting application development, it is safe and concise to simply not specify an access mode, and we can then refine the access modes based on profiling of performance-critical regions of the application.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 7-7. Access targets
+\begin{table}[H]
+	\begin{tabular}{|l|l|}
+		\hline
+		\multicolumn{1}{|c|}{Target} & \multicolumn{1}{c|}{Description}        \\ \hline
+		global\_buffer               & Access a buffer through global memory   \\ \hline
+		constant\_buffer             & Access a buffer through constant memory \\ \hline
+		local                        & Access work-group local memory          \\ \hline
+		unsampled\_image             & Access an unsampled\_image              \\ \hline
+		sampled\_image               & Access a sampled\_image                 \\ \hline
+		host\_buffer                 & Access a buffer on the host             \\ \hline
+		host\_unsampled\_image       & Access an unsampled\_image on the host  \\ \hline
+		host\_sampled\_image         & Access a sample\_image on the host      \\ \hline
+	\end{tabular}
+\end{table}
+
+The next template parameter is the access target. Buffers are an abstraction of data and do not describe where and how data is stored. The access target describes both what type of data, broadly speaking, we are accessing and which memory will contain that data. The possible access targets are listed in Figure 7-7. The type of data is one of two types: a buffer or an image. Images are discussed in this book, but we can think of them as special-purpose buffers that provide domain-specific operations for image processing.\par
+
+The other aspect of an access target is what we should focus on. Devices may have different types of memories available. These memories are represented by different address spaces. The most commonly used type of memory will be a device’s global memory. Most accessors inside kernels will use this target, so global is the default target (if we specify nothing). Constant and local buffers use special-purpose memories. Constant memory, as its name implies, is used to store values that are constant during the lifetime of a kernel invocation. Local memory is special memory available to a work-group that is not accessible to other work-groups. We will learn how to use local memory in Chapter 9. The other target of note is the host buffer, which is the target used when accessing a buffer on the host. The default value for this template parameter is global\_buffer, so in most cases we do not need to specify a target within our code.\par
+
+The final template parameter governs whether an accessor is a placeholder accessor or not. This is not a parameter that a programmer is likely to ever directly set. A placeholder accessor is one that is declared outside of a command group but meant to be used to access data on a device inside a kernel. We will see what differentiates a placeholder accessor from one that is not once we look at examples of accessor creation.\par
+
+While accessors can be extracted from a buffer object using its get\_access method, it’s simpler to directly create (construct) them. This is the style we will use in upcoming examples since it is very simple to understand and is compact.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Accessor Creation}
+
+Figure 7-8 shows an example program with everything that we need to get started with accessors. In this example, we have three buffers, A, B, and C. The first task we submit to the queue creates accessors to each buffer and defines a kernel that uses these accessors to initialize the buffers with some values. Each accessor is constructed with a reference to the buffer it will access as well as the handler object defined by the command group we’re submitting to the queue. This effectively binds the accessor to the kernel we’re submitting as part of the command group. Regular accessors are device accessors since they, by default, target global buffers stored in device memory. This is the most common use case.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 7-8. Simple accessor creation
+\begin{lstlisting}[caption={}]
+constexpr int N = 42;
+
+queue Q;
+
+// create 3 buffers of 42 ints
+buffer<int> A{range{N}};
+buffer<int> B{range{N}};
+buffer<int> C{range{N}};
+accessor pC{C};
+
+Q.submit([&](handler &h) {
+	accessor aA{A, h};
+	accessor aB{B, h};
+	accessor aC{C, h};
+	h.parallel_for(N, [=](id<1> i) {
+		aA[i] = 1;
+		aB[i] = 40;
+		aC[i] = 0;
+	});
+});
+
+Q.submit([&](handler &h) {
+	accessor aA{A, h};
+	accessor aB{B, h};
+	accessor aC{C, h};
+	h.parallel_for(N, [=](id<1> i) {
+		aC[i] += aA[i] + aB[i]; });
+});
+
+Q.submit([&](handler &h) {
+	h.require(pC);
+	h.parallel_for(N, [=](id<1> i) {
+		pC[i]++; });
+});
+
+host_accessor result{C};
+for (int i = 0; i < N; i++)
+	assert(result[i] == N);
+\end{lstlisting}
+
+The second task we submit also defines three accessors to the buffers. We then use those accessors in the second kernel to add the elements of buffers A and B into buffer C. Since this second task operates on the same data as the first one, the runtime will execute this task after the first one is complete. We will learn about this in detail in the next chapter.\par
+
+The third task shows how we can use a placeholder accessor. The accessor pC is declared at the beginning of the example in Figure 7-8 after we create our buffers. Note that the constructor is not passed a handler object since we don’t have one to pass. This lets us create a reusable accessor object ahead of time. However, in order to use this accessor inside a kernel, we need to bind it to a command group during submission. We do this using the handler object’s require method. Once we have bound our placeholder accessor to a command group, we can then use it inside a kernel as we would any other accessor.\par
+
+Finally, we create a host\_accessor object in order to read the results of our computations back on the host. Note that this is a different type than we used inside our kernels. Host accessors use a separate host\_accessor class to allow proper inference of template arguments, providing a simple interface. Note that the host accessor result in this example also does not take a handler object since we once again do not have one to pass. The special type for host accessors also lets us disambiguate them from placeholders. An important aspect of host accessors is that the constructor only completes when the data is available for use on the host, which means that construction of a host accessor can appear to take a long time. The constructor must wait for any kernels to finish executing that produce the data to be copied as well as for the copy itself to finish. Once the host accessor construction is complete, it is safe to use the data that it accesses directly on the host, and we are guaranteed that the latest version of the data is available to us on the host.\par
+
+While this example is perfectly correct, we don’t say anything about how we intend to use our accessors when we create them. Instead, we use the default access mode, which is read-write, for the non-const int data in our buffers. This is potentially overconservative and may create unnecessary dependences between operations or superfluous data movement. A runtime may be able to do a better job if it has more information about how we plan to use the accessors we create. However, before we go through an example where we do this, we should first introduce one more tool—the access tag.\par
+
+Access tags are a compact way to express the desired combination of access mode and target for an accessor. Access tags, when used, are passed as a parameter to an accessor’s constructor. The possible tags are shown in Figure 7-9. When an accessor is constructed with a tag parameter, C++ CTAD can then properly deduce the desired access mode and target, providing an easy way to override the default values for those template parameters. We could also manually specify the desired template parameters, but tags provide a simpler, more compact way to get the same result without spelling out fully templated accessors.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 7-9. Access tags
+\begin{table}[H]
+	\begin{tabular}{|l|l|l|l|}
+		\hline
+		\textbf{Tag type}             & \textbf{Tag value} & \textbf{Access mode} & \textbf{Access target} \\ \hline
+		\textbf{mode\_tag\_t}         & read\_write        & read\_write          & default                \\ \hline
+		\textbf{mode\_tag\_t}         & read\_only         & read                 & default                \\ \hline
+		\textbf{mode\_tag\_t}         & write\_only        & write                & default                \\ \hline
+		\textbf{mode\_target\_tag\_t} & read\_constant     & read                 & constant\_buffer       \\ \hline
+	\end{tabular}
+\end{table}
+
+Let’s take our previous example and rewrite it to add access tags. This new and improved example is shown in Figure 7-10.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 7-10. Accessor creation with specified usage
+\begin{lstlisting}[caption={}]
+constexpr int N = 42;
+
+queue Q;
+
+// Create 3 buffers of 42 ints
+buffer<int> A{range{N}};
+buffer<int> B{range{N}};
+buffer<int> C{range{N}};
+
+accessor pC{C};
+
+Q.submit([&](handler &h) {
+	accessor aA{A, h, write_only, noinit};
+	accessor aB{B, h, write_only, noinit};
+	accessor aC{C, h, write_only, noinit};
+	h.parallel_for(N, [=](id<1> i) {
+		aA[i] = 1;
+		aB[i] = 40;
+		aC[i] = 0;
+	});
+});
+
+Q.submit([&](handler &h) {
+	accessor aA{A, h, read_only};
+	accessor aB{B, h, read_only};
+	accessor aC{C, h, read_write};
+	h.parallel_for(N, [=](id<1> i) {
+		aC[i] += aA[i] + aB[i]; });
+});
+
+Q.submit([&](handler &h) {
+	h.require(pC);
+	h.parallel_for(N, [=](id<1> i) {
+		pC[i]++; });
+});
+
+host_accessor result{C, read_only};
+
+for (int i = 0; i < N; i++)
+	assert(result[i] == N);
+\end{lstlisting}
+
+We begin by declaring our buffers as we did in Figure 7-8. We also create our placeholder accessor that we’ll use later. Let’s now look at the first task we submit to the queue. Previously, we created our accessors by passing a reference to a buffer and the handler object for the command group. Now, we add two extra parameters to our constructor calls. The first new parameter is an access tag. Since this kernel is writing the initial values for our buffers, we use the write\_only access tag. This lets the runtime know that this kernel is producing new data and will not read from the buffer.\par
+
+The second new parameter is an optional accessor property, similar to the optional properties for buffers that we saw earlier in the chapter. The property we pass, noinit, lets the runtime know that the previous contents of the buffer can be discarded. This is useful because it can let the runtime eliminate unnecessary data movement. In this example, since the first task is writing the initial values for our buffers, it’s unnecessary for the runtime to copy the uninitialized host memory to the device before the kernel executes. The noinit property is useful for this example, but it should not be used for read-modify-write cases or kernels where only some values in a buffer may be updated.\par
+
+The second task we submit to our queue is identical to before, but now we add access tags to our accessors. Here, we add the tags read\_only to accessors A and B to let the runtime know that we will only read the values of buffers A and B through these accessors. The third accessor, aC, gets the read\_write access tag since we accumulate the sum of the elements of A and B into C. We explicitly use the tag in the example to be consistent, but this is unnecessary since the default access mode is read\_write.\par
+
+The default usage is retained in the third task where we use our placeholder accessor. This remains unchanged from the simplified example we saw in Figure 7-8. Our final accessor, the host accessor result, now receives an access tag when we create it. Since we only read the final values on the host, we pass the read\_only tag to the constructor. If we rewrote the program in such a way that the host accessor was destroyed, launching another kernel that operated on buffer C would not require it to be written back to the device since the read\_only tag lets the runtime know that it will not be modified by the host.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{What Can We Do with an Accessor?}
+
+Many things can be done with an accessor object. However, the most important thing we can do is spelled out in the accessor’s name—access data. This is usually done through one of the accessor’s [] operators. We use the [] operator in our examples in Figures 7-8 and 7-10. This operator takes either an id object that can properly index multidimensional data or a single size\_t. The second case is used when an accessor has more than one dimension. It returns an object that is then meant to be indexed again with [] until we arrive at a scalar value, and this would be of the form a[i][j] in a two-dimensional case. Remember that the ordering of accessor dimensions follows the convention of C++ where the rightmost dimension is the unit-stride dimension (iterates “fastest”).\par
+
+An accessor can also return a pointer to the underlying data. This pointer can be accessed directly following normal C++ rules. Note that there can be additional complexity involved with respect to the address space of this pointer. Address spaces and their quirks will be discussed in a later chapter.\par
+
+Many things can also be queried from an accessor object. Examples include the number of elements accessible through the accessor, the size in bytes of the region of the buffer it covers, or the range of data accessible.\par
+
+Accessors provide a similar interface to C++ containers and may be used in many situations where containers may be passed. The container interface supported by accessors includes the data method, which is equivalent to get\_pointer, and several flavors of forward and backward iterators.\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

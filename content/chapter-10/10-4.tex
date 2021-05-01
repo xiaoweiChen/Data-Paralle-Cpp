@@ -1,0 +1,137 @@
+When a SYCL implementation is built on top of another API, the implementation may be able to interoperate with kernels defined using mechanisms of the underlying API. This allows an application to easily and incrementally integrate SYCL into existing codebases.\par
+
+Because a SYCL implementation may be layered on top of many other APIs, the functionality described in this section is optional and may not be supported by all implementations. The underlying API may even differ depending on the specific device type or device vendor!\par
+
+Broadly speaking, an implementation may support two interoperability mechanisms: from an API-defined source or intermediate representation (IR) or from an API-specific handle. Of these two mechanisms, the ability to create a kernel from an API-defined source or intermediate representation is more portable, since some source or IR formats are supported by multiple APIs. For example, OpenCL C kernels may be directly consumed by many APIs or may be compiled into some form understood by an API, but it is unlikely that an API-specific kernel handle from one API will be understood by a different API.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+Remember that all forms of interoperability are optional!\\
+Different SYCL implementations may support creating kernels from different API-specific handles—or not at all.\\
+Always check the documentation for details!
+\end{tcolorbox}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Interoperability with API-Defined Source Languages}
+
+With this form of interoperability, the contents of the kernel are described as source code or using an intermediate representation that is not defined by SYCL, but the kernel objects are still created using SYCL API calls. This form of interoperability allows reuse of kernel libraries written in other source languages or use of domain-specific languages (DSLs) that generate code in an intermediate representation.\par
+
+An implementation must understand the kernel source code or intermediate representation to utilize this form of interoperability. For example, if the kernel is written using OpenCL C in source form, the implementation must support building SYCL programs from OpenCL C kernel source code.\par
+
+Figure 10-7 shows how a SYCL kernel may be written as OpenCL C kernel source code.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 10-7. Kernel created from OpenCL C kernel source
+\begin{lstlisting}[caption={}]
+// Note: This must select a device that supports interop!
+queue Q{ cpu_selector{} };
+
+program p{Q.get_context()};
+
+p.build_with_source(R"CLC(
+		kernel void add(global int* data) {
+			int index = get_global_id(0);
+			data[index] = data[index] + 1;
+		}
+		)CLC",
+		"-cl-fast-relaxed-math");
+		
+std::cout << "Running on device: "
+		  << Q.get_device().get_info<info::device::name>() << "\n";
+
+Q.submit([&](handler& h) {
+	accessor data_acc {data_buf, h};
+	
+	h.set_args(data_acc);
+	h.parallel_for(size, p.get_kernel("add"));
+});
+\end{lstlisting}
+
+In this example, the kernel source string is represented as a C++ raw string literal in the same file as the SYCL host API calls, but there is no requirement that this is the case, and some applications may read the kernel source string from a file or even generate it just-in-time.\par
+
+Because the SYCL compiler does not have visibility into a SYCL kernel written in an API-defined source language, any kernel arguments must explicitly be passed using the set\_arg() or set\_args() interface. The SYCL runtime and the API-defined source language must agree on a convention to pass objects as kernel arguments. In this example, the accessor dataAcc is passed as the global pointer kernel argument data.\par
+
+The build\_with\_source() interface supports passing optional APIdefined build options to precisely control how the kernel is compiled. In this example, the program build options -cl-fast-relaxed-math are used to indicate that the kernel compiler can use a faster math library with relaxed precision. The program build options are optional and may be omitted if no build options are required.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Interoperability with API-Defined Kernel Objects}
+
+With this form of interoperability, the kernel objects themselves are created in another API and then imported into SYCL. This form of interoperability enables one part of an application to directly create and use kernel objects using underlying APIs and another part of the application to reuse the same kernels using SYCL APIs. The code in Figure 10-8 shows how a SYCL kernel may be created from an OpenCL kernel object.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 10-8. Kernel created from an OpenCL kernel object
+\begin{lstlisting}[caption={}]
+// Note: This must select a device that supports interop 
+// with OpenCL kernel objects!
+queue Q{ cpu_selector{} };
+context sc = Q.get_context();
+
+const char* kernelSource =
+	R"CLC(
+	kernel void add(global int* data) {
+		int index = get_global_id(0);
+		data[index] = data[index] + 1;
+	}
+	)CLC";
+cl_context c = sc.get();
+cl_program p =
+	clCreateProgramWithSource(c, 1, &kernelSource, nullptr, nullptr);
+clBuildProgram(p, 0, nullptr, nullptr, nullptr, nullptr);
+cl_kernel k = clCreateKernel(p, "add", nullptr);
+
+std::cout << "Running on device: "
+	 	  << Q.get_device().get_info<info::device::name>() << "\n";
+	 	  
+Q.submit([&](handler& h) {
+	accessor data_acc{data_buf, h};
+	
+	h.set_args(data_acc);
+	h.parallel_for(size, kernel{k, sc});
+});
+
+clReleaseContext(c);
+clReleaseProgram(p);
+clReleaseKernel(k);
+\end{lstlisting}
+
+As with other forms of interoperability, the SYCL compiler does not have visibility into an API-defined kernel object. Therefore, kernel arguments must be explicitly passed using the set\_arg() or set\_args() interface, and the SYCL runtime and the underlying API must agree on a convention to pass kernel arguments.\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,68 @@
+\begin{center}
+	\includegraphics[width=0.5\textwidth]{content/chapter-12/images/1}
+\end{center}
+
+Chapter 2 introduced us to the mechanisms that direct work to a particular device—controlling where code executes. In this chapter, we explore how to adapt to the devices that are present at runtime.\par
+
+We want our programs to be portable. In order to be portable, we need our programs to adapt to the capabilities of the device. We can parameterize our programs to only use features that are present and to tune our code to the particulars of devices. If our program is not designed to adapt, then bad things can happen including slow execution or program failures.\par
+
+Fortunately, the creators of the SYCL specification thought about this and gave us interfaces to let us solve this problem. The SYCL specification defines a device class that encapsulates a device on which kernels may be executed. The ability to query the device class, so that our program can adapt to the device characteristics and capabilities, is the heart of what this chapter teaches.\par
+
+Many of us will start with having logic to figure out “Is there a GPU present?” to inform the choices our program will make as it executes. That is the start of what this chapter covers. As we will see, there is much more information available to help us make our programs robust and performant.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+Parameterizing a program can help with correctness, portability, performance portability, and future proofing.
+\end{tcolorbox}
+
+This chapter dives into the most important queries and how to use them effectively in our programs.\par
+
+Device-specific properties are queryable using get\_info, but DPC++ diverges from SYCL 1.2.1 in that it fully overloads get\_info to alleviate the need to use get\_work\_group\_info for work-group information that is really device-specific information. DPC++ does not support use of get\_work\_group\_info. This change means that device-specific kernel and work-group properties are properly found as queries for device-specific properties (get\_info). This corrects a confusing historical anomaly still present in SYCL 1.2.1 that was inherited from OpenCL.\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

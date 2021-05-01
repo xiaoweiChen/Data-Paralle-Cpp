@@ -1,0 +1,82 @@
+In prior sections, when kernels were either created from an API-defined representation or from API-specific handles, the kernels were created in two steps: first by creating a program object and then by creating the kernel from the program object. A program object is a collection of kernels and the functions they call that are compiled as a unit.\par
+
+For kernels represented as lambda expressions or named function objects, the program object containing the kernel is usually implicit and invisible to an application. For applications that require more control, an application can explicitly manage kernels and the program objects that encapsulate them. To describe why this may be beneficial, it is helpful to take a brief look at how many SYCL implementations manage just-in-time (JIT) kernel compilation.\par
+
+While not required by the specification, many implementations compile kernels “lazily.” This is usually a good policy since it ensures fast application startup and does not unnecessarily compile kernels that are never executed. The disadvantage of this policy is that the first use of a kernel usually takes longer than subsequent uses, since it includes the time needed to compile the kernel, plus the time needed to submit and execute the kernel. For some complex kernels, the time needed to compile the kernel can be significant, making it desirable to shift compilation to a different point during application execution, such as when the application is loading, or in a separate background thread.\par
+
+Some kernels may also benefit from implementation-defined “build options” to precisely control how the kernel is compiled. For example, for some implementations, it may be possible to instruct the kernel compiler to use a math library with lower precision and better performance.\par
+
+To provide more control over when and how a kernel is compiled, an 
+application can explicitly request that a kernel be compiled before the kernel is used, using specific build options. Then, the pre-compiled kernel can be submitted into a queue for execution, like usual. Figure 10-9 shows how this works.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 10-9. Compiling kernel lambdas with build options
+\begin{lstlisting}[caption={}]
+// This compiles the kernel named by the specified template
+// parameter using the "fast relaxed math" build option.
+program p(Q.get_context());
+
+p.build_with_kernel_type<class Add>("-cl-fast-relaxed-math");
+
+Q.submit([&](handler& h) {
+	accessor data_acc {data_buf, h};
+	
+	h.parallel_for<class Add>(
+		// This uses the previously compiled kernel.
+		p.get_kernel<class Add>(),
+		range{size},
+		[=](id<1> i) {
+			data_acc[i] = data_acc[i] + 1;
+	});
+});
+\end{lstlisting}
+
+In this example, a program object is created from a SYCL context, and the kernel defined by the specified template parameter is built using the build\_with\_kernel\_type function. For this example, the program build options -cl-fast-relaxed-math indicate that the kernel compiler can use a faster math library with relaxed precision, but the program build options are optional and may be omitted if no special program build options are required. The template parameter naming the kernel lambda is required in this case, to identify which kernel to compile.\par
+
+A program object may also be created from a context and a specific list of devices, rather than all the devices in the context, allowing a program object for one set of devices to be compiled with different build options than those of another program object for a different set of devices.\par
+
+The previously compiled kernel is passed to the parallel\_for using the get\_kernel function in addition to the usual kernel lambda expression. This ensures that the previously compiled kernel that was built using the relaxed math library gets used. If the previously compiled kernel is not passed to the parallel\_for, then the kernel will be compiled again, without any special build options. This may be functionally correct, but it is certainly not the intended behavior!\par
+
+In many cases, such as in the simple example shown earlier, these additional steps are unlikely to produce a noticeable change in application behavior and may be omitted for clarity, but they should be considered when tuning an application for performance.\par
+
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=IMPROVING INTEROPERABILITY AND PROGRAM OBJECT MANAGEMENT]
+Although the SYCL interfaces for interoperability and program object management described in this chapter are useful and functional, they are likely to be improved and enhanced in future versions of SYCL and DPC++. Please refer to the latest SYCL and DPC++ documentation to find updates that were not available or not stable enough to include in this book!
+\end{tcolorbox}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

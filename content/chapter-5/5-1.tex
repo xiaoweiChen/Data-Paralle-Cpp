@@ -1,0 +1,33 @@
+A core aspect of C++ error handling is that if we do nothing to handle an error that has been detected (thrown), then the application will terminate and indicate that something went wrong. This behavior allows us to write applications without focusing on error management and still be confident that errors will somehow be signaled to a developer or user. We’re not suggesting that we should ignore error handling, of course! Production applications should be written with error management as a core part of the architecture, but applications often start development without such a focus. C++ aims to make code which doesn’t handle errors still able to observe errors, even when they are not dealt with explicitly.\par
+
+Since SYCL is Data Parallel C++, the same philosophy holds: if we do nothing in our code to manage errors and an error is detected, an abnormal termination of the program will occur to let us know that something bad happened. Production applications should of course consider error management as a core part of the software architecture, not only reporting but often also recovering from error conditions.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+If we don’t add any error management code and an error occurs, we will still see an abnormal program termination which is an indication to dig deeper.
+\end{tcolorbox}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

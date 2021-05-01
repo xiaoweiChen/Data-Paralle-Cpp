@@ -1,0 +1,298 @@
+In this section, we dive into a topic that causes confusion for new users of SYCL and that leads to the most common (in our experience) first bugs that we encounter as new SYCL developers.\par
+
+Put simply, when we create a buffer from a host memory allocation (e.g., array or vector), we can’t access the host allocation directly until the buffer has been destroyed. The buffer owns any host allocation passed to it at construction time, for the buffer’s entire lifetime. There are rarely used mechanisms that do let us access the host allocation while a buffer is still alive (e.g., buffer mutex), but those advanced features don’t help with the early bugs described here.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+If we construct a buffer from a host memory allocation, we must not directly access the host allocation until the buffer has been destroyed! While it is alive, the buffer owns the allocation.
+\end{tcolorbox}
+
+A common bug appears when the host program accesses a host allocation while a buffer still owns that allocation. All bets are off once this happens, because we don’t know what the buffer is using the allocation for. Don’t be surprised if the data is incorrect—the kernels that we’re trying to read the output from may not have even started running yet! As described in Chapters 3 and 8, SYCL is built around an asynchronous task graph mechanism. Before we try to use output data from task graph operations, we need to be sure that we have reached synchronization points in the code where the graph has executed and made data available to the host. Both buffer destruction and creation of host accessors are operations that cause this synchronization.\par
+
+Figure 13-6 shows a common pattern of code that we often write, where we cause a buffer to be destroyed by closing the block scope that it was defined within. By causing the buffer to go out of scope and be destroyed, we can then safely read kernel results through the original host allocation that was passed to the buffer constructor.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 13-6. Common pattern—buffer creation from a host allocation
+\begin{lstlisting}[caption={}]
+constexpr size_t N = 1024;
+
+// Set up queue on any available device
+queue q;
+
+// Create host containers to initialize on the host
+std::vector<int> in_vec(N), out_vec(N);
+
+// Initialize input and output vectors
+for (int i=0; i < N; i++) in_vec[i] = i;
+std::fill(out_vec.begin(), out_vec.end(), 0);
+
+// Nuance: Create new scope so that we can easily cause
+// buffers to go out of scope and be destroyed
+{
+	
+	// Create buffers using host allocations (vector in this case)
+	buffer in_buf{in_vec}, out_buf{out_vec};
+	
+	// Submit the kernel to the queue
+	q.submit([&](handler& h) {
+		accessor in{in_buf, h};
+		accessor out{out_buf, h};
+		
+		h.parallel_for(range{N}, [=](id<1> idx) {
+			out[idx] = in[idx];
+		});
+	});
+
+	// Close the scope that buffer is alive within! Causes
+	// buffer destruction which will wait until the kernels
+	// writing to buffers have completed, and will copy the
+	// data from written buffers back to host allocations (our
+	// std::vectors in this case). After the buffer destructor
+	// runs, caused by this closing of scope, then it is safe
+	// to access the original in_vec and out_vec again!
+}
+
+// Check that all outputs match expected value
+// WARNING: The buffer destructor must have run for us to safely
+// use in_vec and out_vec again in our host code. While the buffer
+// is alive it owns those allocations, and they are not safe for us
+// to use! At the least they will contain values that are not up to
+// date. This code is safe and correct because the closing of scope
+// above has caused the buffer to be destroyed before this point
+// where we use the vectors again.
+for (int i=0; i<N; i++) 
+	std::cout << "out_vec[" << i << "]=" << out_vec[i] << "\n";
+\end{lstlisting}
+
+There are two common reasons to associate a buffer with existing host memory like in Figure 13-6:\par
+
+\begin{enumerate}
+	\item To simplify initialization of data in a buffer. We can just construct the buffer from host memory that we(or another part of the application) have already initialized.
+	\item To reduce the characters typed because closing scope with a ‘\}’ is slightly more concise (though more error prone) than creating a host\_accessor to the buffer.
+\end{enumerate}
+
+If we use a host allocation to dump or verify the output values from a kernel, we need to put the buffer allocation into a block scope (or other scopes) so that we can control when it is destroyed. We must then make sure that the buffer is destroyed before we access the host allocation to obtain the kernel output. Figure 13-6 shows this done correctly, while Figure 13-7 shows a common bug where the output is accessed while the buffer is still alive.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+Advanced users may prefer to use buffer destruction to return result data from kernels into a host memory allocation. But for most users, and especially new developers, it is recommended to use scoped host accessors.
+\end{tcolorbox}
+
+\hspace*{\fill} \par %插入空行
+Figure 13-7. Common bug: Reading data directly from host allocation during buffer lifetime
+\begin{lstlisting}[caption={}]
+constexpr size_t N = 1024;
+
+// Set up queue on any available device
+queue q;
+
+// Create host containers to initialize on the host
+std::vector<int> in_vec(N), out_vec(N);
+
+// Initialize input and output vectors
+for (int i=0; i < N; i++) in_vec[i] = i;
+std::fill(out_vec.begin(), out_vec.end(), 0);
+
+// Create buffers using host allocations (vector in this case)
+buffer in_buf{in_vec}, out_buf{out_vec};
+
+// Submit the kernel to the queue
+q.submit([&](handler& h) {
+	accessor in{in_buf, h};
+	accessor out{out_buf, h};
+	
+	h.parallel_for(range{N}, [=](id<1> idx) {
+		out[idx] = in[idx];
+	});
+});
+
+// BUG!!! We're using the host allocation out_vec, but the buffer out_buf
+// is still alive and owns that allocation! We will probably see the
+// initialiation value (zeros) printed out, since the kernel probably
+// hasn't even run yet, and the buffer has no reason to have copied
+// any output back to the host even if the kernel has run.
+for (int i=0; i<N; i++)
+	std::cout << "out_vec[" << i << "]=" << out_vec[i] << "\n";
+\end{lstlisting}
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+Prefer to use host accessors instead of scoping of buffers, especially when getting started.
+\end{tcolorbox}
+
+To avoid these bugs, we recommend using host accessors instead of buffer scoping when getting started with SYCL and DPC++. Host accessors provide access to a buffer from the host, and once their constructor has finished running, we are guaranteed that any previous writes (e.g., from kernels submitted before the host\_accessor was created) to the buffer have executed and are visible. This book uses a mixture of both styles (i.e., host accessors and host allocations passed to the buffer constructor) to provide familiarity with both. Using host accessors tends to be less error prone when getting started. Figure 13-8 shows how a host accessor can be used to read output from a kernel, without destroying the buffer first.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 13-8. Recommendation: Use a host accessor to read kernel results
+\begin{lstlisting}[caption={}]
+constexpr size_t N = 1024;
+
+// Set up queue on any available device
+queue q;
+
+// Create host containers to initialize on the host
+std::vector<int> in_vec(N), out_vec(N);
+
+// Initialize input and output vectors
+for (int i=0; i < N; i++) in_vec[i] = i;
+std::fill(out_vec.begin(), out_vec.end(), 0
+);
+// Create buffers using host allocations (vector in this case)
+buffer in_buf{in_vec}, out_buf{out_vec};
+
+// Submit the kernel to the queue
+q.submit([&](handler& h) {
+	accessor in{in_buf, h};
+	accessor out{out_buf, h};
+	
+	h.parallel_for(range{N}, [=](id<1> idx) {
+		out[idx] = in[idx];
+	});
+});
+
+// Check that all outputs match expected value
+// Use host accessor! Buffer is still in scope / alive
+host_accessor A{out_buf};
+
+for (int i=0; i<N; i++) std::cout << "A[" << i << "]=" << A[i] << "\n";
+\end{lstlisting}
+
+Host accessors can be used whenever a buffer is alive, such as at both ends of a typical buffer lifetime—for initialization of the buffer content and for reading of results from our kernels. Figure 13-9 shows an example of this pattern.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 13-9. Recommendation: Use host accessors for buffer initialization and reading of results
+\begin{lstlisting}[caption={}]
+constexpr size_t N = 1024;
+
+// Set up queue on any available device
+queue q;
+
+// Create buffers of size N
+buffer<int> in_buf{N}, out_buf{N};
+
+// Use host accessors to initialize the data
+{ // CRITICAL: Begin scope for host_accessor lifetime!
+	host_accessor in_acc{ in_buf }, out_acc{ out_buf };
+	for (int i=0; i < N; i++) {
+		in_acc[i] = i;
+		out_acc[i] = 0;
+	}
+} // CRITICAL: Close scope to make host accessors go out of scope!
+
+// Submit the kernel to the queue
+q.submit([&](handler& h) {
+	accessor in{in_buf, h};
+	accessor out{out_buf, h};
+	
+	h.parallel_for(range{N}, [=](id<1> idx) {
+		out[idx] = in[idx];
+	});
+});
+
+// Check that all outputs match expected value
+// Use host accessor! Buffer is still in scope / alive
+host_accessor A{out_buf};
+
+for (int i=0; i<N; i++) std::cout << "A[" << i << "]=" << A[i] << "\n";
+\end{lstlisting}
+
+One final detail to mention is that host accessors sometime cause an opposite bug in applications, because they also have a lifetime. While a host\_accessor to a buffer is alive, the runtime will not allow that buffer to be used by any devices! The runtime does not analyze our host programs to determine when they might access a host accessor, so the only way for it to know that the host program has finished accessing a buffer is for the host\_accessor destructor to run. As shown in Figure 13-10, this can cause applications to appear to hang if our host program is waiting for some kernels to run (e.g., queue::wait() or acquiring another host accessor) and if the DPC++ runtime is waiting for our earlier host accessor(s) to be destroyed before it can run kernels that use a buffer.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+When using host accessors, be sure that they are destroyed when no longer needed to unlock use of the buffer by kernels or other host accessors.
+\end{tcolorbox}
+
+\hspace*{\fill} \par %插入空行
+Figure 13-10. Bug (hang!) from improper use of host\_accessors
+\begin{lstlisting}[caption={}]
+constexpr size_t N = 1024;
+
+// Set up queue on any available device
+queue q;
+
+// Create buffers using host allocations (vector in this case)
+buffer<int> in_buf{N}, out_buf{N};
+
+// Use host accessors to initialize the data
+host_accessor in_acc{ in_buf }, out_acc{ out_buf };
+for (int i=0; i < N; i++) {
+	in_acc[i] = i;
+	out_acc[i] = 0;
+}
+
+// BUG: Host accessors in_acc and out_acc are still alive!
+// Later q.submits will never start on a device, because the
+// runtime doesn't know that we've finished accessing the
+// buffers via the host accessors. The device kernels
+// can't launch until the host finishes updating the buffers,
+// since the host gained access first (before the queue submissions).
+// This program will appear to hang! Use a debugger in that case.
+
+// Submit the kernel to the queue
+q.submit([&](handler& h) {
+	accessor in{in_buf, h};
+	accessor out{out_buf, h};
+	
+	h.parallel_for(range{N}, [=](id<1> idx) {
+		out[idx] = in[idx];
+	});
+});
+
+std::cout <<
+	"This program will deadlock here!!! Our host_accessors used\n"
+	" for data initialization are still in scope, so the runtime won't\n"
+	" allow our kernel to start executing on the device (the host could\n"
+	" still be initializing the data that is used by the kernel). "
+	" The next line\n of code is acquiring a host accessor for"
+	" the output, which will wait for\n the kernel to run first. "
+	" Since in_acc and out_acc have not been\n"
+	" destructed, the kernel is not safe for the runtime to run, "
+	" and we deadlock.\n";
+	
+// Check that all outputs match expected value
+// Use host accessor! Buffer is still in scope / alive
+host_accessor A{out_buf};
+
+for (int i=0; i<N; i++) std::cout << "A[" << i << "]=" << A[i] << "\n";
+\end{lstlisting}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

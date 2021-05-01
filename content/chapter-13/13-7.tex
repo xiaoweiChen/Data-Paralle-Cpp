@@ -1,0 +1,74 @@
+When we want to call functions inside a kernel that are defined in a different translational unit, those functions need to be labeled with SYCL\_EXTERNAL. Without this attribute, the compiler will only compile a function for use outside of device code (making it illegal to call that external function from within device code).\par
+
+There are a few restrictions on SYCL\_EXTERNAL functions that do not apply if we define the function within the same translation unit:\par
+
+\begin{itemize}
+	\item SYCL\_EXTERNAL can only be used on functions.
+	\item SYCL\_EXTERNAL functions cannot use raw pointers as parameter or return types. Explicit pointer classes must be used instead.
+	\item SYCL\_EXTERNAL functions cannot call a parallel\_for\_work\_item method.
+	\item SYCL\_EXTERNAL functions cannot be called from within a parallel\_for\_work\_group scope.
+\end{itemize}
+
+If we try to compile a kernel that is calling a function that is not inside the same translation unit and is not declared with SYCL\_EXTERNAL, then we can expect a compile error similar to\par
+
+\begin{tcolorbox}[colback=white,colframe=black]
+error: SYCL kernel cannot call an undefined function without SYCL\_EXTERNAL attribute
+\end{tcolorbox}
+
+If the function itself is compiled without a SYCL\_EXTERNAL attribute, we can expect to see either a link or runtime failure such as\par
+
+\begin{tcolorbox}[colback=white,colframe=black]
+terminate called after throwing an instance of 'cl::sycl::compile\_program\_error' ...error: undefined reference to ...
+\end{tcolorbox}
+
+DPC++ supports SYCL\_EXTERNAL. SYCL does not require compilers to support SYCL\_EXTERNAL; it is an optional feature in general.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Performance Implications of Multiple Translation Units}
+
+An implication of the compilation model (see earlier in this chapter) is that if we scatter our device code into multiple translation units, that may trigger more invocations of just-in-time compilation than if our device code is co-located. This is highly implementation dependent and is subject to changes over time as implementations mature.\par
+
+Such effects on performance are minor enough to ignore through most of our development work, but when we get to fine-tuning to maximize code performance, there are two things we can consider to mitigate these effects: (1) group device code together in the same translation unit, and (2) use ahead-of-time compilation to avoid just-in-time compilation effects entirely. Since both of these require some effort on our part, we only do this when we have finished our development and are trying to squeeze every ounce of performance out of our application. When we do resort to this detailed tuning, it is worth testing changes to observe their effect on the exact SYCL implementation that we are using.\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

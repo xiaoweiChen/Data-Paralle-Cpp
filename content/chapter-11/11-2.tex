@@ -1,0 +1,19 @@
+Vector types in SYCL are cross-platform class templates that work efficiently on devices as well as in host C++ code and allow sharing of vectors between the host and its devices. Vector types include methods that allow construction of a new vector from a swizzled set of component elements, meaning that elements of the new vector can be picked in an arbitrary order from elements of the old vector. vec is a vector type that compiles down to the built-in vector types on target device backends, where possible, and provides compatible support on the host.\par
+
+The vec class is templated on its number of elements and its element type. The number of elements parameter, numElements, can be one of 1,2, 3, 4, 8, or 16. Any other value will produce a compilation failure. The element type parameter, dataT, must be one of the basic scalar types supported in device code.\par
+
+The SYCL vec class template provides interoperability with the underlying vector type defined by vector\_t which is available only when compiled for the device. The vec class can be constructed from an instance of vector\_t and can implicitly convert to an instance of vector\_t in order to support interoperability with native SYCL backends from a kernel function (e.g., OpenCL backends). An instance of the vec class template can also be implicitly converted to an instance of the data type when the number of elements is 1 in order to allow single-element vectors and scalars to be easily interchangeable.\par
+
+For our programming convenience, SYCL provides a number of type aliases of the form using <type><elems> = vec< <storage-type>, <elems> >, where <elems> is 2, 3, 4, 8, and 16 and pairings of <type> and <storage-type> for integral types are char$\Leftrightarrow$int8\_t, uchar $\Leftrightarrow$ uint8\_t, short$\Leftrightarrow$int16\_t, ushort$\Leftrightarrow$uint16\_t, int$\Leftrightarrow$int32\_t, uint$\Leftrightarrow$uint32\_t, long$\Leftrightarrow$int64\_t, and ulong$\Leftrightarrow$uint64\_t and for floatingpoint types half, float, and double. For example, uint4 is an alias to vec<uint32\_t, 4> and float16 is an alias to vec<float, 16>.\par
+
+
+
+
+
+
+
+
+
+
+
+

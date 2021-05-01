@@ -1,0 +1,213 @@
+The functionality of vector types is exposed through the class vec. The vec class represents a set of data elements that are grouped together. The interfaces of the constructors, member functions, and non-member functions of the vec class template are described in Figures 11-1, 11-4, and 11-5.\par
+
+The XYZW members listed in Figure 11-2 are available only when numElements <= 4. RGBA members are available only when numElements == 4.\par
+
+The members lo, hi, odd, and even shown in Figure 11-3 are available only when numElements > 1.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 11-1. vec class declaration and member functions
+\begin{lstlisting}[caption={}]
+vec Class declaration
+template <typename dataT, int numElements> class vec; 
+vec Class Members 
+using element_type = dataT; 
+vec(); 
+explicit vec(const dataT &arg); 
+template <typename … argTN> vec(const argTN&... args); 
+vec(const vec<dataT, numElements> &rhs); 
+
+#ifdef __SYCL_DEVICE_ONLY__ // available on device only
+vec(vector_t openclVector); 
+operator vector_t() const; 
+#endif
+
+operator dataT() const; // Available only if numElements == 1 
+size_t get_count() const; 
+size_t get_size() const;
+
+template <typename convertT, rounding_mode roundingMode> 
+vec<convertT, numElements> convert() const; 
+template <typename asT> asT as() const;
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+Figure 11-2. swizzled\_vec member functions
+\begin{lstlisting}[caption={}]
+template<int… swizzleindexes>
+__swizzled_vec__ swizzle() const; 
+__swizzled_vec__ XYZW_ACCESS() const; 
+__swizzled_vec__ RGBA_ACCESS() const; 
+__swizzled_vec__ INDEX_ACCESS() const; 
+
+#ifdef SYCL_SIMPLE_SWIZZLES
+// Available only when numElements <= 4 
+// XYZW_SWIZZLE is all permutations with repetition of: 
+// x, y, z, w, subject to numElements
+__swizzled_vec__ XYZW_SWIZZLE() const;
+
+// Available only when numElements == 4 
+// RGBA_SWIZZLE is all permutations with repetition of: r, g, b, a. 
+__swizzled_vec__ RGBA_SWIZZLE() const; 
+#endif
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+Figure 11-3. vec operator interface
+\begin{lstlisting}[caption={}]
+__swizzled_vec__ lo() const; 
+__swizzled_vec__ hi() const; 
+__swizzled_vec__ odd() const; 
+__swizzled_vec__ even() const; 
+
+template <access::address_space addressSpace> 
+	void load(size_t offset, mult_ptr ptr<dataT, addressSpace> ptr); 
+template <access::address_space addressSpace>
+	void store(size_t offset, mult_ptr ptr<dataT, addressSpace> ptr) const;
+	
+vec<dataT, numElements> &operator=(const vec<dataT, numElements> &rhs);
+vec<dataT, numElements> &operator=(const dataT &rhs); 
+vec<RET, numElements> operator!(); 
+
+// Not available for floating point types:
+vec<dataT, numElements> operator~();
+\end{lstlisting}
+
+
+\hspace*{\fill} \par %插入空行
+Figure 11-4. vec member functions
+\begin{table}[H]
+	\begin{tabular}{|l|l|l|}
+		\hline
+		Member function with OP variable                                                                                                                                     & \begin{tabular}[c]{@{}l@{}}For all\\ types, OP\\ may be\end{tabular}                                                                 & \begin{tabular}[c]{@{}l@{}}For\\ Integral\\ types, Op\\ may be\end{tabular}                                                                         \\ \hline
+		\begin{tabular}[c]{@{}l@{}}vec\textless{}dataT, numElements\textgreater\\ operatorOP(const vec\textless{}dataT, numElements\textgreater{}\&rhs) const;\end{tabular}  & \multirow{2}{*}{+,-,*,/}                                                                                                             & \multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}\%,\&,|,\textasciicircum{},\\ \textless{}\textless{},\textgreater{}\textgreater{}\end{tabular}}          \\ \cline{1-1}
+		\begin{tabular}[c]{@{}l@{}}vec\textless{}dataT, numElements\textgreater\\ operatorOP(const dataT \&rhs) const\end{tabular}                                           &                                                                                                                                      &                                                                                                                                                     \\ \hline
+		\begin{tabular}[c]{@{}l@{}}vec\textless{}dataT, numElements\textgreater\\ \&operatorOP(const vec\textless{}dataT, numelements\textgreater \&rhs) const;\end{tabular} & \multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}+=,-=,*=,\\ /=\end{tabular}}                                                              & \multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}\%=,\&=,|=,\\ \textasciicircum{}=,\textless{}\textless{}=,\\ \textgreater{}\textgreater{}=\end{tabular}} \\ \cline{1-1}
+		\begin{tabular}[c]{@{}l@{}}vec\textless{}dataT, numElements\textgreater\\ \&operatorOP(const dataT \&rhs) const;\end{tabular}                                        &                                                                                                                                      &                                                                                                                                                     \\ \hline
+		\begin{tabular}[c]{@{}l@{}}vec\textless{}RET, numElements\textgreater\\ operatorOP(const vec\textless{}dataT,numElements\textgreater \&rhs) const;\end{tabular}      & \multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}\&\&,||,==,\\ !=,\textless{},\textgreater{},\textless{}=,\\ \textgreater{}=\end{tabular}} & \multirow{2}{*}{}                                                                                                                                   \\ \cline{1-1}
+		\begin{tabular}[c]{@{}l@{}}vec\textless{}RET, numElements\textgreater\\ operatorOP(const dataT \&rhs) const;\end{tabular}                                            &                                                                                                                                      &                                                                                                                                                     \\ \hline
+		\begin{tabular}[c]{@{}l@{}}vec\textless{}dataT, numElements\textgreater\\ \&operatorOP() const;\end{tabular}                                                         & \multirow{2}{*}{++,--}                                                                                                               & \multirow{2}{*}{}                                                                                                                                   \\ \cline{1-1}
+		\begin{tabular}[c]{@{}l@{}}vec\textless{}dataT, numElements\textgreater\\ operatorOP(int) const;\end{tabular}                                                        &                                                                                                                                      &                                                                                                                                                     \\ \hline
+	\end{tabular}
+\end{table}
+
+
+\hspace*{\fill} \par %插入空行
+Figure 11-5. vec non-member functions
+\begin{table}[H]
+	\begin{tabular}{|l|l|l|}
+		\hline
+		Non-member function with OP variable                                                                                                                                                                                                                 & \begin{tabular}[c]{@{}l@{}}For all\\ types, Op\\ may be\end{tabular}                                                & \begin{tabular}[c]{@{}l@{}}For non\\ floating-point\\ types, OP may be\end{tabular} \\ \hline
+		\begin{tabular}[c]{@{}l@{}}template\textless{}typename dataT, int numElements\textgreater\\ vec\textless{}dataT, numElements\textgreater\\ operatorOP(const dataT, \&lhs,\\ const vec\textless{}dataT, numElements\textgreater \& rhs);\end{tabular} & +,-,*,/                                                                                                             & \%,\&,|,\textasciicircum{},\textless{}\textless{}.\textgreater{}\textgreater{}      \\ \hline
+		\begin{tabular}[c]{@{}l@{}}template\textless{}typename dataT, int numElements\textgreater\\ vec\textless{}RET, numElements\textgreater\\ operatorOP(const dataT \&lhs,\\ const vec\textless{}dataT, numElements\textgreater \&rhs);`\end{tabular}    & \begin{tabular}[c]{@{}l@{}}\&\&,||,==,\\ !=,\textless{},\textgreater{},\textless{}=,\\ \textgreater{}=\end{tabular} &                                                                                     \\ \hline
+	\end{tabular}
+\end{table}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Load and Store Member Functions}
+
+Vector load and store operations are members of the vec class for loading and storing the elements of a vector. These operations can be to or from an array of elements of the same type as the channels of the vector. An example is shown in Figure 11-6.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 11-6. Use of load and store member functions.
+\begin{lstlisting}[caption={}]
+buffer fpBuf(fpData);
+queue Q;
+Q.submit([&](handler& h){
+	accessor buf{fpBuf, h};
+	
+	h.parallel_for(size, [=](id<1> idx){
+		size_t offset = idx[0]/16;
+		float16 inpf16;
+		inpf16.load(offset, buf.get_pointer());
+		float16 result = inpf16 * 2.0f;
+		result.store(offset, buf.get_pointer());
+	});
+});
+\end{lstlisting}
+
+In the vec class, dataT and numElements are template parameters that reflect the component type and dimensionality of a vec.\par
+
+The load() member function template will read values of type dataT from the memory at the address of the multi\_ptr, offset in elements of dataT by numElements*offset, and write those values to the channels of the vec.\par
+
+The store() member function template will read channels of the vecand write those values to the memory at the address of the multi\_ptr, offset in elements of dataT by numElements*offset.\par
+
+The parameter is a multi\_ptr rather than an accessor so that locally created pointers can also be used as well as pointers passed from the host.\par
+
+The data type of the multi\_ptr is dataT, the data type of the components of the vec class specialization. This requires that the pointer passed to either load() or store() must match the type of the vec instance itself.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Swizzle Operations}
+
+In graphics applications, swizzling means rearranging the data elements of a vector. For example, if a = \{1, 2, 3, 4,\}, and knowing that the components of a four-element vector can be referred to as \{x, y, z, w\}, we could write b = a.wxyz(). The result in the variable b would be \{4, 1, 2, 3\}. This form of code is common in GPU applications where there is efficient hardware for such operations. Swizzles can be performed in two ways:\par
+
+\begin{itemize}
+	\item By calling the swizzle member function of a vec, which takes a variadic number of integer template arguments between 0 and numElements-1, specifying swizzle indices
+	\item By calling one of the simple swizzle member functions such as XYZW\_SWIZZLE and RGBA\_SWIZZLE
+\end{itemize}
+
+Note that the simple swizzle functions are only available for up to four-element vectors and are only available when the macro SYCL\_SIMPLE\_SWIZZLES is defined before including sycl.hpp. In both cases, the return type is always an instance of \_\_swizzled\_vec\_\_, an implementationdefined temporary class representing a swizzle of the original vec instance. Both the swizzle member function template and the simple swizzle member functions allow swizzle indexes to be repeated. Figure 11-7 shows a simple usage of \_\_swizzled\_vec\_\_.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 11-7. Example of using the \_\_swizzled\_vec\_\_ class
+\begin{lstlisting}[caption={}]
+constexpr int size = 16;
+
+std::array<float4, size> input;
+for (int i = 0; i < size; i++)
+	input[i] = float4(8.0f, 6.0f, 2.0f, i);
+
+buffer B(input);
+
+queue Q;
+Q.submit([&](handler& h) {
+	accessor A{B, h};
+	
+	// We can access the individual elements of a vector by using 
+	// the functions x(), y(), z(), w() and so on.
+	//
+	// "Swizzles" can be used by calling a vector member equivalent
+	// to the swizzle order that we need, for example zyx() or any
+	// combination of the elements. The swizzle need not be the same
+	// size as the original vector.
+	h.parallel_for(size, [=](id<1> idx) {
+		auto b = A[idx];
+		float w = b.w();
+		float4 sw = b.xyzw();
+		sw = b.xyzw() * sw.wzyx();;
+		sw = sw + w;
+		A[idx] = sw.xyzw();
+	});
+});
+\end{lstlisting}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

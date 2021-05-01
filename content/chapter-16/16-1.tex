@@ -1,0 +1,29 @@
+DPC++ paves a portable path to parallelize our applications or to develop parallel applications from scratch. The application performance of a program, when run on CPUs, is largely dependent upon the following factors:\par
+
+\begin{itemize}
+	\item The underlying performance of the single invocation and execution of kernel code
+	\item The percentage of the program that runs in a parallel kernel and its scalability
+	\item CPU utilization, effective data sharing, data locality, and load balancing
+	\item The amount of synchronization and communication between work-items
+	\item The overhead introduced to create, resume, manage, suspend, destroy, and synchronize the threads that work-items execute on, which is made worse by the 
+	number of serial-to-parallel or parallel-to-serial transitions
+	\item Memory conflicts caused by shared memory or falsely shared memory
+	\item Performance limitations of shared resources such as memory, write combining buffers, and memory bandwidth
+\end{itemize}
+
+In addition, as with any processor type, CPUs may differ from vendor to vendor or even from product generation to product generation. The best practices for one CPU may not be best practices for a different CPU and configuration.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+To achieve optimal performance on a CPU, understand as many characteristics of the CPU architecture as possible!
+\end{tcolorbox}
+
+
+
+
+
+
+
+
+
+
+

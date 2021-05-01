@@ -1,0 +1,64 @@
+Named function objects, also known as functors, are an established pattern in C++ that allows operating on an arbitrary collection of data while maintaining a well-defined interface. When used to represent a kernel, the member variables of a named function object define the state that the kernel may operate on, and the overloaded function call operator() is invoked for each work-item in the parallel execution space.\par
+
+Named function objects require more code than lambda expressions to express a kernel, but the extra verbosity provides more control and additional capabilities. It may be easier to analyze and optimize kernels expressed as named function objects, for example, since any buffers and data values used by the kernel must be explicitly passed to the kernel, rather than captured automatically.\par
+
+Finally, because named function objects are just like any other C++ class, kernels expressed as named function objects may be templated, unlike kernels expressed as lambda expressions. Kernels expressed as named function objects may also be easier to reuse and may be shipped as part of a separate header file or library.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Elements of a Kernel Named Function Object}
+
+The code in Figure 10-6 describes the elements of a kernel represented as a named function object.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 10-6. Kernel as a named function object
+\begin{lstlisting}[caption={}]
+class Add {
+public:
+	Add(accessor<int> acc) : data_acc(acc) {}
+	void operator()(id<1> i) {
+		data_acc[i] = data_acc[i] + 1;
+	}
+
+private:
+	accessor<int> data_acc;
+};
+
+int main() {
+	constexpr size_t size = 16;
+	std::array<int, size> data;
+	
+	for (int i = 0; i < size; i++)
+		data[i] = i;
+		
+	{
+		buffer data_buf{data};
+		
+		queue Q{ host_selector{} };
+		std::cout << "Running on device: "
+				  << Q.get_device().get_info<info::device::name>() << "\n";
+				  
+		Q.submit([&](handler& h) {
+			accessor data_acc {data_buf, h};
+			h.parallel_for(size, Add(data_acc));
+		});
+	}
+});
+\end{lstlisting}
+
+When a kernel is expressed as a named function object, the named function object type must follow C++11 rules to be trivially copyable. Informally, this means that the named function objects may be safely copied byte by byte, enabling the member variables of the named function object to be passed to and accessed by kernel code executing on a device.\par
+
+The arguments to the overloaded function call operator() depend on how the kernel is launched, just like for kernels expressed as lambda expressions.\par
+
+Because the function object is named, the host code compiler can use the function object type to associate with the kernel code produced by the device code compiler, even if the function object is templated. As a result, no additional kernel name template parameter is needed to name a kernel function object.\par
+
+
+
+
+
+
+
+
+
+
+
+

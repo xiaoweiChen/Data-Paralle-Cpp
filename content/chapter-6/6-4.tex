@@ -1,0 +1,180 @@
+Now that we understand how to allocate memory using USM, we will discuss how data is managed. We can look at this in two pieces: data initialization and data movement.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Initialization}
+
+Data initialization concerns filling our memory with values before we perform computations on it. One example of a common initialization pattern is to fill an allocation with zeroes before it is used. If we were to do this using USM allocations, we could do it in a variety of ways. First, we could write a kernel to do this. If our data set is particularly large or the initialization requires complex calculations, this is a reasonable way to go since the initialization can be performed in parallel (and it makes the initialized data ready to go on the device). Second, we could implement this as a loop over all the elements of an allocation that sets each to zero. However, there is potentially a problem with this approach. A loop would work fine for host and shared allocations since these are accessible on the host. However, since device allocations are not accessible on the host, a loop in host code would not be able to write to them. This brings us to the third option.\par
+
+The memset function is designed to efficiently implement this initialization pattern. USM provides a version of memset that is a member function of both the handler and queue classes. It takes three arguments: the pointer representing the base address of the memory we want to set, a byte value representing the byte pattern to set, and the number of bytes to set to that pattern. Unlike a loop on the host, memset happens in parallel and also works with device allocations.\par
+
+While memset is a useful operation, the fact that it only allows us to specify a byte pattern to fill into an allocation is rather limiting. USM also provides a fill method (as a member of the handler and queue classes) that lets us fill memory with an arbitrary pattern. The fill method is a function templated on the type of the pattern we want to write into the allocation. Template it with an int, and we can fill an allocation with the number “42”. Similar to memset, fill takes three arguments: the pointer to the base address of the allocation to fill, the value to fill, and the number of times we want to write that value into the allocation.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Data Movement}
+
+Data movement is probably the most important aspect of USM to understand. If the right data is not in the right place at the right time, our program will produce incorrect results. USM defines two strategies that we can use to manage data: explicit and implicit. The choice of which strategy we want to use is related to the types of USM allocations our hardware supports or that we want to use.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Explicit}
+
+The first strategy USM offers is explicit data movement (Figure 6-6). Here, we must explicitly copy data between the host and device. We can do this by invoking the memcpy method, found on both the handler and queue classes. The memcpy method takes three arguments: a pointer to the destination memory, a pointer to the source memory, and the number of bytes to copy between host and device. We do not need to specify in which direction the copy is meant to happen—this is implicit in the source and destination pointers.\par
+
+The most common usage of explicit data movement is copying to or from device allocations in USM since they are not accessible on the host. Having to insert explicit copying of data does require effort on our part. Additionally, it can be a source of bugs: copies could be accidentally omitted, an incorrect amount of data could be copied, or the source or destination pointer could be incorrect.\par
+
+However, explicit data movement does not only come with disadvantages. It gives us large advantage: total control over data movement. Control over both how much data is copied and when the data gets copied is very important for achieving the best performance in some applications. Ideally, we can overlap computation with data movement whenever possible, ensuring that the hardware runs with high utilization.\par
+
+The other types of USM allocations, host and shared, are both accessible on host and device and do not need to be explicitly copied to the device. This leads us to the other strategy for data movement in USM.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 6-6. USM explicit data movement example
+\begin{lstlisting}[caption={}]
+constexpr int N = 42;
+
+queue Q;
+
+std::array<int,N> host_array;
+int *device_array = malloc_device<int>(N, Q);
+for (int i = 0; i < N; i++)
+	host_array[i] = N;
+
+Q.submit([&](handler& h) {
+	// copy hostArray to deviceArray
+	h.memcpy(device_array, &host_array[0], N * sizeof(int));
+});
+
+Q.wait(); // needed for now (we learn a better way later)
+
+Q.submit([&](handler& h) {
+	h.parallel_for(N, [=](id<1> i) {
+		device_array[i]++;
+	});
+});
+
+Q.wait(); // needed for now (we learn a better way later)
+
+Q.submit([&](handler& h) {
+	// copy deviceArray back to hostArray
+	h.memcpy(&host_array[0], device_array, N * sizeof(int));
+});
+
+Q.wait(); // needed for now (we learn a better way later)
+
+free(device_array, Q);
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Implicit}
+
+The second strategy that USM provides is implicit data movement (example usage shown in Figure 6-7). In this strategy, data movement happens implicitly, that is, without requiring input from us. With implicit data movement, we do not need to insert calls to memcpy since we can directly access the data through the USM pointers wherever we want to use it. Instead, it becomes the job of the system to ensure that the data will be available in the correct location when it is being used.\par
+
+With host allocations, one could argue whether they really cause data movement. Since, by definition, they always remain pointers to host memory, the memory represented by a given host pointer cannot be stored on the device. However, data movement does occur as host allocations are accessed on the device. Instead of the memory being migrated to the device, the values we read or write are transferred over the appropriate interface to or from the kernel. This can be useful for streaming kernels where the data does not need to remain resident on the device.\par
+
+Implicit data movement mostly concerns USM shared allocations. This type of allocation is accessible on both host and device and, more importantly, can migrate between host and device. The key point is that this migration happens automatically, or implicitly, simply by accessing the data in a different location. Next, we will discuss several things to think about when it comes to data migration for shared allocations.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 6-7. USM implicit data movement example
+\begin{lstlisting}[caption={}]
+constexpr int N = 42;
+
+queue Q;
+
+int* host_array = malloc_host<int>(N, Q);
+int* shared_array = malloc_shared<int>(N, Q);
+for (int i = 0; i < N; i++)
+	host_array[i] = i;
+	
+Q.submit([&](handler& h) {
+	h.parallel_for(N, [=](id<1> i) {
+		// access sharedArray and hostArray on device
+		shared_array[i] = host_array[i] + 1;
+	});
+});
+
+Q.wait();
+
+free(shared_array, Q);
+free(host_array, Q);
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Migration}
+
+With explicit data movement, we control how much data movement occurs. With implicit data movement, the system handles this for us, but it might not do it as efficiently. The DPC++ runtime is not an oracle—it cannot predict what data an application will access before it does it. Additionally, pointer analysis remains a very difficult problem for compilers, which may not be able to accurately analyze and identify every allocation that might be used inside a kernel. Consequently, implementations of the mechanisms for implicit data movement may make different decisions based on the capabilities of the device that supports USM, which affects both how shared allocations can be used and how they perform.\par
+
+If a device is very capable, it might be able to migrate memory on demand. In this case, data movement would occur after the host or device attempts to access an allocation that is not currently in the desired location. On-demand data greatly simplifies programming as it provides the desired semantic that a USM shared pointer can be accessed anywhere and just work. If a device cannot support on-demand migration (Chapter 12 explains how to query a device for capabilities), it might still be able to guarantee the same semantics with extra restrictions on how shared pointers can be used.\par
+
+The restricted form of USM shared allocations governs when and where shared pointers may be accessed and how big shared allocations can be. If a device cannot migrate memory on demand, that means the runtime must be conservative and assume that a kernel might access any allocation in its device attached memory. This brings a couple of consequences.\par
+
+First, it means that the host and device should not try to access a shared allocation at the same time. Applications should instead alternate access in phases. The host can access an allocation, then a kernel can compute using that data, and finally the host can read the results.\par
+
+Without this restriction, the host is free to access different parts of an allocation than a kernel is currently touching. Such concurrent access typically happens at the granularity of a device memory page. The host could access one page, while the device accesses another. Atomically accessing the same piece of data will be covered in Chapter 19.\par
+
+The next consequence of this restricted form of shared allocations is that allocations are limited by the total amount of memory attached to a device. If a device cannot migrate memory on demand, it cannot migrate data to the host to make room to bring in different data. If a device does support on-demand migration, it is possible to oversubscribe its attached memory, allowing a kernel to compute on more data than the device’s memory could normally contain, although this flexibility may come with a performance penalty due to extra data movement.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Fine-Grained Control}
+
+When a device supports on-demand migration of shared allocations, data movement occurs after memory is accessed in a location where it is not currently resident. However, a kernel can stall while waiting for the data movement to complete. The next statement it executes may even cause more data movement to occur and introduce additional latency to the kernel execution.\par
+
+DPC++ gives us a way to modify the performance of the automatic migration mechanisms. It does this by defining two functions: prefetch and mem\_advise. Figure 6-8 shows a simple utilization of each. These functions let us give hints to the runtime about how kernels will access data so that the runtime can choose to start moving data before a kernel tries to access it. Note that this example uses the queue shortcut methods that directly invoke parallel\_for on the queue object instead of inside a lambda passed to the submit method (a command group).\par
+
+\hspace*{\fill} \par %插入空行
+Figure 6-8. Fine-grained control via prefetch and mem\_advise
+\begin{lstlisting}[caption={}]
+// Appropriate values depend on your HW
+constexpr int BLOCK_SIZE = 42;
+constexpr int NUM_BLOCKS = 2500;
+constexpr int N = NUM_BLOCKS * BLOCK_SIZE;
+
+queue Q;
+int *data = malloc_shared<int>(N, Q);
+int *read_only_data = malloc_shared<int>(BLOCK_SIZE, Q);
+
+// Never updated after initialization
+for (int i = 0; i < BLOCK_SIZE; i++)
+	read_only_data[i] = i;
+	
+// Mark this data as "read only" so the runtime can copy it
+// to the device instead of migrating it from the host.
+// Real values will be documented by your DPC++ backend.
+int HW_SPECIFIC_ADVICE_RO = 0;
+
+Q.mem_advise(read_only_data, BLOCK_SIZE, HW_SPECIFIC_ADVICE_RO);
+
+event e = Q.prefetch(data, BLOCK_SIZE);
+
+for (int b = 0; b < NUM_BLOCKS; b++) {
+	Q.parallel_for(range{BLOCK_SIZE}, e, [=](id<1> i) {
+		data[b * BLOCK_SIZE + i] += data[i];
+	});
+	if ((b + 1) < NUM_BLOCKS) {
+		// Prefetch next block
+		e = Q.prefetch(data + (b + 1) * BLOCK_SIZE, BLOCK_SIZE);
+	}
+}
+
+Q.wait();
+
+free(data, Q);
+free(read_only_data, Q);
+\end{lstlisting}
+
+The simplest way for us to do this is by invoking prefetch. This function is invoked as a member function of the handler or queue class and takes a base pointer and number of bytes. This lets us inform the runtime that certain data is about to be used on a device so that it can eagerly start migrating it. Ideally, we would issue these prefetch hints early enough such that by the time the kernel touches the data, it is already resident on the device, eliminating the latency we previously described.\par
+
+The other function provided by DPC++ is mem\_advise. This function allows us to provide device-specific hints about how memory will be used in kernels. An example of such possible advice that we could specify is that the data will only be read in a kernel, not written. In that case, the system could realize it could copy, or duplicate, the data on the device, so that the host’s version does not need to be updated after the kernel is complete. However, the advice passed to mem\_advise is specific to a particular device, so be sure to check the documentation for hardware before using this function.\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,236 @@
+Chapter 2 enumerates and explains five methods for choosing a device on which to execute. Essentially, Method\#1 was the least prescriptive run it somewhere, and we evolve to the most prescriptive Method\#5 which considered executing on a fairly precise model of a device from a family of devices. The enumerated methods in between gave a mix of flexibility and prescriptiveness. Figures 12-1, 12-2, and 12-3 help to illustrate how we can select a device.\par
+
+Figure 12-1 shows that even if we allow the implementation to select a default device for us (Method\#1 in Chapter 2), we can still query for information about the selected device.\par
+
+Figure 12-2 shows how we can try to set up a queue using a specific device (in this case, a GPU), but fall back explicitly on the host if no GPU is available. This gives us some control of our device choice. If we simply used a default queue, we could end up with an unexpected device type (e.g., a DSP, FPGA). If we explicitly want to use the host device if there is no GPU device, this code does that for us. Recall that the host device is always guaranteed to exist, so we do not need to worry about using the host\_selector.\par
+
+It is not recommended that we use the solution shown in Figure 12-2. In addition to appearing a little scary and error prone, Figure 12-2 does not give us control over what GPU is selected because it is implementation dependent which GPU we get if more than one is available. Despite being both instructive and functional, there is a better way. It is recommended that we write custom device selectors as shown in the next code example (Figure 12-3).\par
+
+
+\hspace*{\fill} \par %插入空行
+\textbf{Custom Device Selector}
+
+Figure 12-3 uses a custom device selector. Custom device selectors were first discussed in Chapter 2 as Method\#5 for choosing where our code runs (Figure 2-15). The custom device selector causes its operator(), shown in Figure 12-3, to be invoked for each device available to the application. The device selected is the one that receives the highest score.1 In this example, we will have a little fun with our selector:\par
+
+\begin{itemize}
+	\item Reject GPUs with a vendor name including the word “Martian” (return –1).
+	\item Favor GPUs with a vendor name including the word “ACME” (return 824).
+	\item Any other GPU is a good one (return 799).
+	\item We pick the host device if no GPU is present (return 99).
+	\item All other devices are ignored (return –1).
+\end{itemize}
+
+The next section, “Being Curious: get\_info<>,” dives into the rich information that get\_devices(), get\_platforms(), and get\_info<> offer. Those interfaces open up any type of logic we might want to utilize to pick our devices, including the simple vendor name checks shown in Figures 2-15 and 12-3.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 12-1. Device we have been assigned by default
+\begin{lstlisting}[caption={}]
+queue Q;
+
+std::cout << "By default, we are running on "
+	<< Q.get_device().get_info<info::device::name>() << "\n";
+
+// sample output:
+// By default, we are running on Intel(R) Gen9 HD Graphics NEO.
+\end{lstlisting}
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+Queries about devices rely on installed software (special user-level drivers), to respond regarding a device. SYCL and DPC++ rely on this, just as an operating system needs drivers to access hardware—it is not sufficient that the hardware simply be installed in a machine.
+\end{tcolorbox}
+
+\hspace*{\fill} \par %插入空行
+Figure 12-2. Using try-catch to select a GPU device if possible, host device if not
+\begin{lstlisting}[caption={}]
+auto GPU_is_available = false;
+
+try {
+	device testForGPU((gpu_selector()));
+	GPU_is_available = true;
+} catch (exception const& ex) {
+	std::cout << "Caught this SYCL exception: " << ex.what() << std::endl;
+}
+
+auto Q = GPU_is_available ? queue(gpu_selector()) : queue(host_selector());
+
+std::cout << "After checking for a GPU, we are running on:\n "
+	  	  << Q.get_device().get_info<info::device::name>() << "\n";
+
+// sample output using a system with a GPU:
+// After checking for a GPU, we are running on:
+// Intel(R) Gen9 HD Graphics NEO.
+// 
+// sample output using a system with an FPGA accelerator, but no GPU:
+// Caught this SYCL exception: No device of requested type available.
+// ...(CL_DEVICE_NOT_FOUND)
+// After checking for a GPU, we are running on:
+// SYCL host device.
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+Figure 12-3. Custom device selector—our preferred solution
+\begin{lstlisting}[caption={}]
+class my_selector : public device_selector {
+public:
+	int operator()(const device &dev) const {
+		int score = -1;
+		
+		// We prefer non-Martian GPUs, especially ACME GPUs
+		if (dev.is_gpu()) {
+			if (dev.get_info<info::device::vendor>().find("ACME")
+				!= std::string::npos) score += 25;
+			
+			if (dev.get_info<info::device::vendor>().find("Martian")
+				== std::string::npos) score += 800;
+		}
+	
+		// Give host device points so it is used if no GPU is available.
+		// Without these next two lines, systems with no GPU would select
+		// nothing, since we initialize the score to a negative number above.
+		if (dev.is_host()) score += 100;
+		return score;
+	}
+};
+
+int main() {
+	auto Q = queue{ my_selector{} };
+	
+	std::cout << "After checking for a GPU, we are running on:\n "
+			  << Q.get_device().get_info<info::device::name>() << "\n";
+			  
+	// Sample output using a system with a GPU:
+	// After checking for a GPU, we are running on:
+	// Intel(R) Gen9 HD Graphics NEO.
+	// 
+	// Sample output using a system with an FPGA accelerator, but no GPU:
+	// After checking for a GPU, we are running on:
+	// SYCL host device.
+	return 0;
+}
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Being Curious: get\_info<>}
+
+In order for our program to “know” what devices are available at runtime, we can have our program query available devices from the device class, and then we can learn more details using get\_info<> to inquire about a specific device. We provide a simple program, called curious (see Figure 12-4), that uses these interfaces to dump out information for us to look at directly. This can be very useful for doing a sanity check when developing or debugging a program that uses these interfaces. Failure of this program to work as expected can often tell us that the software drivers we need are not installed correctly. Figure 12-5 shows sample output from this program, with the high-level information about the devices that are present.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 12-4. Simple use of device query mechanisms: curious.cpp
+\begin{lstlisting}[caption={}]
+// Loop through available platforms
+for (auto const& this_platform : platform::get_platforms() ) {
+	std::cout << "Found platform: "
+			  << this_platform.get_info<info::platform::name>() << "\n";
+	
+	// Loop through available devices in this platform
+	for (auto const& this_device : this_platform.get_devices() ) {
+		std::cout << " Device: "
+				  << this_device.get_info<info::device::name>() << "\n";
+	}
+	std::cout << "\n";
+}
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+Figure 12-5. Sample output from curious.cpp
+\begin{tcolorbox}[colback=white,colframe=black]
+\% make curious \\
+dpcpp curious.cpp -o curious\\
+\\
+\% ./curious \\
+Found platform 1...\\
+Platform: Intel(R) FPGA Emulation Platform for OpenCL(TM)\\
+Device: Intel(R) FPGA Emulation Device\\
+\\
+Found platform 2...\\
+Platform: Intel(R) OpenCL HD Graphics\\
+Device: Intel(R) Gen9 HD Graphics NEO\\
+\\
+Found platform 3...\\
+Platform: Intel(R) OpenCL\\
+Device: Intel(R) Xeon(R) E-2176G CPU @ 3.70GHz\\
+\\
+Found platform 4...\\
+Platform: SYCL host platform\\
+Device: SYCL host device
+\end{tcolorbox}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Being More Curious: Detailed Enumeration Code}
+
+We offer a program, which we have named verycurious.cpp (Figure 12-6), to illustrate some of the detailed information available using get\_info<>. Again, we find ourselves writing code like this to help when developing or debugging a program. Figure 12-5 shows sample output from this program, with the lower-level information about the devices that are present.\par
+
+Now that we have shown how to access the information, we will discuss the information fields that prove the most important to query and act upon in applications.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 12-6. More detailed use of device query mechanisms: verycurious.cpp
+\begin{lstlisting}[caption={}]
+template <auto query, typename T>
+void do_query( const T& obj_to_query, const std::string& name, int indent=4) 
+{
+	std::cout << std::string(indent, ' ') << name << " is '"
+		<< obj_to_query.template get_info<query>() << "'\n";
+}
+
+// Loop through the available platforms
+for (auto const& this_platform : platform::get_platforms() ) {
+	std::cout << "Found Platform:\n";
+	do_query<info::platform::name>(this_platform,
+		"info::platform::name");
+	do_query<info::platform::vendor>(this_platform, 
+		"info::platform::vendor");
+	do_query<info::platform::version>(this_platform, 
+		"info::platform::version");
+	do_query<info::platform::profile>(this_platform, 
+		"info::platform::profile");
+		
+	// Loop through the devices available in this plaform
+	for (auto &dev : this_platform.get_devices() ) {
+		std::cout << " Device: "
+				  << dev.get_info<info::device::name>() << "\n";
+		std::cout << " is_host(): "
+				  << (dev.is_host() ? "Yes" : "No") << "\n";
+		std::cout << " is_cpu(): "
+				  << (dev.is_cpu() ? "Yes" : "No") << "\n";
+		std::cout << " is_gpu(): "
+			  	  << (dev.is_gpu() ? "Yes" : "No") << "\n";
+		std::cout << " is_accelerator(): "
+				  << (dev.is_accelerator() ? "Yes" : "No") << "\n";
+				  
+		do_query<info::device::vendor>(dev, "info::device::vendor");
+		do_query<info::device::driver_version>(dev,
+					"info::device::driver_version");
+		do_query<info::device::max_work_item_dimensions>(dev,
+					"info::device::max_work_item_dimensions");
+		do_query<info::device::max_work_group_size>(dev,
+					"info::device::max_work_group_size");
+		do_query<info::device::mem_base_addr_align>(dev,
+					"info::device::mem_base_addr_align");
+		do_query<info::device::partition_max_sub_devices>(dev,
+					"info::device::partition_max_sub_devices");
+					
+		std::cout << " Many more queries are available than shown here!\n";
+	}
+	std::cout << "\n";
+}
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Inquisitive: get\_info<>}
+
+The has\_extension() interface allows a program to test directly for a feature, rather than having to walk through a list of extensions from get\_info <info::platform::extensions> as printed out by the previous code examples. The SYCL 2020 provisional specification has defined new mechanisms to query extensions and detailed aspects of devices, but we don't cover those features (which are just being finalized) in this book. Consult the online oneAPI DPC++ language reference for more information.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

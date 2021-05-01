@@ -1,0 +1,17 @@
+\begin{center}
+	\includegraphics[width=0.3\textwidth]{content/chapter-16/images/1}
+\end{center}
+
+Kernel programming originally became popular as a way to program GPUs. As kernel programming is generalized, it is important to understand how our style of programming affects the mapping of our code to a CPU.\par
+
+The CPU has evolved over the years. A major shift occurred around 2005 when performance gains from increasing clock speeds diminished. Parallelism arose as the favored solution—instead of increasing clock speeds, CPU producers introduced multicore chips. Computers became more effective in performing multiple tasks at the same time!\par
+
+While multicore prevailed as the path for increasing hardware performance, releasing that gain in software required non-trivial effort. Multicore processors required developers to come up with different algorithms so the hardware improvements could be noticeable, and this was not always easy. The more cores that we have, the harder it is to keep them efficiently busy. DPC++ is one of the programming languages that address these challenges, with many constructs that help to exploit various forms of parallelism on CPUs (and other architectures).\par
+
+This chapter discusses some particulars of CPU architectures, how CPU hardware executes DPC++ applications, and offers best practices when writing a DPC++ code for a CPU platform.\par
+
+
+
+
+
+

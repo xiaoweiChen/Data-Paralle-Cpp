@@ -1,0 +1,9 @@
+
+In this chapter, we explored different ways to define kernels. We described how to seamlessly integrate into existing C++ codebases by representing kernels as C++ lambda expressions or named function objects. For new codebases, we also discussed the pros and cons of the different kernel representations, to help choose the best way to define kernels based on the needs of the application or library.\par
+
+We also described how to interoperate with other APIs, either by creating a kernel from an API-defined source language or intermediate representation or by creating a kernel object from a handle to an API representation of the kernel. Interoperability enables an application to migrate from lower-level APIs to SYCL over time or to interface with libraries written for other APIs.\par
+
+Finally, we described how kernels are typically compiled in a SYCL application and how to directly manipulate kernels in program objects to control the compilation process. Even though this level of control will not be required for most applications, it is a useful technique to be aware of when tuning an application.\par
+
+
+\newpage

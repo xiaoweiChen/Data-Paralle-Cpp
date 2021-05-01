@@ -1,0 +1,92 @@
+As described in Chapters 4 and 9, a work-item is the leaf node of the parallelism hierarchy and represents an individual instance of a kernel function. Work-items can be executed in any order and cannot communicate or synchronize with each other except through atomic memory operations to local and global memory or through group collective functions (e.g., shuffle, barrier).\par
+
+As described at the start of this chapter, a vector in DPC++ should be interpreted as a convenience for us when writing code. Each vector is local to a single work-item (instead of relating to vectorization in hardware) and can therefore be thought of as equivalent to a private array of numElements in our work-item. For example, the storage of a “float4 y4” declaration is equivalent to float y4[4]. Consider the example shown in Figure 11-8.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 11-8. Vector execution example
+\begin{lstlisting}[caption={}]
+Q.prallel_for(8, [=](id<1> i){
+	...
+	float  x  = a[i]; // i = 1,2,3...,7
+	float4 y4 = b[i]; // i = 1,2,3...,7
+	...
+});
+\end{lstlisting}
+
+For the scalar variable x, the result of kernel execution with multiple work-items on hardware that has SIMD instructions (e.g., CPUs, GPUs) might use a vector register and SIMD instructions, but the vectorization is across work-items and unrelated to any vector type in our code. Each work-item could operate on a different location in the implicit vec\_x, as shown in Figure 11-9. The scalar data in a work-item can be thought of as being implicitly vectorized (combined into SIMD hardware instructions) across work-items that happen to execute at the same time, in some implementations and on some hardware, but the work-item code that we write does not encode this in any way—this is at the core of the SPMD style of programming.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 11-9. Vector expansion from scalar variable x to vec\_x[8]
+\begin{table}[H]
+	\begin{tabular}{|l|l|l|l|l|l|l|l|l|}
+		\hline
+		work-item ID & w0 & w1 & w2 & w3 & w4 & w5 & w6 & w7 \\ \hline
+		vec\_x       & a0 & a1 & a2 & a3 & a4 & a5 & a6 & a7 \\ \hline
+	\end{tabular}
+\end{table}
+
+With the implicit vector expansion from scalar variable x to vec\_x[8] by the compiler as shown in Figure 11-9, the compiler creates a SIMD operation in hardware from a scalar operation that occurs in multiple work-items.\par
+
+For the vector variable y4, the result of kernel execution for multiple work-items, for example, eight work-items, does not process the vec4 by using vector operations in hardware. Instead each work-item independently sees its own vector, and the operations on elements on that vector occur across multiple clock cycles/instructions (the vector is scalarized by the compiler), as shown in Figure 11-10.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 11-10. Vertical expansion to equivalent of vec\_y[8][4] of y4 across eight work-items
+\begin{table}[]
+	\begin{tabular}{|l|l|l|l|l|}
+		\hline
+		work-item ID & vec\_y0 & vec\_y1 & vec\_y2 & vec\_y3 \\ \hline
+		w0           & b0      & b0      & b0      & b0      \\ \hline
+		w1           & b1      & b1      & b1      & b1      \\ \hline
+		w2           & b2      & b2      & b2      & b2      \\ \hline
+		w3           & b3      & b3      & b3      & b3      \\ \hline
+		w4           & b4      & b4      & b4      & b4      \\ \hline
+		w5           & b5      & b5      & b5      & b5      \\ \hline
+		w6           & b6      & b6      & b6      & b6      \\ \hline
+		w7           & b7      & b7      & b7      & b7      \\ \hline
+	\end{tabular}
+\end{table}
+
+Each work-item sees the original data layout of y4, which provides an intuitive model to reason about and tune. The performance downside is that the compiler has to generate gather/scatter memory instructions for both CPUs and GPUs, as shown in Figure 11-11, (the vectors are contiguous in memory and neighboring work-items operating on different vectors in parallel), so scalars are often an efficient approach over explicit vectors when a compiler will vectorize across work-items (e.g., across a sub-group). See Chapters 15 and 16 for more details.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 11-11. Vector code example with address escaping
+\begin{lstlisting}[caption={}]
+Q.prallel_for(8, [=](id<1> i){
+	...
+	float  x  = a[i]; // i = 1,2,3...,7
+
+	//"dowork" expects y4 with vec_y[8][4] data layout
+	float x = dowork(&y4);
+	...
+});
+\end{lstlisting}
+
+When the compiler is able to prove that the address of y4 does not escape from the current kernel work-item or all callee functions are to be inlined, then the compiler may perform optimizations that act as if there was a horizontal unit-stride expansion to vec\_y[4][8] from y4 using a set of vector registers, as shown in Figure 11-12. In this case, compilers can achieve optimal performance without generating gather/scatter SIMD instructions for both CPUs and GPUs. The compiler optimization reports provide information to programmers about this type of transformation, whether it occurred or not, and can provide hints on how to tweak our code for increased performance.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 11-12. Horizontal unit-stride expansion to vec\_y[4][8] of y4
+\begin{table}[H]
+	\begin{tabular}{|l|l|l|l|l|l|l|l|l|}
+		\hline
+		work-item ID & w0 & w1 & w2 & w3 & w4 & w5 & w6 & w7 \\ \hline
+		y0           & b0 & b1 & b2 & b3 & b4 & b5 & b6 & b7 \\ \hline
+		y1           & b0 & b1 & b2 & b3 & b4 & b5 & b6 & b7 \\ \hline
+		y2           & b0 & b1 & b2 & b3 & b4 & b5 & b6 & b7 \\ \hline
+		y3           & b0 & b1 & b2 & b3 & b4 & b5 & b6 & b7 \\ \hline
+	\end{tabular}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

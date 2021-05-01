@@ -1,0 +1,70 @@
+There are a few additional parameters that can be considered as finetuning parameters for our kernels. These can be ignored without jeopardizing the correctness of a program. These allow our kernels to really utilize the particulars of the hardware for performance.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+Paying attention to the results of these queries can help when tuning for a cache (if it exists).
+\end{tcolorbox}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Device Queries}
+
+global\_mem\_cache\_line\_size: Size of global memory cache line in bytes.\par
+
+global\_mem\_cache\_size: Size of global memory cache in bytes.\par
+
+local\_mem\_type: The type of local memory supported. This can be info::local\_mem\_
+type::local implying dedicated local memory storage such as SRAM or info::local\_mem\_type::global. The latter type means that local memory is just implemented as an abstraction on top of global memory with no performance gains. For custom devices (only), the local memory type can also be info::local\_mem\_type::none, indicating local memory is not supported.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Kernel Queries}
+
+preferred\_work\_group\_size: The preferred work-group size for executing a kernel on a specific device.\par
+
+preferred\_work\_group\_size\_multiple: The preferred work-group size for executing a kernel on a specific device\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

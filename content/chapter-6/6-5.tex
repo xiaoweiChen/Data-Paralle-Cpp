@@ -1,0 +1,102 @@
+Finally, not all devices support every feature of USM. We should not assume 
+that all USM features are available if we want our programs to be portable 
+across different devices. USM defines several things that we can query. 
+These queries can be separated into two categories: pointer queries and 
+device capability queries. Figure 6-9 shows a simple utilization of each.\par
+
+The pointer queries in USM answer two questions. The first question 
+is “What type of USM allocation does this pointer point to?” The get\_
+pointer\_type function takes a pointer and DPC++ context and returns 
+a result of type usm::alloc, which can have four possible values: host, 
+device, shared, or unknown. The second question is “What device was this 
+USM pointer allocated against?” We can pass a pointer and a context to the 
+function get\_pointer\_device and get back a device object. This is mostly 
+used with device or shared USM allocations since it does not make much 
+sense with host allocations.\par
+
+The second type of query provided by USM concerns the capabilities 
+of a device. USM extends the list of device information descriptors that 
+can be queried by calling get\_info on a device object. These queries can 
+be used to test which types of USM allocations are supported by a device. 
+Additionally, we can query if shared allocations are restricted on the device in the ways we previously described in this chapter. The full list of 
+queries is shown in Figure 6-10. In Chapter 12, we will look at the query 
+mechanism in more detail.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 6-9. Queries on USM pointers and devices
+\begin{lstlisting}[caption={}]
+constexpr int N = 42;
+
+template <typename T> void foo(T data, id<1> i) { data[i] = N; }
+
+queue Q;
+auto dev = Q.get_device();
+auto ctxt = Q.get_context();
+bool usm_shared = dev.get_info<dinfo::usm_shared_allocations>();
+bool usm_device = dev.get_info<dinfo::usm_device_allocations>();
+bool use_USM = usm_shared || usm_device;
+
+if (use_USM) {
+	int *data;
+	if (usm_shared)
+		data = malloc_shared<int>(N, Q);
+	else /* use device allocations */
+		data = malloc_device<int>(N, Q);
+		
+	std::cout << "Using USM with "
+			<< ((get_pointer_type(data, ctxt) == usm::alloc::shared)
+			? "shared"
+			: "device")
+			<< " allocations on "
+			<< get_pointer_device(data, ctxt).get_info<dinfo::name>()
+			<< "\n";
+			
+	Q.parallel_for(N, [=](id<1> i) { foo(data, i); });
+	Q.wait();
+	free(data, Q);
+} else /* use buffers */ {
+	buffer<int, 1> data{range{N}};
+	Q.submit([&](handler &h) {
+		accessor a(data, h);
+		h.parallel_for(N, [=](id<1> i) {
+			foo(a, i); });
+	});
+	Q.wait();
+}
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+Figure 6-10. USM device information descriptors
+\begin{table}[]
+	\begin{tabular}{|l|l|l|}
+		\hline
+		Device Descriptor                                  & Type & Description                                                                                   \\ \hline
+		info::device::usm\_device\_allocations             & bool & Returns true if the device supports device allocations                                        \\ \hline
+		info::device::usm\_host\_allocations               & bool & Returns true if the device can access host allocations                                        \\ \hline
+		info::device::usm\_shared\_allocations             & bool & Returns true is this device supports shared allocations                                       \\ \hline
+		info::device::usm\_restricted\_shared\_allocations & bool & Returns true if shared allocations are governed by the restrictions described in this chapter \\ \hline
+	\end{tabular}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

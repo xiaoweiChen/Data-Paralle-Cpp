@@ -1,0 +1,152 @@
+Many of these patterns can be expressed directly using built-in functionality of DPC++ or vendor-provided libraries written in DPC++. Leveraging these functions and libraries is the best way to balance performance, portability, and productivity in real large-scale software engineering projects.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{The DPC++ Reduction Library}
+
+Rather than require that each of us maintain our own library of portable and highly performant reduction kernels, DPC++ provides a convenient abstraction for describing variables with reduction semantics. This abstraction simplifies the expression of reduction kernels and makes the fact that a reduction is being performed explicit, allowing implementations to select between different reduction algorithms for different combinations of device, data type, and reduction operation.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-8. Reduction expressed as an ND-range data-parallel kernel using the reduction library
+\begin{lstlisting}[caption={}]
+h.parallel_for(
+	nd_range<1>{N, B},
+	reduction(sum, plus<>()),
+	[=](nd_item<1> it, auto& sum) {
+		int i = it.get_global_id(0);
+		sum += data[i];
+});
+\end{lstlisting}
+
+The kernel in Figure 14-8 shows an example of using the reduction library. Note that the kernel body doesn’t contain any reference to reductions—all we must specify is that the kernel contains a reduction which combines instances of the sum variable using the plus functor. This provides enough information for an implementation to automatically generate an optimized reduction sequence.\par
+
+At the time of writing, the reduction library only supports kernels with a single reduction variable. Future versions of DPC++ are expected to support kernels which perform more than one reduction simultaneously, by specifying multiple reductions between the nd\_range and functor arguments passed into parallel\_for and taking multiple reducers as arguments to the kernel functor.\par
+
+The result of a reduction is not guaranteed to be written back to the original variable until the kernel has completed. Apart from this restriction, accessing the result of a reduction behaves identically to accessing any other variable in SYCL: accessing a reduction result stored in a buffer requires the creation of an appropriate device or host accessor, and accessing a reduction result stored in a USM allocation may require explicit synchronization and/or memory movement.\par
+
+One important way in which the DPC++ reduction library differs from reduction abstractions found in other languages is that it restricts our access to the reduction variable during kernel execution—we cannot inspect the intermediate values of a reduction variable, and we are forbidden from updating the reduction variable using anything other than the specified combination function. These restrictions prevent us from making mistakes that would be hard to debug (e.g., adding to a reduction variable while trying to compute the maximum) and ensure that reductions can be implemented efficiently on a wide variety of different devices.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{The reduction Class}
+
+The reduction class is the interface we use to describe the reductions present in a kernel. The only way to construct a reduction object is to use one of the functions shown in Figure 14-9.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-9. Function prototypes of the reduction function
+\begin{lstlisting}[caption={}]
+template <typename T, typename BinaryOperation>
+unspecified reduction(T* variable, BinaryOperation combiner);
+
+template <typename T, typename BinaryOperation>
+unspecified reduction(T* variable, T identity, BinaryOperation combiner);
+\end{lstlisting}
+
+The first version of the function allows us to specify the reduction variable and the operator used to combine the contributions from each work-item. The second version allows us to provide an optional identity value associated with the reduction operator—this is an optimization for user-defined reductions, which we will revisit later.\par
+
+Note that the return type of the reduction function is unspecified, and the reduction class itself is completely implementation-defined. Although this may appear slightly unusual for a C++ class, it permits an implementation to use different classes (or a single class with any number of template arguments) to represent different reduction algorithms. Future versions of DPC++ may decide to revisit this design in order to enable us to explicitly request specific reduction algorithms in specific execution contexts.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{The reducer Class}
+
+An instance of the reducer class encapsulates a reduction variable, exposing a limited interface ensuring that we cannot update the reduction variable in any way that an implementation could consider to be unsafe. A simplified definition of the reducer class is shown in Figure 14-10. Like the reduction class, the precise definition of the reducer class is implementation-defined—a reducer's type will depend on how the reduction is being performed, and it is important to know this at compile time in order to maximize performance. However, the functions and operators that allow us to update the reduction variable are well-defined and are guaranteed to be supported by any DPC++ implementation.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-10. Simplified definition of the reducer class
+\begin{lstlisting}[caption={}]
+template <typename T,
+		  typename BinaryOperation,
+	      /* implementation-defined */>
+class reducer {
+	// Combine partial result with reducer's value
+	void combine(const T& partial);
+};
+
+// Other operators are available for standard binary operations
+template <typename T>
+auto& operator +=(reducer<T,plus::<T>>&, const T&);
+\end{lstlisting}
+
+Specifically, every reducer provides a combine() function which combines the partial result (from a single work-item) with the value of the reduction variable. How this combine function behaves is implementation-defined but is not something that we need to worry about when writing a kernel. A reducer is also required to make other operators available depending on the reduction operator; for example, the += operator is defined for plus reductions. These additional operators are provided only as a programmer convenience and to improve readability; where they are available, these operators have identical behavior to calling combine() directly.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{User-Defined Reductions}
+
+Several common reduction algorithms (e.g., a tree reduction) do not see each work-item directly update a single shared variable, but instead accumulate some partial result in a private variable that will be combined at some point in the future. Such private variables introduce a problem: how should the implementation initialize them? Initializing variables to the first contribution from each work-item has potential performance ramifications, since additional logic is required to detect and handle uninitialized variables. Initializing variables to the identity of the reduction operator instead avoids the performance penalty but is only possible when the identity is known.\par
+
+DPC++ implementations can only automatically determine the correct identity value to use when a reduction is operating on simple arithmetic types and the reduction operator is a standard functor (e.g., plus). For user-defined reductions (i.e., those operating on user-defined types and/or using user-defined functors), we may be able to improve performance by specifying the identity value directly.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-11. Using a user-defined reduction to find the location of the minimum value with an ND-range kernel
+\begin{lstlisting}[caption={}]
+template <typename T, typename I>
+struct pair {
+	bool operator<(const pair& o) const {
+		return val <= o.val || (val == o.val && idx <= o.idx);
+	}
+	T val;
+	I idx;
+};
+
+template <typename T, typename I>
+using minloc = minimum<pair<T, I>>;
+
+constexpr size_t N = 16;
+constexpr size_t L = 4;
+
+queue Q;
+float* data = malloc_shared<float>(N, Q);
+pair<float, int>* res = malloc_shared<pair<float, int>>(1, Q);
+std::generate(data, data + N, std::mt19937{});
+
+pair<float, int> identity = {
+	std::numeric_limits<float>::max(), std::numeric_limits<int>::min()
+};
+*res = identity;
+
+auto red = reduction(res, identity, minloc<float, int>());
+
+Q.submit([&](handler& h) {
+	h.parallel_for(nd_range<1>{N, L}, red, [=](nd_item<1> item, auto& res) {
+		int i = item.get_global_id(0);
+		pair<float, int> partial = {data[i], i};
+		res.combine(partial);
+	});
+}).wait();
+
+std::cout << "minimum value = " << res->val << " at " << res->idx << "\n";
+\end{lstlisting}
+
+Support for user-defined reductions is limited to trivially copyable types and combination functions with no side effects, but this is enough to enable many real-life use cases. For example, the code in Figure 14-11 demonstrates the usage of a user-defined reduction to compute both the minimum element in a vector and its location.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{oneAPI DPC++ Library}
+
+The C++ Standard Template Library (STL) contains several algorithms which correspond to the parallel patterns discussed in this chapter. The algorithms in the STL typically apply to sequences specified by pairs of iterators and—starting with C++17—support an execution policy argument denoting whether they should be executed sequentially or in parallel.\par
+
+The oneAPI DPC++ Library (oneDPL) leverages this execution policy argument to provide a high-productivity approach to parallel programming that leverages kernels written in DPC++ under the hood. If an application can be expressed solely using functionality of the STL algorithms, oneDPL makes it possible to make use of the accelerators in our systems without writing a single line of DPC++ kernel code!\par
+
+The table in Figure 14-12 shows how the algorithms available in the STL relate to the parallel patterns described in this chapter and to legacy serial algorithms (available before C++17) where appropriate. A more detailed explanation of how to use these algorithms in a DPC++ application can be found in Chapter 18.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-12. Relating parallel patterns with the C++17 algorithm library
+\begin{table}[H]
+	\begin{tabular}{|l|l|l|}
+		\hline
+		\textbf{Pattern} & \textbf{Serial Algorithm(s)} & \textbf{Parallel Algorithm(s)}                                                                                                      \\ \hline
+		Map              & transform                    & transform                                                                                                                           \\ \hline
+		Stencil          & transform                    & transform                                                                                                                           \\ \hline
+		Reduction        & accumulate                   & \begin{tabular}[c]{@{}l@{}}reduce\\ transform\_reduc\end{tabular}                                                                   \\ \hline
+		Scan             & partial\_sum                 & \begin{tabular}[c]{@{}l@{}}inclusive\_scan\\ exclusive\_scan\\ transform\_inclusive\_scan\\ transform\_exclusive\_scan\end{tabular} \\ \hline
+		Pack             & N/A                          & copy\_if                                                                                                                            \\ \hline
+		Unpack           & N/A                          & N/A                                                                                                                                 \\ \hline
+	\end{tabular}
+\end{table}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Group Functions}
+
+Support for parallel patterns in DPC++ device code is provided by a separate library of group functions. These group functions exploit the parallelism of a specific group of work-items (i.e., a work-group or a subgroup) to implement common parallel algorithms at limited scope and can be used as building blocks to construct other more complex algorithms.\par
+
+Like oneDPL, the syntax of the group functions in DPC++ is based on that of the algorithm library in C++. The first argument to each function accepts a group or sub\_group object in place of an execution policy, and any restrictions from the C++ algorithms apply. Group functions are performed collaboratively by all the work-items in the specified group and so must be treated similarly to a group barrier—all work-items in the group must encounter the same algorithm in converged control flow (i.e., all work-items in the group must similarly encounter or not encounter the algorithm call), and all work-items must provide the same function arguments in order to ensure that they agree on the operation being performed.\par
+
+At the time of writing, the reduce, exclusive\_scan, and inclusive\_scan functions are limited to supporting only primitive data types and the most common reduction operators (e.g., plus, minimum, and maximum). This is enough for many use cases, but future versions of DPC++ are expected to extend collective support to user-defined types and operators.\par
+

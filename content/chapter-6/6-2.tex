@@ -1,0 +1,70 @@
+While USM is based on C++ pointers, not all pointers are created equal. USM defines three different types of allocations, each with unique semantics. A device may not support all types (or even any type) of USM allocation. We will learn how to query what a device supports later. The three types of allocations and their characteristics are summarized in Figure 6-1.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 6-1. USM allocation types
+\begin{table}[]
+	\begin{tabular}{|l|l|l|l|l|}
+		\hline
+		Type   & Description                                & Accessible on host? & Accessible on device? & Located on                          \\ \hline
+		device & Allocations in device memory               & ×                   & √                     & device                              \\ \hline
+		host   & Allocations in host memory                 & √                   & √                     & host                                \\ \hline
+		shared & Allocations shated between host and device & √                   & √                     & Can migrate between host and device \\ \hline
+	\end{tabular}
+\end{table}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Device Allocations}
+
+This first type of allocation is what we need in order to have a pointer into a device’s attached memory, such as (G)DDR or HBM. Device allocations can be read from or written to by kernels running on a device, but they cannot be directly accessed from code executing on the host. Trying to access a device allocation on the host can result in either incorrect data or a program crashing due to an error. We must copy data between host and device using the explicit USM memcpy mechanisms, which specify how much data must be copied between two places, that will be covered later in this chapter.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Host Allocations}
+
+This second type of allocation is easier to use than device allocations since we do not have to manually copy data between the host and the device. Host allocations are allocations in host memory that are accessible on both the host and the device. These allocations, while accessible on the device, cannot migrate to the device’s attached memory. Instead, kernels that read from or write to this memory do it remotely, often over a slower bus such as PCI-Express. This tradeoff between convenience and performance is something that we must take into consideration. Despite the higher access costs that host allocations can incur, there are still valid reasons to use them. Examples include rarely accessed data or large data sets that cannot fit inside device attached memory.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Shared Allocations}
+
+The final type of allocation combines attributes of both device and host allocations, combining the programmer convenience of host allocations with the greater performance afforded by device allocations. Like host allocations, shared allocations are accessible on both the host and device. The difference between them is that shared allocations are free to migrate between host memory and device attached memory, automatically, without our intervention. If an allocation has migrated to the device, any kernel executing on that device accessing it will do so with greater performance than remotely accessing it from the host. However, shared allocations do not give us all the benefits without any drawbacks.\par
+
+Automatic migration can be implemented in a variety of ways. No matter which way the runtime chooses to implement shared allocations, they usually pay a price of increased latency. With device allocations, we know exactly how much memory needs to be copied and can schedule the copy to begin as quickly as possible. The automatic migration mechanisms cannot see the future and, in some cases, do not begin moving data until a kernel tries to access it. The kernel must then wait, or block, until the data movement has completed before it can continue executing. In other cases, the runtime may not know exactly how much data the kernel will access and might conservatively move a larger amount of data than is required, also increasing latency for the kernel.\par
+
+We should also note that while shared allocations can migrate, it does not necessarily mean that all implementations of DPC++ will migrate them. We expect most implementations to implement shared allocations with migration, but some devices may prefer to implement them identically to host allocations. In such an implementation, the allocation is still visible on both host and device, but we may not see the performance gains that a migrating implementation could provide.\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

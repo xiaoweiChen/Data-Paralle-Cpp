@@ -1,0 +1,63 @@
+Vectors are a surprisingly controversial topic when we talk with parallel programming experts, and in the authors’ experience, this is because different people define and think about the term in different ways.\par
+
+There are two broad ways to think about vector data types (a collection of data):\par
+
+\begin{enumerate}
+	\item \textbf{As a convenience type}, which groups data that you might want to refer to and operate on as a group, for example, grouping the color channels of a pixel (e.g., RGB, YUV) into a single variable (e.g., float3), which could be a vector. We could define a pixel class or struct and define math operators like + on it, but vector types conveniently do this for us out of the box. Convenience types can be found in many shader languages used to program GPUs, so this way of thinking is already common among many GPU developers.
+	\item As a mechanism to describe how code maps to a \textbf{SIMD instruction set} in hardware. For example, in some languages and implementations, operations on a float8 could in theory map to an eight-lane SIMD instruction in hardware. Vector types are used in multiple languages as a convenient highlevel alternative to CPU-specific SIMD intrinsics for specific instruction sets, so this way of thinking is already common among many CPU developers.
+\end{enumerate}
+
+Although these two interpretations are very different, they unintentionally became combined and muddled together as SYCL and other languages became applicable to both CPUs and GPUs. A vector in the SYCL 1.2.1 specification is compatible with either interpretation (we will revisit this later), so we need to clarify our recommended thinking in DPC++ before going any further.\par
+
+Throughout this book, we talk about how work-items can be grouped together to expose powerful communication and synchronization primitives, such as sub-group barriers and shuffles. For these operations to be efficient on vector hardware, there is an assumption that different workitems in a sub-group combine and map to SIMD instructions. Said another way, multiple work-items are grouped together by the compiler, at which point they can map to SIMD instructions in the hardware. Remember from Chapter 4 that this is a basic premise of SPMD programming models that operate on top of vector hardware, where a single work-item constitutes a lane of what might be a SIMD instruction in hardware, instead of a work-item defining the entire operation that will be a SIMD instruction in the hardware. You can think of the compiler as always vectorizing across work-items when mapping to SIMD instructions in hardware, when programming in a SPMD style with the DPC++ compiler.\par
+
+For the features and hardware described in this book, vectors are useful primarily for the first interpretation in this section—vectors are convenience types that should not be thought of as mapping to SIMD instructions in hardware. Work-items are grouped together to form SIMD instructions in hardware, on the platforms where that applies (CPUs, GPUs). Vectors should be thought of as providing convenient operators such as swizzles and math functions that make common operations on groups of data concise within our code (e.g., adding two RGB pixels).\par
+
+For developers coming from languages that don’t have vectors or from GPU shading languages, we can think of SYCL vectors as local to a work-item in that if there is an addition of two four-element vectors, that addition might take four instructions in the hardware (it would be scalarized from the perspective of the work-item). Each element of the vector would be added through a different instruction/clock cycle in the hardware. With this interpretation, vectors are a convenience in that we can add two vectors in a single operation in our source code, as opposed to performing four scalar operations in the source.\par
+
+For developers coming from a CPU background, we should know that implicit vectorization to SIMD hardware occurs by default in the compiler in a few ways independent of the vector types. The compiler performs this implicit vectorization across work-items, extracts the vector operations from well-formed loops, or honors vector types when mapping to vector instructions—see Chapter 16 for more information.\par
+
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=OTHER IMPLEMENTATIONS POSSIBLE!]
+Different compilers and implementations of SYCL and DPC++ can in theory make different decisions on how vector data types in code map to vector hardware instructions. We should read a vendor’s documentation and optimization guides to understand how to write code that will map to efficient SIMD instructions. This book is written principally against the DPC++ compiler, so documents the thinking and programming patterns that it is built around.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=CHANGES ARE ON THE HORIZON]
+We have just said to consider vector types as convenience types and to expect vectorization across work-items when thinking about the mapping to hardware on devices where that makes sense. This is expected to be the default interpretation in the DPC++ compiler and toolchain going forward. However, there are two additional future-looking changes to be aware of.\\
+
+First, we can expect some future DPC++ features that will allow us to write explicit vector code that maps directly to SIMD instructions in the hardware, particularly for experts who want to tune details of code for a specific architecture and take control from the compiler vectorizers. This is a niche feature that will be used by very few developers, but we can expect programming mechanisms to exist eventually where this is possible. Those programming mechanisms will make it very clear which code is written in an explicit vector style, so that there isn’t confusion between the code we write today and that new more explicit (and less portable) style.\\
+
+Second, the need for this section of the book (talking about interpretations of vectors) highlights that there is confusion on what a vector means, and that will be solved in SYCL in the future. There is a hint of this in the SYCL 2020 provisional specification where a math array type (marray) has been described, which is explicitly the first interpretation from this section—a convenience type unrelated to vector hardware instructions. We should expect another type to also eventually appear to cover the second interpretation, likely aligned with the C++ std::simd templates. With these two types being clearly associated with specific interpretations of a vector data type, our intent as programmers will be clear from the code that we write. This will be less error prone and less confusing and may even reduce the number of heated discussions between expert developers when the question arises “What is a vector?”
+\end{tcolorbox}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,6 @@
+
+There are multiple interpretations of the term vector within programming languages, and understanding the interpretation that a particular language or compiler has been built around is important when we want to write performant and scalable code. DPC++ and the DPC++ compiler have been built around the idea that vectors in source code are convenience functions local to a work-item and that implicit vectorization by the compiler across work-items may map to SIMD instructions in the hardware. When we want to write code which maps directly to vector hardware explicitly, we should look to vendor documentation and future extensions to SYCL and DPC++. Writing our kernels using multiple work-items (e.g., ND-range) and relying on the compiler to vectorize across work-items should be how most applications are written because doing so leverages the powerful abstraction of SPMD, which provides an easy-to-reason-about programming model, and that provides scalable performance across devices and architectures.\par
+
+This chapter has described the vec interface, which offers convenience out of the box when we have groupings of similarly typed data that we want to operate on (e.g., a pixel with multiple color channels). It has also touched briefly on SIMD instructions in hardware, to prepare us for more detailed discussions in Chapters 15 and 16.\par
+
+\newpage

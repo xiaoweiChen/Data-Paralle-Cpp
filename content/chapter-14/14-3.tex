@@ -1,0 +1,323 @@
+Although we recommend leveraging libraries wherever possible, we can learn a lot by looking at how each pattern could be implemented using “native” DPC++ kernels.\par
+
+The kernels in the remainder of this chapter should not be expected to reach the same level of performance as highly tuned libraries but are useful in developing a greater understanding of the capabilities of DPC++—and may even serve as a starting point for prototyping new library functionality.\par
+
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=USE VENDOR-PROVIDED LIBRARIES!]
+When a vendor provides a library implementation of a function, it is almost always beneficial to use it rather than re-implementing the function as a kernel!
+\end{tcolorbox}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Map}
+
+Owing to its simplicity, the map pattern can be implemented directly as a basic parallel kernel. The code shown in Figure 14-13 shows such an implementation, using the map pattern to compute the square root of each input element in a range.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-13. Implementing the map pattern in a data-parallel kernel
+\begin{lstlisting}[caption={}]
+Q.parallel_for(N, [=](id<1> i) {
+	output[i] = sqrt(input[i]);
+}).wait();
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Stencil}
+
+Implementing a stencil directly as a multidimensional basic data-parallel kernel with multidimensional buffers, as shown in Figure 14-14, is straightforward and easy to understand.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-14. Implementing the stencil pattern in a data-parallel kernel
+\begin{lstlisting}[caption={}]
+id<2> offset(1, 1);
+h.parallel_for(stencil_range, offset, [=](id<2> idx) {
+	int i = idx[0];
+	int j = idx[1];
+	
+	float self = input[i][j];
+	float north = input[i - 1][j];
+	float east = input[i][j + 1];
+	float south = input[i + 1][j];
+	float west = input[i][j - 1];
+	output[i][j] = (self + north + east + south + west) / 5.0f;
+});
+\end{lstlisting}
+
+However, this expression of the stencil pattern is very naïve and should not be expected to perform very well. As mentioned earlier in the chapter, it is well-known that leveraging locality (via spatial or temporal blocking) is required to avoid repeated reads of the same data from memory. A simple example of spatial blocking, using work-group local memory, is shown in Figure 14-15.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-15. Implementing the stencil pattern in an ND-range kernel, using work-group local memory
+\begin{lstlisting}[caption={}]
+range<2> local_range(B, B);
+// Includes boundary cells
+range<2> tile_size = local_range + range<2>(2, 2);
+auto tile = local_accessor<float, 2>(tile_size, h);
+
+// Compute the average of each cell and its immediate neighbors
+id<2> offset(1, 1);
+
+h.parallel_for(
+nd_range<2>(stencil_range, local_range, offset), [=](nd_item<2> it) {
+	// Load this tile into work-group local memory
+	id<2> lid = it.get_local_id();
+	range<2> lrange = it.get_local_range();
+	for (int ti = lid[0]; ti < B + 2; ti += lrange[0]) {
+		int gi = ti + B * it.get_group(0);
+		for (int tj = lid[1]; tj < B + 2; tj += lrange[1]) {
+			int gj = tj + B * it.get_group(1);
+			tile[ti][tj] = input[gi][gj];
+		}
+	}
+	it.barrier(access::fence_space::local_space);
+	
+	// Compute the stencil using values from local memory
+	int gi = it.get_global_id(0);
+	int gj = it.get_global_id(1);
+	
+	int ti = it.get_local_id(0) + 1;
+	int tj = it.get_local_id(1) + 1;
+	
+	float self = tile[ti][tj];
+	float north = tile[ti - 1][tj];
+	float east = tile[ti][tj + 1];
+	float south = tile[ti + 1][tj];
+	float west = tile[ti][tj - 1];
+	output[gi][gj] = (self + north + east + south + west) / 5.0f;
+});
+\end{lstlisting}
+
+Selecting the best optimizations for a given stencil requires compiletime introspection of block size, the neighborhood, and the stencil function itself, requiring a much more sophisticated approach than discussed here.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Reduction}
+
+It is possible to implement reduction kernels in DPC++ by leveraging language features that provide synchronization and communication capabilities between work-items (e.g., atomic operations, work-group and sub-group functions, sub-group shuffles). The kernels in Figures 14-16 and 14-17 show two possible reduction implementations: a naïve reduction using a basic parallel\_for and an atomic operation for every work-item; and a slightly smarter reduction that exploits locality using an ND-range parallel\_for and a work-group reduce function, respectively. We will revisit these atomic operations in more detail in Chapter 19.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-16. Implementing a naïve reduction expressed as a data-parallel kernel
+\begin{lstlisting}[caption={}]
+Q.parallel_for(N, [=](id<1> i) {
+	atomic_ref<
+	int,
+	memory_order::relaxed,
+	memory_scope::system,
+	access::address_space::global_space>(*sum) += data[i];
+}).wait();
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+Figure 14-17. Implementing a naïve reduction expressed as an ND-range kernel
+\begin{lstlisting}[caption={}]
+Q.parallel_for(nd_range<1>{N, B}, [=](nd_item<1> it) {
+	int i = it.get_global_id(0);
+	int group_sum = reduce(it.get_group(), data[i], plus<>());
+	if (it.get_local_id(0) == 0) {
+		atomic_ref<
+		int,
+		memory_order::relaxed,
+		memory_scope::system,
+		access::address_space::global_space>(*sum) += group_sum;
+	}
+}).wait();
+\end{lstlisting}
+
+There are numerous other ways to write reduction kernels, and different devices will likely prefer different implementations, owing to differences in hardware support for atomic operations, work-group local memory size, global memory size, the availability of fast device-wide barriers, or even the availability of dedicated reduction instructions. On some architectures, it may even be faster (or necessary!) to perform a tree reduction using log2(N) separate kernel calls.\par
+
+We strongly recommend that manual implementations of reductions be considered only for cases that are not supported by the DPC++ reduction library or when fine-tuning a kernel for the capabilities of a specific device—and even then, only after being 100\% sure that the reduction library is underperforming!\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Scan}
+
+As we saw earlier in this chapter, implementing a parallel scan requires multiple sweeps over the data, with synchronization occurring between each sweep. Since DPC++ does not provide a mechanism for synchronizing all work-items in an ND-range, a direct implementation of a device-wide scan must be implemented using multiple kernels that communicate partial results through global memory.\par
+
+The code, shown in Figures 14-18, 14-19, and 14-20, demonstrates an inclusive scan implemented using several kernels. The first kernel distributes the input values across work-groups, computing work-group local scans in work-group local memory (note that we could have used the work-group inclusive\_scan function instead). The second kernel computes a local scan using a single work-group, this time over the final value from each block. The third kernel combines these intermediate results to finalize the prefix sum. These three kernels correspond to the three layers of the diagram in Figure 14-5.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-18. Phase 1 for implementing a global inclusive scan in an ND-range kernel: Computing across each work-group
+\begin{lstlisting}[caption={}]
+// Phase 1: Compute local scans over input blocks
+q.submit([&](handler& h) {
+	auto local = local_accessor<int32_t, 1>(L, h);
+	h.parallel_for(nd_range<1>(N, L), [=](nd_item<1> it) {
+		int i = it.get_global_id(0);
+		int li = it.get_local_id(0);
+		
+		// Copy input to local memory
+		local[li] = input[i];
+		it.barrier();
+		
+		// Perform inclusive scan in local memory
+		for (int32_t d = 0; d <= log2((float)L) - 1; ++d) {
+			uint32_t stride = (1 << d);
+			int32_t update = (li >= stride) ? local[li - stride] : 0;
+			it.barrier();
+			local[li] += update;
+			it.barrier();
+		}
+	
+		// Write the result for each item to the output buffer
+		// Write the last result from this block to the temporary buffer
+		output[i] = local[li];
+		if (li == it.get_local_range()[0] - 1)
+			tmp[it.get_group(0)] = local[li];
+	});
+}).wait();
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+Figure 14-19. Phase 2 for implementing a global inclusive scan in an ND-range kernel: Scanning across the results of each work-group
+\begin{lstlisting}[caption={}]
+// Phase 2: Compute scan over partial results
+q.submit([&](handler& h) {
+	auto local = local_accessor<int32_t, 1>(G, h);
+	h.parallel_for(nd_range<1>(G, G), [=](nd_item<1> it) {
+		int i = it.get_global_id(0);
+		int li = it.get_local_id(0);
+		
+		// Copy input to local memory
+		local[li] = tmp[i];
+		it.barrier();
+		
+		// Perform inclusive scan in local memory
+		for (int32_t d = 0; d <= log2((float)G) - 1; ++d) {
+			uint32_t stride = (1 << d);
+			int32_t update = (li >= stride) ? local[li - stride] : 0;
+			it.barrier();
+			local[li] += update;
+			it.barrier();
+		}
+	
+		// Overwrite result from each work-item in the temporary buffer
+		tmp[i] = local[li];
+	});
+}).wait();
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+Figure 14-20. Phase 3 (final) for implementing a global inclusive scan in an ND-range kernel
+\begin{lstlisting}[caption={}]
+// Phase 3: Update local scans using partial results
+q.parallel_for(nd_range<1>(N, L), [=](nd_item<1> it) {
+	int g = it.get_group(0);
+	if (g > 0) {
+		int i = it.get_global_id(0);
+		output[i] += tmp[g - 1];
+	}
+}).wait();
+\end{lstlisting}
+
+Figures 14-18 and 14-19 are very similar; the only differences are the size of the range and how the input and output values are handled. A real-life implementation of this pattern could use a single function taking different arguments to implement these two phases, and they are only presented as distinct code here for pedagogical reasons.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Pack and Unpack}
+
+Pack and unpack are also known as gather and scatter operations. These operations handle differences in how data is arranged in memory and how we wish to present it to the compute resources.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Pack}
+
+Since pack depends on an exclusive scan, implementing a pack that applies to all elements of an ND-range must also take place via global memory and over the course of several kernel enqueues. However, there is a common use case for pack that does not require the operation to be applied over all elements of an ND-range—namely, applying a pack only across items in a specific work-group or sub-group.\par
+
+The snippet in Figure 14-21 shows how to implement a group pack operation on top of an exclusive scan.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-21. Implementing a group pack operation on top of an exclusive scan
+\begin{lstlisting}[caption={}]
+uint32_t index = exclusive_scan(g, (uint32_t) predicate, plus<>());
+if (predicate)
+	dst[index] = value;
+\end{lstlisting}
+
+The code in Figure 14-22 demonstrates how such a pack operation could be used in a kernel to build a list of elements which require some additional postprocessing (in a future kernel). The example shown is based on a real kernel from molecular dynamics simulations: the work-items in the sub-group assigned to particle i cooperate to identify all other particles within a fixed distance of i, and only the particles in this “neighbor list” will be used to calculate the force acting on each particle.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-22. Using a sub-group pack operation to build a list of elements needing additional postprocessing
+\begin{lstlisting}[caption={}]
+range<2> global(N, 8);
+range<2> local(1, 8);
+Q.parallel_for(
+nd_range<2>(global, local),
+[=](nd_item<2> it) [[cl::intel_reqd_sub_group_size(8)]] {
+	int i = it.get_global_id(0);
+	sub_group sg = it.get_sub_group();
+	int sglid = sg.get_local_id()[0];
+	int sgrange = sg.get_max_local_range()[0];
+	
+	uint32_t k = 0;
+	for (int j = sglid; j < N; j += sgrange) {
+		
+		// Compute distance between i and neighbor j
+		float r = distance(position[i], position[j]);
+		
+		// Pack neighbors that require post-processing into a list
+		uint32_t pack = (i != j) and (r <= CUTOFF);
+		uint32_t offset = exclusive_scan(sg, pack, plus<>());
+		if (pack)
+			neighbors[i * MAX_K + k + offset] = j;
+		
+		// Keep track of how many neighbors have been packed so far
+		k += reduce(sg, pack, plus<>());
+	}
+	num_neighbors[i] = reduce(sg, k, maximum<>());
+}).wait();
+\end{lstlisting}
+
+Note that the pack pattern never re-orders elements—the elements that are packed into the output array appear in the same order as they did in the input. This property of pack is important and enables us to use pack functionality to implement other more abstract parallel algorithms (such as std::copy\_if and std::stable\_partition). However, there are other parallel algorithms that can be implemented on top of pack functionality where maintaining order is not required (such as std::partition).\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Unpack}
+
+As with pack, we can implement unpack using scan. Figure 14-23 shows how to implement a sub-group unpack operation on top of an exclusive scan.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-23. Implementing a sub-group unpack operation on top of an exclusive scan
+\begin{lstlisting}[caption={}]
+uint32_t index = exclusive_scan(sg, (uint32_t) predicate, plus<>());
+return (predicate) ? new_value[index] : original_value;
+\end{lstlisting}
+
+The code in Figure 14-24 demonstrates how such a sub-group unpack operation could be used to improve load balancing in a kernel with divergent control flow (in this case, computing the Mandelbrot set). Each work-item is assigned a separate pixel to compute and iterates until convergence or a maximum number of iterations is reached. An unpack operation is then used to replace completed pixels with new pixels.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 14-24. Using a sub-group unpack operation to improve load balancing for kernels with divergent control flow
+\begin{lstlisting}[caption={}]
+// Keep iterating as long as one work-item has work to do
+while (any_of(sg, i < Nx)) {
+	uint32_t converged =
+		next_iteration(params, i, j, count, cr, ci, zr, zi, mandelbrot);
+	if (any_of(sg, converged)) {
+		3
+		// Replace pixels that have converged using an unpack
+		// Pixels that haven't converged are not replaced
+		uint32_t index = exclusive_scan(sg, converged, plus<>());
+		i = (converged) ? iq + index : i;
+		iq += reduce(sg, converged, plus<>());
+		
+		// Reset the iterator variables for the new i
+		if (converged)
+		reset(params, i, j, count, cr, ci, zr, zi);
+	}
+}
+\end{lstlisting}
+
+The degree to which an approach like this improves efficiency (and decreases execution time) is highly application- and input-dependent, since checking for completion and executing the unpack operation both introduce some overhead! Successfully using this pattern in realistic applications will therefore require some fine-tuning based on the amount of divergence present and the computation being performed (e.g., introducing a heuristic to execute the unpack operation only if the number of active work-items falls below some threshold).\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

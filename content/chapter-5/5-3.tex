@@ -1,0 +1,88 @@
+As examples for the remainder of this chapter and to allow us to experiment, we’ll create both synchronous and asynchronous errors in the following sections.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Synchronous Error}
+
+\hspace*{\fill} \par %插入空行
+Figure 5-2. Creating a synchronous error
+\begin{lstlisting}[caption={}]
+	#include <CL/sycl.hpp>
+	using namespace sycl;
+	
+	int main() {
+		buffer<int> B{ range{16} };
+		
+		// ERROR: Create sub-buffer larger than size of parent buffer
+		// An exception is thrown from within the buffer constructor
+		buffer<int> B2(B, id{8}, range{16});
+		
+		return 0;
+	}
+	/*
+	Example output:
+	terminate called after throwing an instance of 
+	'cl::sycl::invalid_object_error'
+	what(): Requested sub-buffer size exceeds the size of the parent buffer 
+	-30 (CL_INVALID_VALUE)
+	*/
+\end{lstlisting}
+
+In Figure 5-2, a sub-buffer is created from a buffer but with an illegal size (larger than the original buffer). The constructor of the sub-buffer detects this error and throws an exception before the constructor’s execution completes. This is a synchronous error because it occurs as part of (synchronously with) the host program’s execution. The error is detectable before the constructor returns, so the error may be handled immediately at its point of origin or detection in the host program.\par
+
+Our code example doesn’t do anything to catch and handle C++ exceptions, so the default C++ uncaught exception handler calls std::terminate for us, signaling that something went wrong.\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{Asynchronous Error}
+
+Generating an asynchronous error is a bit trickier because implementations work hard to detect and report errors synchronously whenever possible. Synchronous errors are easier to debug because they occur at a specific point of origin in the host program, so are preferred whenever possible. One way to generate an asynchronous error for our demonstration purpose, though, is to add a fallback/secondary queue to our command group submission and to discard synchronous exceptions that also happen to be thrown. Figure 5-3 shows such code which invokes our handle\_async\_error function to allow us to experiment. Asynchronous errors can occur and be reported without a secondary/fallback queue, so note that the secondary queue is only part of the example and in no way a requirement for asynchronous errors.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 5-3. Creating an asynchronous error
+\begin{lstlisting}[caption={}]
+#include <CL/sycl.hpp>
+using namespace sycl;
+
+// Our simple asynchronous handler function
+auto handle_async_error = [](exception_list elist) {
+	for (auto &e : elist) {
+		try{ std::rethrow_exception(e); }
+		catch ( sycl::exception& e ) {
+			std::cout << "ASYNC EXCEPTION!!\n";
+			std::cout << e.what() << "\n";
+		}
+	}
+};
+
+void say_device (const queue& Q) {
+	std::cout << "Device : "
+	<< Q.get_device().get_info<info::device::name>() << "\n";
+}
+
+int main() { 
+	queue Q1{ gpu_selector{}, handle_async_error };
+	queue Q2{ cpu_selector{}, handle_async_error };
+	say_device(Q1);
+	say_device(Q2);
+	
+	try {
+		Q1.submit([&] (handler &h){
+			// Empty command group is illegal and generates an error
+		},
+		Q2); // Secondary/backup queue!
+	} catch (...) {} // Discard regular C++ exceptions for this example
+	return 0;
+}
+/*
+Example output:
+Device : Intel(R) Gen9 HD Graphics NEO
+Device : Intel(R) Xeon(R) E-2176G CPU @ 3.70GHz
+ASYNC EXCEPTION!!
+Command group submitted without a kernel or a explicit memory operation. -59 (CL_INVALID_OPERATION)
+*/
+\end{lstlisting}
+
+
+
+
+
+
