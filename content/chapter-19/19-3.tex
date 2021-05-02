@@ -1,0 +1,203 @@
+The potential usages of atomics are so broad and varied that it would be impossible for us to provide an example of each usage in this book. We have included two representative examples, with broad applicability across domains:\par
+\begin{center}
+	
+\begin{enumerate}
+	\item Computing a histogram
+	\item Implementing device-wide synchronization
+\end{enumerate}
+
+\end{center}
+\hspace*{\fill} \par %插入空行
+\textbf{Computing a Histogram}
+
+The code in Figure 19-18 demonstrates how to use relaxed atomics in conjunction with work-group barriers to compute a histogram. The kernel is split by the barriers into three phases, each with their own atomicity requirements. Remember that the barrier acts both as a synchronization point and an acquire-release fence—this ensures that any reads and writes in one phase are visible to all work-items in the work-group in later phases.\par
+
+The first phase sets the contents of some work-group local memory to zero. The work-items in each work-group update independent locations in work-group local memory by design—race conditions cannot occur, and no atomicity is required.\par
+
+The second phase accumulates partial histogram results in local memory. Work-items in the same work-group may update the same locations in work-group local memory, but synchronization can be deferred until the end of the phase—we can satisfy the atomicity requirements using memory\_order::relaxed and memory\_scope::work\_group.\par
+
+The third phase contributes the partial histogram results to the total stored in global memory. Work-items in the same work-group are guaranteed to read from independent locations in work-group local memory, but may update the same locations in global memory—we no longer require atomicity for the work-group local memory and can satisfy the atomicity requirements for global memory using memory\_order::relaxed and memory\_scope::system as before.\par
+
+\hspace*{\fill} \par %插入空行
+Figure 19-18. Computing a histogram using atomic references in different memory spaces
+\begin{lstlisting}[caption={}]
+// Define shorthand aliases for the types of atomic needed by this kernel 
+template <typename T>
+using local_atomic_ref = atomic_ref<
+	T,
+	memory_order::relaxed, 
+	memory_scope::work_group,
+	access::address_space::local_space>; 
+	
+template <typename T>
+using global_atomic_ref = atomic_ref<
+	T,
+	memory_order::relaxed, 
+	memory_scope::system,
+	access::address_space::global_space>; 
+	
+Q.submit([&](handler& h) {
+	auto local = 1ocal_accessor<uint32_t, 1>{B, h};
+	h.parallel_for(
+		nd_range<1>{num_groups * num_items, num_items},[=](nd_item<1> it){ 
+			// Phase 1:Work-items co-operate to zero local memory
+			for (int32_t b=it.get_local_id(0); b <B; b+=it.get_local_range(0)){
+				local[b]=0;
+			}
+		
+			it.barrier();// Wait for all to be zeroed
+		
+			// Phase 2:Work-groups each compute a chunk of the input 
+			//Work-items co-operate to compute histogram in local memory 
+			auto grp=it.get_group();
+		
+			const auto [group_start, group_end] = distribute_range (grp, N); 
+			for (int i = group_start + it.get_local_id(0); i < group_end; 
+				i +=it.get_local_range(0)){
+			
+				int32_t b = input[i] % B;
+				local_atomic_ref<uint32_t>(local[b])++;
+			}
+			it.barrier(); // Wait for all local histogram updates to complete 
+			
+			// Phase 3: Work-items co-operate to update global memory
+			for (int32_t b = it.get_local_id(0); b < B; b +=it.get_local_range(0)){
+				
+				global_atomic_ref<uint32_t>(histogram[b]) += local[b];
+			}
+		});
+	}).wait();
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+\textbf{Implementing Device-Wide Synchronization}
+
+Back in Chapter 4, we warned against writing kernels that attempt to synchronize work-items across work-groups. However, we fully expect several readers of this chapter will be itching to implement their own device-wide synchronization routines atop of atomic operations and that our warnings will be ignored.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+Device-wide synchronization is currently not portable and is best left to expert programmers. Future versions of the language will address this.
+\end{tcolorbox}
+
+The code discussed in this section is dangerous and should not be expected to work on all devices, because of potential differences in scheduling and concurrency guarantees. The memory ordering guarantees provided by atomics are orthogonal to forward progress guarantees; and, at the time of writing, work-group scheduling in SYCL and DPC++ is completely implementation-defined. Formalizing the concepts and terminology required to discuss execution models and scheduling guarantees is currently an area of active academic research, and future versions of DPC++ are expected to build on this work to provide additional scheduling queries and controls. For now, these topics should be considered expert-only.\par
+
+Figure 19-19 shows a simple implementation of a device-wide latch (a single-use barrier), and Figure 19-20 shows a simple example of its usage. Each work-group elects a single work-item to signal arrival of the group at the latch and await the arrival of other groups using a naïve spin-loop, while the other work-items wait for the elected work-item using a workgroup barrier. It is this spin-loop that makes device-wide synchronization unsafe; if any work-groups have not yet begun executing or the currently executing work-groups are not scheduled fairly, the code may deadlock.\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+Relying on memory order alone to implement synchronization primitives may lead to deadlocks in the absence of independent forward progress guarantees!
+\end{tcolorbox}
+
+For the code to work correctly, the following three conditions must hold:\par
+
+\begin{enumerate}
+	\item The atomic operations must use memory orders at least as strict as those shown, in order to guarantee that the correct fences are generated.
+	\item Each work-group in the ND-range must be capable of making forward progress, in order to avoid a single work-group spinning in the loop from starving a work-group that has yet to increment the counter.
+	\item The device must be capable of executing all orkgroups in the ND-range concurrently, in order to ensure that all work-groups in the ND-range eventually reach the latch.
+\end{enumerate}
+
+\hspace*{\fill} \par %插入空行
+Figure 19-19. Building a simple device-wide latch on top of atomic references
+\begin{lstlisting}[caption={}]
+struct device_latch {
+	using memory_order = intel::memory_order;
+	using memory_scope = intel::memory_scope;
+	
+	explicit device_latch(size_t num_groups) :
+			counter(0), expected(num_groups) {}
+			
+	template <int Dimensions>
+	void arrive_and_wait(nd_item<Dimensions>& it) {
+		it.barrier();
+		// Elect one work-item per work-group to be involved
+		// in the synchronization
+		// All other work-items wait at the barrier after the branch
+		if (it.get_local_linear_id() == 0) {
+			atomic_ref<
+				size_t,
+				memory_order::acq_rel,
+				memory_scope::device,
+				access::address_space::global_space> atomic_counter(counter);
+				
+			// Signal arrival at the barrier
+			// Previous writes should be visible to 
+			// all work-items on the device
+			atomic_counter++;
+			
+			// Wait for all work-groups to arrive
+			// Synchronize with previous releases by
+			// all work-items on the device
+			while (atomic_counter.load() != expected) {}
+		}
+		it.barrier();
+	}
+	size_t counter;
+	size_t expected;
+};
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+Figure 19-20. Using the device-wide latch from Figure 19-19
+\begin{lstlisting}[caption={}]
+// Allocate a one-time-use device_latch in USM
+void* ptr = sycl::malloc_shared(sizeof(device_latch), Q);
+device_latch* latch = new (ptr) device_latch(num_groups);
+Q.submit([&](handler& h) {
+	h.parallel_for(R, [=](nd_item<1> it) {
+		// Every work-item writes a 1 to its location
+		data[it.get_global_linear_id()] = 1;
+		
+		// Every work-item waits for all writes
+		latch->arrive_and_wait(it);
+		
+		// Every work-item sums the values it can see
+		size_t sum = 0;
+		for (int i = 0; i < num_groups * items_per_group; ++i) {
+			sum += data[i];
+		}
+		sums[it.get_global_linear_id()] = sum;
+	});
+}).wait();
+free(ptr, Q);
+\end{lstlisting}
+
+Although this code is not guaranteed to be portable, we have included it here to highlight two key points: 1) DPC++ is expressive enough to enable device-specific tuning, sometimes at the expense of portability; and 2) DPC++ already contains the building blocks necessary to implement higher-level synchronization routines, which may be included in a future version of the language.\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
