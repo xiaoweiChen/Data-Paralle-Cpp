@@ -1,0 +1,45 @@
+Maintaining close alignment between SYCL, DPC++, and ISO C++ has two advantages. First, it enables SYCL and DPC++ to leverage the newest and greatest features of standard C++ to improve developer productivity. Second, it increases the chances of heterogeneous programming features introduced in SYCL or DPC++ successfully influencing the future direction of standard C++ (e.g., executors).\par
+
+SYCL 1.2.1 was based on C++11, and many of the biggest improvements to the interfaces of SYCL 2020 and DPC++ are only possible because of language features introduced in C++14 (e.g., generic lambdas) and C++17 (e.g., class template argument deduction—CTAD).\par
+
+The C++20 specification was ratified in 2020 (while we were writing this book!). It includes a number of features (e.g., std::atomic\_ref, std::bit\_cast) that have already been pre-adopted by DPC++ and SYCL—as we move toward the next official release of SYCL (after 2020 provisional) and the next version of DPC++, we expect to more closely align with C++20 and incorporate the most useful parts of it. For example, C++20 introduced some additional thread synchronization routines in the form of std::latch and std::barrier; we already explored in Chapter 19 how similar interfaces could be used to define device-wide barriers, and it may make sense to reexamine sub-group and work-group barriers in the context of the new C++20 syntax as well.\par
+
+Work for any standard committee is never done, and work has already begun on C++23. Since the specification is not finalized yet, adopting any of these features into a SYCL or DPC++ specification would be a mistake—the features may change significantly before making it into C++23, resulting in incompatibilities that may prove hard to fix. However, there are many features under discussion that may change the way that future SYCL and DPC++ programs look and behave. One of the most exciting proposed features is mdspan, a non-owning view of data that provides both multidimensional array syntax for pointers and an AccessorPolicy as an extension point for controlling access to the underlying data. These semantics are very similar to those of SYCL accessors, and mdspan would enable accessor-like syntax to be used for both buffers and USM 
+allocations, as shown in Figure EP-1.
+
+\hspace*{\fill} \par %插入空行
+Figure EP-1. Attaching accessor-like indexing to a USM pointer using mdspan
+\begin{lstlisting}[caption={}]
+queue Q;
+constexpr int N = 4;
+constexpr int M = 2;
+int* data = malloc_shared<int>(N * M, Q);
+stdex::mdspan<int, N, M> view{data};
+Q.parallel_for(range<2>{N, M}, [=](id<2> idx) {
+	int i = idx[0];
+	int j = idx[1];
+	view(i, j) = i * M + j;
+}).wait();
+\end{lstlisting}
+
+Hopefully it is only a matter of time until mdspan becomes standard C++. In the meantime, we recommend that interested readers experiment with the open source production-quality reference implementation available as part of the Kokkos project.\par
+
+Another exciting proposed feature is the std::simd class template, which seeks to provide a portable interface for explicit vector parallelism in C++. Adopting this interface would provide a clear distinction between the two different uses of vector types described in Chapter 11: uses of vector types for programmer convenience and uses of vector types by ninja programmers for low-level performance tuning. The presence of support for both SPMD and SIMD programming styles within the same language also raises some interesting questions: how should we declare which style a kernel uses, and should we be able to mix and match styles within the same kernel? We expect future vendor extensions to explore these questions, as vendors experiment with the possibilities in this space ahead of standardization.\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

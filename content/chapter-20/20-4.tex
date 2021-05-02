@@ -1,0 +1,67 @@
+As we noted back in Chapter 4, we consider the hierarchical parallelism in older versions of SYCL to be an experimental feature and expect it to be slower than basic data-parallel and ND-range kernels in its adoption of new language features.\par
+
+There are a lot of new language features in DPC++ and SYCL 2020, and several of them are currently incompatible with hierarchical parallelism (e.g., sub-groups, group algorithms, reductions). Closing this gap would help to improve programmer productivity and would enable more compact syntax for some simple cases. The code in Figure EP-7 shows a possible route for extending reduction support to hierarchical parallelism, enabling a hierarchical reduction: each work-group computes a sum, and the kernel as a whole computes the maximum of all sums across all workgroups.\par
+
+\hspace*{\fill} \par %插入空行
+Figure EP-7. Using hierarchical parallelism for a hierarchical reduction
+\begin{lstlisting}[caption={}]
+h.parallel_for_work_group(N, reduction(max, maximum<>()),
+[=](group<1> g, auto& max) {
+	float sum = 0.0f;
+	g.parallel_for_work_item(M, reduction(sum, plus<>()),
+	[=](h_item<1> it, auto& sum) {
+		sum += data[it.get_global_id()];
+	});
+	max.combine(sum);
+});
+\end{lstlisting}
+
+The other aspect of hierarchical parallelism that was briefly touched on in Chapter 4 is its implementation complexity. Mapping nested parallelism to accelerators is a challenge that is not unique to SYCL or DPC++, and this topic is the subject of much interest and research. As implementers gain experience with the implementation of hierarchical parallelism and the capabilities of different devices, we expect syntax in SYCL and DPC++ to evolve in alignment with standard practice.\par
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

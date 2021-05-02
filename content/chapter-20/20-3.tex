@@ -1,0 +1,80 @@
+Chapter 12 introduced an expressive set of queries enabling the host to extract information about a device at runtime. These queries enable runtime parameters such as work-group size to be tuned for a specific device and for different kernels implementing different algorithms to be dispatched to different types of device.\par
+
+Future versions are expected to augment these runtime queries with compile-time queries, allowing code to be specialized based on whether an implementation understands a vendor extension. Figure EP-5 shows how the preprocessor could be used to detect whether the compiler supports a specific vendor extension.\par
+
+\hspace*{\fill} \par %插入空行
+Figure EP-5. Checking for Intel sub-group extension compiler support with \#ifdef
+\begin{lstlisting}[caption={}]
+#ifdef SYCL_EXT_INTEL_SUB_GROUPS
+sycl::ext::intel::sub_group sg = it.get_sub_group();
+#endif
+\end{lstlisting}
+
+There are also plans to introduce compile-time queries enabling kernels to be specialized based on properties (which we call aspects) of the targeted device (e.g., the device type, support for a specific extension, the size of work-group local memory, the sub-group size selected by the compiler). These aspects represent a special kind of constant expression not currently present in C++—they are not necessarily constexpr when the host code is compiled but become constexpr when the target device becomes known. The exact mechanism used to expose this device constexpr concept is still being designed. We expect it to build on the specialization constants feature introduced in the SYCL 2020 provisional and to look and behave similarly to the code shown in Figure EP-6.\par
+
+\hspace*{\fill} \par %插入空行
+Figure EP-6. Specializing kernel code based on device aspects at kernel compile time
+\begin{lstlisting}[caption={}]
+h.parallel_for(..., [=](item<1> it) {
+	if devconstexpr (this_device().has<aspect::cpu>()) {
+		/* Code specialized for CPUs */
+	}
+	else if devconstexpr (this_device().has<aspect::gpu>()) {
+		/* Code specialized for GPUs */
+	}
+});
+\end{lstlisting}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

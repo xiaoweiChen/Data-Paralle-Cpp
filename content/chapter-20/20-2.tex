@@ -1,0 +1,97 @@
+As we have seen in earlier chapters, there are some cases in which otherwise simple codes are complicated by the existence of memory spaces. We are free to use regular C++ pointers in most places, but at other times are required to use the multi\_ptr class and explicitly specify which address space(s) their code is expected to support.\par
+
+Many modern architectures solve this problem by providing hardware support for a so-called generic address space; pointers may point to any allocation in any memory space, so that we (and compilers!) can leverage runtime queries to specialize code in situations where different memory spaces require different handling (e.g., accessing work-group local memory may use different instructions). Support for a generic address space is already available in other programming languages, such as OpenCL, and it is expected that a future version of SYCL will adopt generic-by-default in place of inference rules.\par
+
+This change would greatly simplify many codes and make usage of the multi\_ptr class an optional performance-tuning feature instead of one that is required for correctness. Figure EP-2 shows a simple class written using the existing address spaces, and Figures EP-3 and EP-4 show two alternative designs that would be enabled by the introduction of a generic address space.\par
+
+\hspace*{\fill} \par %插入空行
+Figure EP-2. Storing pointers to a specific address space in a class
+\begin{lstlisting}[caption={}]
+// Pointers in structs must be explicitly decorated with address space
+// Supporting both address spaces requires a template parameter
+template <access::address_space AddressSpace>
+struct Particles {
+	multi_ptr<float, AddressSpace> x;
+	multi_ptr<float, AddressSpace> y;
+	multi_ptr<float, AddressSpace> z;
+};
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+Figure EP-3. Storing pointers to the generic address space in a class
+\begin{lstlisting}[caption={}]
+// Pointers in structs default to the generic address space
+struct Particles {
+	float* x;
+	float* y;
+	float* z;
+};
+\end{lstlisting}
+
+\hspace*{\fill} \par %插入空行
+Figure EP-4. Storing pointers with an optional address space in a class
+\begin{lstlisting}[caption={}]
+// Template parameter defaults to generic address space
+// User of class can override address space for performance tuning
+template <access::address_space AddressSpace =
+access::address_space::generic_space>
+
+struct Particles {
+	multi_ptr<float, AddressSpace> x;
+	multi_ptr<float, AddressSpace> y;
+	multi_ptr<float, AddressSpace> z;
+};
+\end{lstlisting}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
