@@ -1,10 +1,10 @@
-As examples for the remainder of this chapter and to allow us to experiment, we’ll create both synchronous and asynchronous errors in the following sections.\par
+我们将在下面几节中创建同步和异步错误。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Synchronous Error}
+\textbf{同步错误}
 
 \hspace*{\fill} \par %插入空行
-Figure 5-2. Creating a synchronous error
+图5-2 创建同步错误
 \begin{lstlisting}[caption={}]
 	#include <CL/sycl.hpp>
 	using namespace sycl;
@@ -27,17 +27,17 @@ Figure 5-2. Creating a synchronous error
 	*/
 \end{lstlisting}
 
-In Figure 5-2, a sub-buffer is created from a buffer but with an illegal size (larger than the original buffer). The constructor of the sub-buffer detects this error and throws an exception before the constructor’s execution completes. This is a synchronous error because it occurs as part of (synchronously with) the host program’s execution. The error is detectable before the constructor returns, so the error may be handled immediately at its point of origin or detection in the host program.\par
+图5-2中，一个缓冲区创建了一个子缓冲区，但其大小是非法的(大于原始缓冲区)。子缓冲区的构造函数检测到错误，并在构造函数完成之前抛出异常。这是一个同步错误，因为是主机程序的一部分(与主机程序同步)。在构造函数返回之前错误是可检测到的，因此错误可以在起始点或主程序中的检测点处进行处理。\par
 
-Our code example doesn’t do anything to catch and handle C++ exceptions, so the default C++ uncaught exception handler calls std::terminate for us, signaling that something went wrong.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Asynchronous Error}
-
-Generating an asynchronous error is a bit trickier because implementations work hard to detect and report errors synchronously whenever possible. Synchronous errors are easier to debug because they occur at a specific point of origin in the host program, so are preferred whenever possible. One way to generate an asynchronous error for our demonstration purpose, though, is to add a fallback/secondary queue to our command group submission and to discard synchronous exceptions that also happen to be thrown. Figure 5-3 shows such code which invokes our handle\_async\_error function to allow us to experiment. Asynchronous errors can occur and be reported without a secondary/fallback queue, so note that the secondary queue is only part of the example and in no way a requirement for asynchronous errors.\par
+代码示例没有执行任何捕获和处理C++异常的操作，因此程序会调用std::terminate。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 5-3. Creating an asynchronous error
+\textbf{异步错误}
+
+生成异步错误比较棘手，因为实现会同步地检测和报告错误。因为同步错误发生在主程序中特定的起始点，所以更容易调试。不过，为演示目的生成异步错误的一种方法是，向我们的命令组提交添加一个应急/备用队列，并丢弃会抛出的同步异常。图5-3就是这样的代码，它调用了handle\_async\_error函数。异步错误可以在没有应急/备用队列的情况下发生并报告，因此备用队列只是示例的一部分，异步错误实际并不需要这个队列。\par
+
+\hspace*{\fill} \par %插入空行
+图5-3 创建异步错误
 \begin{lstlisting}[caption={}]
 #include <CL/sycl.hpp>
 using namespace sycl;

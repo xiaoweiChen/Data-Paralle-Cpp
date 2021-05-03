@@ -1,18 +1,18 @@
-C++ provides a framework for notification and handling of errors through its exception mechanism. Heterogeneous programming requires an additional level of error management beyond this, because some errors occur on a device or when trying to launch work on a device. These errors are typically decoupled in time from the host program’s execution, and as such they don’t integrate cleanly with classic C++ exception handling mechanisms. To solve this, there are additional mechanisms to make asynchronous errors as manageable and controllable as regular C++ exceptions.\par
+C++通过异常机制提供了通知和处理错误的框架。因为有些错误发生在设备上，或者在设备上启动工作时，所以异构编程还需要对错误级别进行管理。这些错误通常与主程序的执行不相关，因此不能与C++异常处理机制相集成。为了解决这个问题，需要有其他机制可以使异步错误像C++异常一样易于管理和控制。\par
 
-Figure 5-1 shows two components of a typical application: (1) the host code that runs sequentially and submits work to the task graph for future execution and (2) the task graph which runs asynchronously from the host program and executes kernels or other actions on devices when the necessary dependences are met. The example shows a parallel\_for as the operation that executes asynchronously as part of the task graph, but other operations are possible as well as discussed in Chapters 3, 4, and 8.\par
+图5-1展示了程序的两个组件:(1)主机代码运行顺序，以及执行和提交工作任务图(2)的异步置信国内和函数或对其他设备操作，与主程序的运行的依赖性。例子使用parallel\_for执行内核函数，并作为任务图的一部分异步执行，其他的操作会在第3、4和8章中再进行讨论。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 5-1. Separation of host program and task graph executions
+图5-1 分离主程序和内核任务
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-5/images/2}
 \end{center}
 
-The distinction between the left and right (host and task graph) sides of Figure 5-1 is the key to understanding the differences between synchronous and asynchronous errors.\par
+了解图5-1中左边和右边(主机和任务图)之间的区别，是理解同步和异步错误区别的关键。\par
 
-Synchronous errors occur when an error condition can be detected as the host program executes an operation, such as an API call or object constructor. They can be detected before an instruction on the left side of the figure completes, and the error can be thrown by the operation that caused the error immediately. We can wrap specific instructions on the left side of the diagram with a try-catch construct, expecting that errors occurring as a result of operations within the try will be detected before the try block ends (and therefore caught). The C++ exception mechanism is designed to handle exactly these types of errors.\par
+主程序执行某个操作(如API调用或对象构造函数)，在检测到错误条件时，就会发生同步错误。可以在图左侧的指令完成之前检测到，并且可以立即导将错误抛出。可以在图的左侧使用try-catch来包装指令，期望在try块结束(从而捕获)之前检测到try中操作的错误。C++异常机制就是为了处理这些错误而设计的。\par
 
-Alternatively, asynchronous errors occur as part of the right side of Figure 5-1, where an error is only detected when an operation in the task graph is executed. By the time that an asynchronous error is detected as part of task graph execution, the host program has typically already moved on with its execution, so there is no code to wrap with a trycatch construct to catch these errors. There is instead an asynchronous exception handling framework to handle these errors that occur at seemingly random times relative to host program execution.\par
+当图5-1右侧出现异步错误，只有在执行任务中的操作才会检测到错误。当检测到异步错误时，主程序通常会继续执行，所以没有代码可以用try-catch来捕获这些错误。不放，有异步异常处理框架可以来处理这些错误。\par
 
 
 

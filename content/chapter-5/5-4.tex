@@ -1,22 +1,22 @@
-The C++ exception features are designed to cleanly separate the point in a program where an error is detected from the point where it may be handled, and this concept fits very well with both synchronous and asynchronous errors in SYCL. Through the throw and catch mechanisms, a hierarchy of handlers can be defined which can be important in production applications.\par
+C++异常设计目的是将程序中检测到错误与处理错误区分开，这个概念非常适合SYCL中的同步和异步错误。通过抛出和捕获机制，可以定义处理程序的层次结构，这在实际应用程序中很重要。\par
 
-Building an application that can handle errors in a consistent and reliable way requires a strategy up front and a resulting software architecture built for error management. C++ provides flexible tools to implement many alternative strategies, but such architecture is beyond the scope of this chapter. There are many books and other references devoted to this topic, so we encourage looking to them for full coverage of C++ error management strategies.\par
+构建能以可靠的方式处理错误的应用程序，需要预先制定策略，并为错误管理构建相应的软件体系结构。C++提供了工具来实现许多策略，但是这样的架构超出了本章的范围。有许多书籍和其他参考资料专门讨论这个主题，可以去全面的了解一下C++错误管理的策略。\par
 
-This said, error detection and reporting doesn’t always need to be production-scale. Errors in a program can be reliably detected and reported through minimal code if the goal is simply to detect errors during execution and to report them (but not necessarily to recover from them). The following sections cover first what happens if we ignore error handling and do nothing (the default behavior isn’t all that bad!), followed by recommended error reporting that is simple to implement in basic applications.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Ignoring Error Handling}
-
-C++ and SYCL are designed to tell us that something went wrong even when we don’t handle errors explicitly. The default result of unhandled synchronous or asynchronous errors is abnormal program termination which an operating system should tell us about. The following two examples mimic the behavior that will occur if we do not handle a synchronous and an asynchronous error, respectively.\par
-
-Figure 5-4 shows the result of an unhandled C++ exception, which could be an unhandled SYCL synchronous error, for example. We can use this code to test what a particular operating system will report in such a case.\par
-
-Figure 5-5 shows example output from std::terminate being called, which will be the result of an unhandled SYCL asynchronous error in our application. We can use this code to test what a particular operating system will report in such a case.\par
-
-Although we probably should handle errors in our programs, since uncaught errors will be caught and the program terminated, we do not need to worry about a program silently failing!\par
+也就是说，错误检测和报告与程序实际功能并不相关。如果目标仅仅是在执行过程中检测并报告错误(但不一定是从错误中恢复)，那么可以通过可靠地检测和报告程序中的错误。下面几节先来介绍忽略错误处理时会发生什么(默认行为并不是那么糟糕!)，然后介绍在应用程序中很容易实现的错误报告方式。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 5-4. Unhandled exception in C++
+\textbf{忽略错误}
+
+在C++和SYCL中即使我们没有显式地处理错误，也会出现错误。未处理的同步或异步错误的默认结果是，程序异常终止。下面两个示例分别模拟了不处理同步错误和异步错误时情况。\par
+
+图5-4展示了不处理的C++异常的情况，例如：该异常可能是一个未处理的SYCL同步错误。我们可以使用此代码来测试特定操作系统在这种情况下将报告什么。\par
+
+图5-5展示了调用std::terminate的输出，这是程序中未处理的SYCL异步错误的情况。我们可以使用此代码来测试特定操作系统在这种情况下将报告什么。\par
+
+我们应该处理程序中的错误，因为未捕获的错误将使程序终止!\par
+
+\hspace*{\fill} \par %插入空行
+图5-4 C++中不处理异常
 \begin{lstlisting}[caption={}]
 #include <iostream>
 
@@ -37,7 +37,7 @@ Aborted (core dumped)
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure 5-5. std::terminate is called when a SYCL asynchronous exception isn’t handled
+图5-5 不处理SYCL异步异常时，将调用std::terminate
 \begin{lstlisting}[caption={}]
 #include <iostream>
 
@@ -55,14 +55,14 @@ Aborted (core dumped)
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Synchronous Error Handling}
+\textbf{同步的处理错误}
 
-We keep this section very short because SYCL synchronous errors are just C++ exceptions. Most of the additional error mechanisms added in SYCL relate to asynchronous errors which we cover in the next section, but synchronous errors are important because implementations try to detect and report as many errors synchronously as possible, since they are easier to reason about and handle.\par
+SYCL同步错误与C++异常一样，SYCL中添加的大多错误机制都与异步错误有关，我们将在下一节中介绍异步错误，而同步错误非常重要，因为实现会以同步的方式检测和报告尽可能多的错误，使其更容易检测和处理。\par
 
-Synchronous errors defined by SYCL are a derived class from std::exception of type sycl::exception, which allows us to catch the SYCL errors specifically though a try-catch structure such as what we see in Figure 5-6.\par
+SYCL定义的同步错误是SYCL::exception类型，是std::exception的派生类，其允许我们通过如图5-6所示的try-catch结构来捕获错误。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 5-6. Pattern to catch sycl::exception specifically
+图5-6 捕获sycl::exception的模式
 \begin{lstlisting}[caption={}]
 try{
 	// Do some SYCL work
@@ -73,9 +73,9 @@ try{
 } 
 \end{lstlisting}
 
-On top of the C++ error handling mechanisms, SYCL adds a sycl::exception type for the exceptions thrown by the runtime. Everything else is standard C++ exception handling, so will be familiar to most developers.\par
+在C++处理错误机制的基础上，SYCL添加了SYCL::exception异常类型。其他与标准的c++异常处理方式相同，所以也符合大多数开发者的习惯。\par
 
-A slightly more complete example is provided in Figure 5-7, where additional classes of exception are handled, as well as the program being ended by returning from main().\par
+图5-7提供了一个示例处理了异常，以及通过从main()来结束程序。\par
 
 \hspace*{\fill} \par %插入空行
 Figure 5-7. Pattern to catch exceptions from a block of code
@@ -107,24 +107,24 @@ the parent buffer -30 (CL_INVALID_VALUE)
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Asynchronous Error Handling}
+\textbf{异步的错误处理}
 
-Asynchronous errors are detected by the SYCL runtime (or an underlying backend), and the errors occur independently of execution of commands in the host program. The errors are stored in lists internal to the SYCL runtime and only released for processing at specific points that the programmer can control. There are two topics that we need to discuss to cover handling of asynchronous errors:\par
+异步错误由SYCL运行时(或底层后端)检测，错误的发生与主机程序无关。错误存储在SYCL运行时的内部列表中，仅在开发者可以控制的点进行处理。我们需要讨论两个主题来讨论异步错误的处理:\par
 
 \begin{enumerate}
-	\item \textbf{The asynchronous handler} that is invoked when there are outstanding asynchronous errors to process
-	\item \textbf{When} the asynchronous handler is invoked
+	\item \textbf{异步处理程序}，当有未处理的异步错误需要处理时调用
+	\item 异步处理程序\textbf{何时}调用
 \end{enumerate}
 
 \hspace*{\fill} \par %插入空行
-\textbf{The Asynchronous Handler}
+\textbf{异步处理程序}
 
-The asynchronous handler is a function that the application defines, which is registered with SYCL contexts and/or queues. At the times defined by the next section, if there are any unprocessed asynchronous exceptions that are available to be handled, then the asynchronous handler is invoked by the SYCL runtime and passed a list of these exceptions.\par
+异步处理程序是个函数定义，使用SYCL上下文和/或队列注册。下一节中，有未处理的异步异常需要处理，那么SYCL运行时将调用异步处理程序，并将其传递到异常列表中。\par
 
-The asynchronous handler is passed to a context or queue constructor as a std::function and can be defined in ways such as a regular function, lambda, or functor, depending on our preference. The handler must accept a sycl::exception\_list argument, such as in the example handler shown in Figure 5-8.\par
+异步处理程序以std::function的形式传递给上下文或队列构造函数，可以根据偏好以常规函数、lambda或函数操作符等方式定义。处理程序必须接受sycl::exception\_list参数，如图5-8所示的示例处理程序。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 5-8. Example asynchronous handler implementation defined as a lambda
+图5-8 定义为lambda的异步处理程序示例
 \begin{lstlisting}[caption={}]
 // Our simple asynchronous handler function
 auto handle_async_error = [](exception_list elist) {
@@ -138,26 +138,26 @@ auto handle_async_error = [](exception_list elist) {
 };
 \end{lstlisting}
 
-In Figure 5-8, the std::rethrow\_exception followed by catch of a specific exception type provides filtering of the type of exception, in this case to the only sycl::exception. We can also use alternative filtering approaches in C++ or just choose to handle all exceptions regardless of the type.\par
+图5-8中，std::rethrow\_exception可以抛出特定的异常类型，并可以使用catch对异常进行捕捉，本例中捕捉的是sycl::exception。我们还可以在C++中使用替代的方法，或者选择处理所有类型的异常。\par
 
-The handler is associated with a queue or context (low-level detail covered more in Chapter 6) at construction time. For example, to register the handler defined in Figure 5-8 with a queue that we are creating, we could write\par
+处理程序在构造时与队列或上下文(第6章将详细介绍底层细节)相关联。例如，要将图5-8中定义的处理程序注册到正在创建的队列中，可以写成：\par
 
 queue my\_queue{ gpu\_selector{}, handle\_async\_error };\par
 
-Likewise, to register the handler defined in Figure 5-8 with a context that we are creating, we could write\par
+同样，要将图5-8中定义的处理程序注册到正在创建的上下文中，可以写成:\par
 
 context my\_context{ handle\_async\_error };\par
 
-Most applications do not need contexts to be explicitly created or managed (they are created behind the scenes for us automatically), so if an asynchronous handler is going to be used, most developers should associate such handlers with queues that are being constructed for specific devices (and not explicit contexts).\par
+大多数应用程序不需要显式地创建或管理上下文(程序会自动创建)，大多数开发者应该为特定设备构造处理程序与队列构(而不是显式创建上下文)。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-In defining asynchronous handlers, most developers should define them on queues unless already explicitly managing contexts for other reasons.
+定义异步处理程序时(除非已经显式的管理了上下文)，应该在队列上进行定义。
 \end{tcolorbox}
 
-If an asynchronous handler is not defined for a queue or the queue’s parent context and an asynchronous error occurs on that queue (or in the context) that must be processed, then the default asynchronous handler is invoked. The default handler operates as if it was coded as shown in Figure 5-9.\par
+如果没有为队列或队列的父上下文定义异步处理程序，在处理队列(或上下文中)上发生的异步错误时，会使用默认的异步处理程序。默认的处理程序就如图5-9那样运行。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 5-9. Example of how the default asynchronous handler behaves
+图5-9 默认异步处理程序的示例
 \begin{lstlisting}[caption={}]
 // Our simple asynchronous handler function
 auto handle_async_error = [](exception_list elist) {
@@ -174,34 +174,34 @@ auto handle_async_error = [](exception_list elist) {
 };
 \end{lstlisting}
 
-The default handler should display some information to the user on any errors in the exception list and then will terminate the application abnormally, which should also cause the operating system to report that termination was abnormal.\par
+默认处理程序应该向用户显示异常列表中的错误信息，然后以非正常的方式终止应用程序，同时也需要让操作系统记录下这次终止是非正常的。\par
 
-What we put within an asynchronous handler is up to us. It can range from logging of an error to application termination to recovery of the error condition so that an application can continue executing normally. The common case is to report any details of the error available by calling sycl::exception::what(), followed by termination of the application.\par
+异步处理程序中执行什么由我们来定，可以记录错误、终止程序、恢复错误，以便程序可以继续正常执行。常见的情况是通过sycl::exception::what()来展示错误的细节，然后终止程序。\par
 
-Although it’s up to us to decide what an asynchronous handler does internally, a common mistake is to print an error message (that may be missed in the noise of other messages from the program), followed by completion of the handler function. Unless we have error management principles in place that allow us to recover known program state and to be confident that it’s safe to continue execution, we should consider terminating the application within our asynchronous handler function(s). This reduces the chance that incorrect results will appear from a program where an error was detected, but where the application was inadvertently allowed to continue with execution regardless. In many programs, abnormal termination is the preferred result once we have experienced asynchronous exceptions.\par
+虽然是我们决定异步处理程序在内部做什么，但常见的错误是打印错误消息(会受程序中的其他消息的干扰)，然后完成处理函数。除非有适当的错误管理原则，允许恢复已知的程序状态，并确信继续执行的安全，否则应该考虑在异步处理程序函数中终止应用程序，以便减少了在检测到错误的程序中出现结果错误的可能性。许多程序中，当出席异步异常时，终止必是首选。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Consider terminating applications within an asynchronous handler, after outputting information about the error, if comprehensive error recovery and management mechanisms are not in place.
+如果没有完善的错误恢复和管理机制，请考虑在输出有关错误的信息之后，在异步处理程序中终止程序。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Invocation of the Handler}
+\textbf{处理程序的调用}
 
-The asynchronous handler is called by the runtime at specific times. Errors aren’t reported immediately as they occur because management of errors and safe application programming (particularly multithreaded) would become more difficult and expensive if that was the case. The asynchronous handler is instead called at the following very specific times:\par
+运行时在特定时间调用异步处理程序。错误发生时不会立即报告，如果有这种情况，管理错误和程序编程(特别是多线程)将变得更加困难。异步处理程序会在以下特定时间调用:\par
 
 \begin{enumerate}
-	\item When the host program calls \textbf{queue::throw\_asynchronous()} on a specific queue
-	\item When the host program calls \textbf{queue::wait\_and\_throw()} on a specific queue
-	\item When the host program calls \textbf{event::wait\_and\_throw()} on a specific event
-	\item When a \textbf{queue} is destroyed
-	\item When a \textbf{context} is destroyed
+	\item 当主程序在听定队列上调用\textbf{queue::throw\_asynchronous()}时
+	\item 当主程序在听定队列上调用\textbf{queue::wait\_and\_throw()}时
+	\item 当主程序在听定事件上调用\textbf{event::wait\_and\_throw()}时
+	\item 当一个\textbf{队列}销毁时
+	\item 当一个\textbf{上下文}销毁时
 \end{enumerate}
 
-Methods 1–3 provide a mechanism for a host program to control when asynchronous exceptions are handled, so that thread safety and other details specific to an application can be managed. They effectively provide controlled points at which asynchronous exceptions enter the host program control flow and can be processed almost as if they were synchronous errors.\par
+方法1-3提供了一种机制，让宿主程序控制何时处理异步异常，这样就可以管理线程安全和其他特定于应用程序的细节，其有效地提供了控制点。在控制点上，异步异常可以进入主程序控制流，并且可以像处理同步错误一样处理它们。\par
 
-If a user doesn’t explicitly call one of the methods 1–3, then asynchronous errors are commonly reported during program teardown when queues and contexts are destroyed. This is often enough to signal to a user that something went wrong and that program results shouldn’t be trusted.\par
+如果用户没有显式地调用方法1-3的其中一个，那么当队列和上下文销毁时，通常会在程序关闭时报告异步错误。这足以向用户发出错误的信号，并表示不要信任本次程序最终的结果。\par
 
-Relying on error detection during program teardown doesn’t work in all cases, though. For example, if a program will only terminate when some algorithm convergence criteria are achieved and if those criteria are only achievable by successful execution of device kernels, then an asynchronous exception may signal that the algorithm will never converge and begin the teardown (where the error would be noticed). In these cases, and also in production applications where more complete error handling strategies are in place, it makes sense to invoke throw\_asynchronous() or wait\_and\_throw() at regular and controlled points in the program (e.g., before checking whether algorithm convergence has occurred).\par
+不过，在程序的正确性依赖错误检测，并不是在所有情况下都有效。例如，如果程序只在某些算法收敛条件达到时才会终止，而这些条件只有通过成功执行设备内核才能实现，那么某个异步异常可能会让算法永远不收敛。在这种情况下，以及在有更完整的错误处理策略的生产应用程序中，程序中使用常规调用和控制点调用throw\_asynchronous()或wait\_and\_throw()则是有意义的(例如，在检查算法是否收敛之前调用)。\par
 
 
 
