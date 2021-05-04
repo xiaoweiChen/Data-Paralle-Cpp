@@ -1,53 +1,53 @@
-Data represented by a buffer cannot be directly accessed through the buffer object. Instead, we must create accessor objects that allow us to safely access a buffer’s data. Accessors inform the runtime where and how we want to access data, allowing the runtime to ensure that the right data is in the right place at the right time. This is a very powerful concept, especially when combined with the task graph that schedules kernels for execution based in part on data dependences.\par
+由缓冲区表示的数据不能通过缓冲区对象直接访问。相反，必须创建允许安全地访问缓冲区数据的访问器对象。访问器告知运行时我们希望在何处以及如何访问数据，从而允许运行时确保正确的数据在正确的时间出现在正确的位置。这是一个非常强大的概念，特别是与任务图结合使用时，任务图基于数据依赖来调度内核的执行。\par
 
-Accessor objects are instantiated from the templated accessor class. This class has five template parameters. The first parameter is the type of the data being accessed. This should be the same as the type of data being stored by the corresponding buffer. Similarly, the second parameter describes the dimensionality of the data and buffer and defaults to a value of one.\par
+访问器是对象从模板化的访问器类实例化。这个类有5个模板参数。第一个参数是被访问数据的类型。这应该与对应缓冲区中存储的数据类型相同。类似地，第二个参数描述了数据和缓冲区的维度，默认值为1。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 7-6. Access modes
+图7-6 访问模式
 \begin{table}[H]
 	\begin{tabular}{|l|l|}
 		\hline
-		\multicolumn{1}{|c|}{Mode} & \multicolumn{1}{c|}{Description}               \\ \hline
-		read                       & Read-only access                               \\ \hline
-		write                      & Write-only access preserving previous contents \\ \hline
-		read\_write                & Read and write access                          \\ \hline
+		\multicolumn{1}{|c|}{模式} & \multicolumn{1}{c|}{描述}               \\ \hline
+		read                       & 只能读取                               \\ \hline
+		write                      & 只能写，并保留以前的内容 \\ \hline
+		read\_write                & 读写都可以                          \\ \hline
 	\end{tabular}
 \end{table}
 
-The next three template parameters are unique to accessors. The first of these is the access mode. The access mode describes how we intend to use an accessor in a program. The possible modes are listed in Figure 7-6. We will learn how these modes are used to order the execution of kernels and perform data movement in Chapter 8. The access mode parameter does have a default value if none is specified or automatically inferred. If we do not specify otherwise, accessors will default to read\_write access mode for non-const data types and read for const data types. These defaults are always correct, but providing more accurate information may improve a runtime’s ability to perform optimizations. When starting application development, it is safe and concise to simply not specify an access mode, and we can then refine the access modes based on profiling of performance-critical regions of the application.\par
+接下来的三个模板参数对访问器是唯一的。第一个是访问模式，描述了如何在程序中使用访问器。支持的模式如图7-6所示。我们将在第8章了解如何使用这些模式来安排内核的执行和数据移动。如果没有指定或自动推断出访问模式参数，则访问模式参数具有默认值。如果不指定，对于非const数据类型，访问器默认为read\_write访问模式，对于const数据类型，默认为read。这些默认值没有问题，但提供更准确的信息可以提高运行时执行优化的能力。开始应用程序开发时，不指定访问模式是安全而简洁的，然后可以根据对应用程序性能关键区域的分析来细化访问模式。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 7-7. Access targets
+图7-7 访问目标
 \begin{table}[H]
 	\begin{tabular}{|l|l|}
 		\hline
-		\multicolumn{1}{|c|}{Target} & \multicolumn{1}{c|}{Description}        \\ \hline
-		global\_buffer               & Access a buffer through global memory   \\ \hline
-		constant\_buffer             & Access a buffer through constant memory \\ \hline
-		local                        & Access work-group local memory          \\ \hline
-		unsampled\_image             & Access an unsampled\_image              \\ \hline
-		sampled\_image               & Access a sampled\_image                 \\ \hline
-		host\_buffer                 & Access a buffer on the host             \\ \hline
-		host\_unsampled\_image       & Access an unsampled\_image on the host  \\ \hline
-		host\_sampled\_image         & Access a sample\_image on the host      \\ \hline
+		\multicolumn{1}{|c|}{目标} & \multicolumn{1}{c|}{描述}        \\ \hline
+		global\_buffer               & 通过全局内存访问一个缓冲区   \\ \hline
+		constant\_buffer             & 通过常量内存访问缓冲区 \\ \hline
+		local                        & 访问工作组本地内存          \\ \hline
+		unsampled\_image             & 访问unsampled\_image              \\ \hline
+		sampled\_image               & 访问sampled\_image                 \\ \hline
+		host\_buffer                 & 访问主机上的缓冲区             \\ \hline
+		host\_unsampled\_image       & 访问host\_unsampled\_image  \\ \hline
+		host\_sampled\_image         & 访问host\_sampled\_image      \\ \hline
 	\end{tabular}
 \end{table}
 
-The next template parameter is the access target. Buffers are an abstraction of data and do not describe where and how data is stored. The access target describes both what type of data, broadly speaking, we are accessing and which memory will contain that data. The possible access targets are listed in Figure 7-7. The type of data is one of two types: a buffer or an image. Images are discussed in this book, but we can think of them as special-purpose buffers that provide domain-specific operations for image processing.\par
+下一个模板参数是访问目标。缓冲区是数据的抽象，不描述数据存储的位置和方式。一般来说，访问目标既描述了我们正在访问的数据类型，也描述了哪些内存将包含该数据，可访问目标如图7-7所示。数据类型是两种类型中的一种:缓冲区或图像。本书中讨论了图像，但可以把它们看作是为图像处理提供特定领域操作的专用缓冲区。\par
 
-The other aspect of an access target is what we should focus on. Devices may have different types of memories available. These memories are represented by different address spaces. The most commonly used type of memory will be a device’s global memory. Most accessors inside kernels will use this target, so global is the default target (if we specify nothing). Constant and local buffers use special-purpose memories. Constant memory, as its name implies, is used to store values that are constant during the lifetime of a kernel invocation. Local memory is special memory available to a work-group that is not accessible to other work-groups. We will learn how to use local memory in Chapter 9. The other target of note is the host buffer, which is the target used when accessing a buffer on the host. The default value for this template parameter is global\_buffer, so in most cases we do not need to specify a target within our code.\par
+访问目标的另一个方面是应该关注的。设备可能有不同类型的可用内存，这些内存由不同的地址空间表示。常用的内存类型是设备的全局内存。内核中的大多数访问器都会使用这个目标，所以global是默认的目标(如果没有指定)。常量和本地缓冲区使用特殊用途的内存，常量内存用于存储内核调用生命周期内的常量值，本地内存是工作组可用的特殊内存，其他工作组不能访问。我们将在第9章了解如何使用本地内存。另一个需要注意的是主机缓冲区，访问主机上的缓冲区时使用的目标。这个模板形参的默认值是global\_buffer，所以在大多数情况下，不需要在代码中指定目标。\par
 
-The final template parameter governs whether an accessor is a placeholder accessor or not. This is not a parameter that a programmer is likely to ever directly set. A placeholder accessor is one that is declared outside of a command group but meant to be used to access data on a device inside a kernel. We will see what differentiates a placeholder accessor from one that is not once we look at examples of accessor creation.\par
+最终模板形参决定访问器是否为占位符访问器，这不是一个开发者会直接设置的参数。占位符访问器在命令组之外声明，但用于访问内核内设备上的数据。通过创建访问器的例子，我们将看到占位符访问器与非占位符访问器的区别。\par
 
-While accessors can be extracted from a buffer object using its get\_access method, it’s simpler to directly create (construct) them. This is the style we will use in upcoming examples since it is very simple to understand and is compact.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Accessor Creation}
-
-Figure 7-8 shows an example program with everything that we need to get started with accessors. In this example, we have three buffers, A, B, and C. The first task we submit to the queue creates accessors to each buffer and defines a kernel that uses these accessors to initialize the buffers with some values. Each accessor is constructed with a reference to the buffer it will access as well as the handler object defined by the command group we’re submitting to the queue. This effectively binds the accessor to the kernel we’re submitting as part of the command group. Regular accessors are device accessors since they, by default, target global buffers stored in device memory. This is the most common use case.\par
+虽然可以使用缓冲区对象的get\_access方法从缓冲区对象中提取访问器，但直接创建(构造)它们更简单。这是在接下来的例子中使用的样式，因为它非常简单，容易理解。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 7-8. Simple accessor creation
+\textbf{创建访问器}
+
+图7-8显示了一个示例程序，其中包含了开始使用访问器所需的所有内容。本例中，有三个缓冲区：A、B和C。我们提交给队列的第一个任务是为每个缓冲区创建访问器，并定义内核，该内核使用这些访问器用一些值初始化缓冲区。每个访问器都是用将要访问的缓冲区的引用，以及由开发者提交给队列的命令组定义的处理程序对象构造的。这有效地将访问器绑定为命令组的一部分提交的内核。常规访问器是设备访问器，默认情况下，它们的目标是存储在设备内存中的全局缓冲区。这是最常见的情况。\par
+
+\hspace*{\fill} \par %插入空行
+图7-8 简单的访问器创建
 \begin{lstlisting}[caption={}]
 constexpr int N = 42;
 
@@ -89,22 +89,22 @@ for (int i = 0; i < N; i++)
 	assert(result[i] == N);
 \end{lstlisting}
 
-The second task we submit also defines three accessors to the buffers. We then use those accessors in the second kernel to add the elements of buffers A and B into buffer C. Since this second task operates on the same data as the first one, the runtime will execute this task after the first one is complete. We will learn about this in detail in the next chapter.\par
+我们提交的第二个任务还定义了三个缓冲区访问器。然后，在第二个内核中使用这些访问器将缓冲区A和B的元素添加到缓冲区C中。因为第二个任务与第一个任务操作相同的数据，所以运行时将在第一个任务完成后执行这个任务。\par
 
-The third task shows how we can use a placeholder accessor. The accessor pC is declared at the beginning of the example in Figure 7-8 after we create our buffers. Note that the constructor is not passed a handler object since we don’t have one to pass. This lets us create a reusable accessor object ahead of time. However, in order to use this accessor inside a kernel, we need to bind it to a command group during submission. We do this using the handler object’s require method. Once we have bound our placeholder accessor to a command group, we can then use it inside a kernel as we would any other accessor.\par
+第三个任务展示了如何使用占位符访问器。在创建缓冲区之后，图7-8中的示例的开头声明访问器pC。请注意，构造函数没有传递处理程序对象，因为没有要传递的处理程序对象。这可以提前创建一个可重用的访问器对象。然而，为了在内核中使用这个访问器，需要在提交期间将它绑定到一个命令组。我们使用处理程序对象的require方法来实现这一点。当我们将占位符访问器绑定到一个命令组，就可以像使用其他访问器一样，在内核中使用它了。\par
 
-Finally, we create a host\_accessor object in order to read the results of our computations back on the host. Note that this is a different type than we used inside our kernels. Host accessors use a separate host\_accessor class to allow proper inference of template arguments, providing a simple interface. Note that the host accessor result in this example also does not take a handler object since we once again do not have one to pass. The special type for host accessors also lets us disambiguate them from placeholders. An important aspect of host accessors is that the constructor only completes when the data is available for use on the host, which means that construction of a host accessor can appear to take a long time. The constructor must wait for any kernels to finish executing that produce the data to be copied as well as for the copy itself to finish. Once the host accessor construction is complete, it is safe to use the data that it accesses directly on the host, and we are guaranteed that the latest version of the data is available to us on the host.\par
+最后，创建一个host\_accessor对象，以便在主机上读取计算结果。注意，这与内核中使用的类型不同。主机访问器使用单独的host \_accessor类来允许正确地推断模板参数，提供简单的接口。注意，本例中的主机访问器结果也不接受处理程序对象，因为我们同样没有要传递的处理程序对象。主机访问器的特殊类型，还允许我们将它们与占位符区分开来。主机访问器的一个重要方面是，只有当数据在主机上可用时，构造函数才会完成，这意味着主机访问器的构造可能需要很长时间。构造函数必须等待生成要复制的数据的任何内核执行完毕，以及复制本身完成。当主机访问器构造完成，就可以安全地使用它在主机上直接访问的数据，并且可以保证在主机上使用最新的数据。\par
 
-While this example is perfectly correct, we don’t say anything about how we intend to use our accessors when we create them. Instead, we use the default access mode, which is read-write, for the non-const int data in our buffers. This is potentially overconservative and may create unnecessary dependences between operations or superfluous data movement. A runtime may be able to do a better job if it has more information about how we plan to use the accessors we create. However, before we go through an example where we do this, we should first introduce one more tool—the access tag.\par
+虽然这个示例是完全正确的，但是在创建访问器时，并没有说明如何使用。相反，对于缓冲区中的非const int数据，使用默认的访问模式(即读写模式)，可能过于保守，并可能在操作之间产生不必要的依赖关系或多余的数据移动。如果运行时能够提供更多关于如何使用访问器的信息，那么它可能会做得更好。但是，在介绍这样做的示例之前，我们应该首先介绍另一个工具——访问标识。\par
 
-Access tags are a compact way to express the desired combination of access mode and target for an accessor. Access tags, when used, are passed as a parameter to an accessor’s constructor. The possible tags are shown in Figure 7-9. When an accessor is constructed with a tag parameter, C++ CTAD can then properly deduce the desired access mode and target, providing an easy way to override the default values for those template parameters. We could also manually specify the desired template parameters, but tags provide a simpler, more compact way to get the same result without spelling out fully templated accessors.\par
+访问标识是表达访问器所需的访问模式和目标组合的一种简洁方式，当使用访问标记时，将作为参数传递给访问器的构造函数。可能的标签如图7-9所示。当使用标记参数构造访问器时，C++ CTAD可以正确地推导出所需的访问模式和目标，从而提供一种简单的方法来覆盖这些模板参数的默认值。我们也可以手动指定所需的模板参数，但是标识提供了一种更简单、更紧凑的方式来获得相同的结果，而无需拼写出完全模板化的访问器。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 7-9. Access tags
+图7-9 访问标识
 \begin{table}[H]
 	\begin{tabular}{|l|l|l|l|}
 		\hline
-		\textbf{Tag type}             & \textbf{Tag value} & \textbf{Access mode} & \textbf{Access target} \\ \hline
+		\textbf{标识类型}             & \textbf{标识值} & \textbf{访问模式} & \textbf{访问目标} \\ \hline
 		\textbf{mode\_tag\_t}         & read\_write        & read\_write          & default                \\ \hline
 		\textbf{mode\_tag\_t}         & read\_only         & read                 & default                \\ \hline
 		\textbf{mode\_tag\_t}         & write\_only        & write                & default                \\ \hline
@@ -112,10 +112,10 @@ Figure 7-9. Access tags
 	\end{tabular}
 \end{table}
 
-Let’s take our previous example and rewrite it to add access tags. This new and improved example is shown in Figure 7-10.\par
+让我们以前面的示例为例，重写它以添加访问标识。这个新的改进的示例如图7-10所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 7-10. Accessor creation with specified usage
+图7-10 使用指定使用方式创建访问器
 \begin{lstlisting}[caption={}]
 constexpr int N = 42;
 
@@ -159,24 +159,24 @@ for (int i = 0; i < N; i++)
 	assert(result[i] == N);
 \end{lstlisting}
 
-We begin by declaring our buffers as we did in Figure 7-8. We also create our placeholder accessor that we’ll use later. Let’s now look at the first task we submit to the queue. Previously, we created our accessors by passing a reference to a buffer and the handler object for the command group. Now, we add two extra parameters to our constructor calls. The first new parameter is an access tag. Since this kernel is writing the initial values for our buffers, we use the write\_only access tag. This lets the runtime know that this kernel is producing new data and will not read from the buffer.\par
+首先声明缓冲区，如图7-8所示。我们还创建了稍后将使用的占位符访问器，现在看看提交给队列的第一个任务。以前，通过传递对缓冲区的引用和命令组的处理程序对象来创建访问器。现在，向构造函数调用添加两个额外的参数。第一个新参数是一个访问标识。因为这个内核正在为我们的缓冲区写入初始值，所以使用write\_only访问标记。这让运行时知道这个内核正在生成新数据，从而不会从缓冲区中读取数据。\par
 
-The second new parameter is an optional accessor property, similar to the optional properties for buffers that we saw earlier in the chapter. The property we pass, noinit, lets the runtime know that the previous contents of the buffer can be discarded. This is useful because it can let the runtime eliminate unnecessary data movement. In this example, since the first task is writing the initial values for our buffers, it’s unnecessary for the runtime to copy the uninitialized host memory to the device before the kernel executes. The noinit property is useful for this example, but it should not be used for read-modify-write cases or kernels where only some values in a buffer may be updated.\par
+第二个新参数是一个可选的accessor属性，类似于本章前面看到的缓冲区的可选属性。我们传递的属性noinit，让运行时知道缓冲区前面的内容可以丢弃，它可以让运行时消除不必要的数据移动。本例中，由于第一个任务是为缓冲区写入初始值，所以运行时没有必要在内核执行之前将未初始化的主机内存复制到设备中。noinit属性对于这个示例很有用，但是它不应该用于读-修改-写的情况，或者内核函数只更新缓冲区中的一些值。\par
 
-The second task we submit to our queue is identical to before, but now we add access tags to our accessors. Here, we add the tags read\_only to accessors A and B to let the runtime know that we will only read the values of buffers A and B through these accessors. The third accessor, aC, gets the read\_write access tag since we accumulate the sum of the elements of A and B into C. We explicitly use the tag in the example to be consistent, but this is unnecessary since the default access mode is read\_write.\par
+我们提交给队列的第二个任务与之前的任务相同，但是现在我们向访问器添加了访问标识。这里，向访问器A和B添加read\_only标识，以让运行时知道我们只会通过这些访问器读取缓冲区A和B的值。第三个访问器aC获得read\_write访问标识，因为我们将A和B的元素之和累积到c中。我们在示例中显式地使用标记以保持一致，但这没必要，因为默认的访问模式就是read\_write。\par
 
-The default usage is retained in the third task where we use our placeholder accessor. This remains unchanged from the simplified example we saw in Figure 7-8. Our final accessor, the host accessor result, now receives an access tag when we create it. Since we only read the final values on the host, we pass the read\_only tag to the constructor. If we rewrote the program in such a way that the host accessor was destroyed, launching another kernel that operated on buffer C would not require it to be written back to the device since the read\_only tag lets the runtime know that it will not be modified by the host.\par
+使用占位符访问器的第三个任务中保留了默认用法。这与图7-8中看到的简化示例一样。我们的最终访问器，即主机访问器结果，现在在创建它时接收到一个访问标识。因为我们只读取主机上的最终值，所以将read\_only标记传递给构造函数。如果改写程序，这样主机访问器销毁，启动另一个内核缓冲区C操作时，当使用read\_only的标识时，就不需要写回到设备端了，并且运行时知道主机不会修改这个缓冲区。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{What Can We Do with an Accessor?}
+\textbf{我们可以用存取器做什么?}
 
-Many things can be done with an accessor object. However, the most important thing we can do is spelled out in the accessor’s name—access data. This is usually done through one of the accessor’s [] operators. We use the [] operator in our examples in Figures 7-8 and 7-10. This operator takes either an id object that can properly index multidimensional data or a single size\_t. The second case is used when an accessor has more than one dimension. It returns an object that is then meant to be indexed again with [] until we arrive at a scalar value, and this would be of the form a[i][j] in a two-dimensional case. Remember that the ordering of accessor dimensions follows the convention of C++ where the rightmost dimension is the unit-stride dimension (iterates “fastest”).\par
+使用访问器对象可以完成很多事情。然而，可以做的最重要的事情是在访问器的名称访问数据中进行说明。这通常是通过访问器的[]操作符完成的。在图7-8和7-10的例子中使用[]操作符，其可以接受索引多维数据的id对象或单个size\_t。当访问器有多个维度时使用第二种方式。它返回一个对象，在查询到达标量值之前，该对象可以再次使用[]进行索引。二维情况下，可以表示为a[i][j]。请记住，访问器维度的排序遵循C++的约定。\par
 
-An accessor can also return a pointer to the underlying data. This pointer can be accessed directly following normal C++ rules. Note that there can be additional complexity involved with respect to the address space of this pointer. Address spaces and their quirks will be discussed in a later chapter.\par
+访问器还可以返回指向底层数据的指针。这个指针可以按照C++规则直接访问。注意，对于这个指针的地址空间，可能会有额外的复杂性。地址空间及其怪癖将在后面的章节中讨论。\par
 
-Many things can also be queried from an accessor object. Examples include the number of elements accessible through the accessor, the size in bytes of the region of the buffer it covers, or the range of data accessible.\par
+还可以从访问器对象查询许多内容。示例包括通过访问器可访问的元素数量、它所覆盖的缓冲区区域的字节大小或可访问的数据范围。\par
 
-Accessors provide a similar interface to C++ containers and may be used in many situations where containers may be passed. The container interface supported by accessors includes the data method, which is equivalent to get\_pointer, and several flavors of forward and backward iterators.\par
+访问器提供了与C++容器类似的接口，可以在许多可能传递容器的情况下使用。访问器支持的容器接口包括data方法(相当于get\_pointer)，以及几种不同类型的前向迭代器和后向迭代器。\par
 
 
 
