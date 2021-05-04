@@ -1,8 +1,8 @@
-In this chapter, we have learned about graphs and how they are built, scheduled, and executed in DPC++. We went into detail on what command groups are and what function they serve. We discussed the three things that can be within a command group: dependences, an action, and miscellaneous host code. We reviewed how to specify dependences between tasks using events as well as through data dependences described by accessors. We learned that the single action in a command group may be either a kernel or an explicit memory operation, and we then looked at several examples that showed the different ways we can construct common execution graph patterns. Next, we reviewed how data movement is an important part of DPC++ graphs, and we learned how it can appear either explicitly or implicitly in a graph. Finally, we looked at all the ways to synchronize the execution of a graph with the host.\par
+本章中，我们已经学习了图，以及如何在DPC++中构建、调度和执行的。详细介绍了什么是命令组，它们的作用是什么。讨论了命令组中可以包含的三种内容:依赖关系、操作和杂项主机代码。回顾了如何使用事件，以及通过访问器描述的数据依赖来指定任务之间的依赖关系。了解到命令组中的单个操作可以是内核操作，也可以是显式内存操作，然后看了几个示例，展示了构建公共执行图的不同方法。接下来，回顾了数据移动是如何成为DPC++图的重要部分，并了解了数据移动如何显式或隐式地出现在图中。最后，了解了与主机同步图形执行的所有方法。\par
 
-Understanding the program flow can enable us to understand the sort of debug information that can be printed if we have runtime failures to debug. Chapter 13 has a table in the section “Debugging Runtime Failures” that will make a little more sense given the knowledge we have gained by this point in the book. However, this book does not attempt to discuss these advanced compiler dumps in detail.\par
+理解程序流程可使我们理解在调试运行时失败时，可以打印的调试信息。第13章“调试运行时失败”一节中有一个表，根据我们在本书中所获得的知识，这个表会更有意义一些。然而，本书并不打算详细讨论这些高级编译器信息。\par
 
-Hopefully this has left you feeling like a graph expert who can construct graphs that range in complexity from linear chains to enormous graphs with hundreds of nodes and complex data and task dependences! In the next chapter, we’ll begin to dive into low-level details that are useful for improving the performance of an application on a specific device.\par
+希望了解完这章，可以让您觉得自己像执行图形专家，可以构建复杂的图形，从线性链到具有数百个节点、复杂数据和任务依赖的巨大执行图!下一章中，我们将开始深入研究在特定设备上改进应用程序性能的底层细节。\par
 
 
 \newpage
