@@ -1,46 +1,46 @@
-A command group can contain three different things: an action, its dependences, and miscellaneous host code. Of these three things, the one that is always required is the action since without it, the command group really doesn’t do anything. Most command groups will also express dependences, but there are cases where they may not. One such example is the first action submitted in a program. It does not depend on anything to begin execution; therefore, we would not specify any dependence. The other thing that can appear inside a command group is arbitrary C++ code that executes on the host. This is perfectly legal and can be useful to help specify the action or its dependences, and this code is executed while the command group is created (not later when the action is performed based on dependences having been met).\par
+一个命令组可以包含三种不同的东西:操作、依赖关系和主机代码。这三样东西中，始终需要的是动作，如果没有它，命令组什么也做不了。大多数命令组也会表示依赖关系，但有些情况下可能不会，比如：程序中提交的第一个操作。它不依赖任何东西来执行，因此不会指定任何依赖关系。在命令组中可能出现的另一种东西是在主机上执行的C++代码，这可以帮助指定操作或其依赖项，并且在创建命令组时执行此代码(而不是根据已满足的依赖项执行操作时执行)。\par
 
-Command groups are typically expressed as a C++ lambda expression passed to the submit method. Command groups can also be expressed through shortcut methods on queue objects that take a kernel and set of event-based dependences.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Command Group Actions}
-
-There are two types of actions that may be performed by a command group: kernels and explicit memory operations. A command group may only perform a single action. As we’ve seen in earlier chapters, kernels are defined through calls to a parallel\_for or single\_task method and express computations that we want to perform on our devices. Operations for explicit data movement are the second type of action. Examples from USM include memcpy, memset, and fill operations. Examples from buffers include copy, fill, and update\_host.\par
+命令组通常表示为传递给submit方法的C++ lambda表达式。命令组还可以通过队列对象上的快捷方法表示，这些队列对象采用内核和基于事件的依赖项。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{How Command Groups Declare Dependences}
+\textbf{命令组行为}
 
-The other main component of a command group is the set of dependences that must be satisfied before the action defined by the group can execute. DPC++ allows these dependences to be specified in several ways.\par
-
-If a program uses in-order DPC++ queues, the in-order semantics of the queue specify implicit dependences between successively enqueued command groups. One task cannot execute until the previously submitted task has completed.\par
-
-Event-based dependences are another way to specify what must be complete before a command group may execute. These event-based dependences may be specified in two ways. The first way is used when a command group is specified as a lambda passed to a queue’s submit method. In this case, the programmer invokes the depends\_on method of the command group handler object, passing either an event or vector of events as parameter. The other way is used when a command group is created from the shortcut methods defined on the queue object. When the programmer directly invokes parallel\_for or single\_task on a queue, an event or vector of events may be passed as an extra parameter.\par
-
-The last way that dependences may be specified is through the creation of accessor objects. Accessors specify how they will be used to read or write data in a buffer object, letting the runtime use this information to determine the data dependences that exist between different kernels. As we reviewed in the beginning of this chapter, examples of data dependences include one kernel reading data that another produces, two kernels writing the same data, or one kernel modifying data after another kernel reads it.\par
+命令组可以执行两种类型的操作:内核操作和显式内存操作。一个命令组只能执行一个操作。正如前面的章节所示，内核通过调用parallel\_for或single\_task方法进行定义，并表达我们想要在设备上执行的计算。用于显式数据移动的操作是第二种类型的操作。USM包括memcpy、memset和fill操作。缓冲区中包括copy、fill和update\_host。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Examples}
+\textbf{命令组如何声明依赖关系}
 
-Now we will illustrate everything we’ve just learned with several examples. We will present how one might express two different dependence patterns in several ways. The two patterns we will illustrate are linear dependence chains where one task executes after another and a “Y” pattern where two independent tasks must execute before successive tasks.\par
+命令组的另一个主要组成是在执行组定义的操作之前必须满足的依赖集。DPC++允许以多种方式指定这些依赖项。\par
 
-Graphs for these dependence patterns can be seen in Figures 8-1 and 8-2. Figure 8-1 depicts a linear dependence chain. The first node represents the initialization of data, while the second node presents the reduction operation that will accumulate the data into a single result. Figure 8-2 depicts a “Y” pattern where we independently initialize two different pieces of data. After the data is initialized, an addition kernel will sum the two vectors together. Finally, the last node in the graph accumulates the result into a single value.\par
+如果程序使用有序的DPC++队列，队列的有序语义指定了连续进入队列的命令组之间的隐式依赖关系。在之前提交的任务完成之前，其他任务不能执行。\par
+
+基于事件的依赖关系，是指定在执行命令组之前必须完成任务的另一种方法。这些基于事件的依赖项可以通过两种方式指定。将命令组指定为传递给队列的submit方法的lambda时，使用第一种方法。这种情况下，开发者调用命令组处理程序对象的depends\_on方法，传递一个事件或事件组作为参数。当从队列对象上定义的快捷方法创建命令组时，使用另一种方法。当开发者直接调用队列上的parallel\_for或single\_task时，一个事件或事件组可以作为一个额外参数。\par
+
+指定依赖项的最后一种方法是通过创建访问器对象。访问器指定如何来读取或写入缓冲区对象中的数据，让运行时使用该信息确定不同内核之间存在的数据依赖关系。如在本章开头所回顾的，数据依赖的例子包括:一个内核读取另一个生成的数据，两个内核写入相同的数据，或者一个内核在另一个内核读取数据后修改数据。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 8-1. Linear dependence chain graph
+\textbf{示例}
+
+现在用几个例子来说明刚刚学过的东西。我们将介绍如何用几种方式表达两种不同的依赖模式，说明的两种模式是线性依赖链，其中一个任务在另一个任务之后执行，以及“Y”模式，其中两个独立的任务必须在后续任务之前执行。.\par
+
+这些依赖模式的见图8-1和图8-2。图8-1描述了一个线性相关链。第一个节点表示数据的初始化，而第二个节点表示将数据累加为单个结果的约简操作。图8-2描述了一个“Y”模式，其中分别初始化两个不同的数据。数据初始化后，加法内核将两个向量相加。最后，图中的最后一个节点将结果累加为一个值。\par
+
+\hspace*{\fill} \par %插入空行
+图8-1 线性相关链
 \begin{center}
 	\includegraphics[width=0.2\textwidth]{content/chapter-8/images/2}
 \end{center}
 
-For each pattern, we will show three different implementations. The first implementation will use in-order queues. The second will use event-based dependences. The last implementation will use buffers and accessors to express data dependences between command groups.\par
+对于每个模式，我们将展示三种不同的实现。第一个实现将使用顺序队列，第二个将使用基于事件的依赖项，最后一个实现将使用缓冲区和访问器来表示命令组之间的数据依赖关系。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 8-2. “Y” pattern dependence graph
+图8-2 “Y”模式依赖
 \begin{center}
 	\includegraphics[width=0.5\textwidth]{content/chapter-8/images/3}
 \end{center}
 
 \hspace*{\fill} \par %插入空行
-Figure 8-3. Linear dependence chain with in-order queues
+图8-3 具有有序队列的线性依赖链
 \begin{lstlisting}[caption={}]
 constexpr int N = 42;
 
@@ -60,10 +60,10 @@ Q.wait();
 assert(data[0] == N);
 \end{lstlisting}
 
-Figure 8-3 shows how to express a linear dependence chain using in-order queues. This example is very simple because the semantics of inorder queues already guarantee a sequential order of execution between command groups. The first kernel we submit initializes the elements of an array to 1. The next kernel then takes those elements and sums them together into the first element. Since our queue is in order, we do not need to do anything else to express that the second kernel should not execute until the first kernel has completed. Finally, we wait for the queue to finish executing all its tasks, and we check that we obtained the expected result.\par
+如图8-3所示，使用有序队列表示线性依赖链。这个示例非常简单，因为有序队列的语义可以保证命令组之间的连续执行顺序。我们提交的第一个内核将数组的元素初始化为1。下一个内核取这些元素，并将它们加起来成为第一个元素。由于队列是有序的，不需要做任何其他事情来表示第二个内核在第一个内核完成之前不应该执行。最后，等待队列完成它的所有任务，并检查是否获得了预期的结果。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 8-4. Linear dependence chain with events
+图8-4 与事件线性相关的链
 \begin{lstlisting}[caption={}]
 constexpr int N = 42;
 
@@ -85,10 +85,10 @@ Q.wait();
 assert(data[0] == N);
 \end{lstlisting}
 
-Figure 8-4 shows the same example using an out-of-order queue and event-based dependences. Here, we capture the event returned by the first call to parallel\_for. The second kernel is then able to specify a dependence on that event and the kernel execution it represents by passing it as a parameter to depends\_on. We will see in Figure 8-6 how we could shorten the expression of the second kernel using one of the shortcut methods for defining kernels.\par
+图8-4展示了使用无序队列和基于事件依赖的示例。这里，我们捕获第一次调用parallel\_for所返回的事件。然后，第二个内核能够指定对该事件的依赖，并通过将其作为参数传递给depends\_on来表示内核执行。我们将在图8-6中看到如何使用定义内核的一种快捷方法，来缩短第二个内核的表达式。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 8-5. Linear dependence chain with buffers and accessors
+图8-5 带有缓冲区和访问器的线性依赖链
 \begin{lstlisting}[caption={}]
 constexpr int N = 42;
 queue Q;
@@ -112,10 +112,10 @@ host_accessor h_a{data};
 assert(h_a[0] == N);
 \end{lstlisting}
 
-Figure 8-5 rewrites our linear dependence chain example using buffers and accessors instead of USM pointers. Here we once again use an outof-order queue but use data dependences specified through accessors instead of event-based dependences to order the execution of the command groups. The second kernel reads the data produced by the first kernel, and the runtime can see this because we declare accessors based on the same underlying buffer object. Unlike the previous examples, we do not wait for the queue to finish executing all its tasks. Instead, we declare a host accessor that defines a data dependence between the output of the second kernel and our assertion that we computed the correct answer on the host. Note that while a host accessor gives us an up-to-date view of data on the host, it does not guarantee that the original host memory has been updated if any was specified when the buffer was created. We can’t safely access the original host memory unless the buffer is first destroyed or unless we use a more advanced mechanism like the mutex mechanism described in Chapter 7.\par
+图8-5使用缓冲区和访问器，重写了我们的线性依赖链示例。这里再次使用无序队列，但使用通过访问器指定的数据依赖项，而不是基于事件的依赖，对命令组的执行进行排序。第二个内核读取第一个内核产生的数据，运行时可以看到这一点，因为基于相同的底层缓冲区对象声明的访问器。这里与前面的示例不同，不需要等待队列完成所有任务。相反，这里使用主机访问器定义了数据之间的依赖关系，并在主机上计算出第二个内核的正确输出，并使用断言来判断内核给出的答案是否正确。请注意，虽然主机访问器提供了主机上数据的视图，但如果在创建缓冲区时指定了原始主机内存，就不能保证已经更新了原始主机内存。除非先销毁缓冲区，或者使用更高级的机制(如第7章中描述的互斥机制)，否则无法安全地访问原始主机内存。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 8-6. “Y” pattern with in-order queues
+图8-6 有序队列的“Y”模式
 \begin{lstlisting}[caption={}]
 constexpr int N = 42;
 
@@ -140,10 +140,10 @@ Q.wait();
 assert(data1[0] == N);
 \end{lstlisting}
 
-Figure 8-6 shows how to express a “Y” pattern using in-order queues. In this example, we declare two arrays, data1 and data2. We then define two kernels that will each initialize one of the arrays. These kernels do not depend on each other, but because the queue is in order, the kernels must execute one after the other. Note that it would be perfectly legal to swap the order of these two kernels in this example. After the second kernel has executed, the third kernel adds the elements of the second array to those of the first array. The final kernel sums up the elements of the first array to compute the same result we did in our examples for linear dependence chains. This summation kernel depends on the previous kernel, but this linear chain is also captured by the in-order queue. Finally, we wait for all kernels to complete and validate that we successfully computed our magic number.\par
+如图8-6所示，使用有序队列表示“Y”模式。本例中，声明了两个数组data1和data2。然后定义两个内核，每个内核将初始化其中一个数组。这些内核并不相互依赖，但是由于队列是有序的，所以内核必须逐个地执行。而且，交换这两个内核的顺序是完全合法的。第二个内核执行之后，第三个内核将第二个数组的元素添加到第一个数组的元素中。最后一个内核函数将第一个数组的元素求和，从而得到与我们在线性相关链的例子中相同的结果。这个求和内核依赖于前面的内核，但是这个线性链也可以让有序队列捕获。最后，等待所有的内核都完成并验证我们是否成功地计算出了“魔数”。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 8-7. “Y” pattern with events
+图8-7 事件方式的“Y”模式
 \begin{lstlisting}[caption={}]
 constexpr int N = 42;
 queue Q;
@@ -170,10 +170,10 @@ Q.wait();
 assert(data1[0] == N);
 \end{lstlisting}
 
-Figure 8-7 shows our “Y” pattern example with out-of-order queues instead of in-order queues. Since the dependences are no longer implicit due to the order of the queue, we must explicitly specify the dependences between command groups using events. As in Figure 8-6, we begin by defining two independent kernels that have no initial dependences. We represent these kernels by two events, e1 and e2. When we define our third kernel, we must specify that it depends on the first two kernels. We do this by saying that it depends on events e1 and e2 to complete before it may execute. However, in this example, we use a shortcut form to specify these dependences instead of the handler’s depends\_on method. Here, we pass the events as an extra parameter to parallel\_for. Since we want to pass multiple events at once, we use the form that accepts a std::vector of events, but luckily modern C++ simplifies this for us by automatically converting the expression {e1, e2} into the appropriate vector.\par
+图8-7展示了另一种“Y”模式示例，使用了无序队列，而不是有序队列。由于队列的顺序，依赖关系不再是隐式的，因此必须使用事件显式地指定命令组之间的依赖关系。如图8-6所示，首先定义两个没有初始依赖关系的独立内核。用两个事件来表示这些内核，e1和e2。们定义第三个内核时，必须指定它依赖于前两个内核。这样做是因为它依赖于事件e1和e2在执行之前完成。但是，本例中使用一个快捷形式来指定这些依赖项，而不是处理程序的depends\_on方法。我们将事件作为额外参数传递给parallel\_for。想要一次传递多个事件，所以使用接受事件组的形式。幸运的是，现代C++通过表达式\{e1, e2\}，会将其转换为适当的向量，简化了步操作。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 8-8. “Y” pattern with accessors
+图8-8 访问器的“Y”模式
 \begin{lstlisting}[caption={}]
 constexpr int N = 42;
 queue Q;
@@ -210,14 +210,14 @@ host_accessor h_a{data1};
 assert(h_a[0] == N);
 \end{lstlisting}
 
-In our final example, seen in Figure 8-8, we again replace USM pointers and events with buffers and accessors. This example represents the two arrays data1 and data2 as buffer objects. Our kernels no longer use the shortcut methods for defining kernels since we must associate accessors with a command group handler. Once again, the third kernel must capture the dependence on the first two kernels. Here this is accomplished by declaring accessors for our buffers. Since we have previously declared accessors for these buffers, the runtime is able to properly order the execution of these kernels. Additionally, we also provide extra information to the runtime here when we declare accessor b. We add the access tag read\_only to let the runtime know that we’re only going to read this data, not produce new values. As we saw in our buffer and accessor example for linear dependence chains, our final kernel orders itself by updating the values produced in the third kernel. We retrieve the final value of our computation by declaring a host accessor that will wait for the final kernel to finish executing before moving the data back to the host where we can read it and assert we computed the correct result.\par 
+如图8-8所示，最后一个例子中，再次用缓冲区和访问器替换USM指针和事件。这个例子将两个数组data1和data2表示为缓冲区对象。内核不再使用快捷方法，因为必须将访问器与命令组处理程序关联起来。同样，第三个内核必须捕获对前两个内核的依赖关系。这里通过为缓冲区声明访问器来完成。因为之前已经为这些缓冲区声明了访问器，所以运行时能够正确地排列这些内核的执行顺序。此外，当声明访问器b时，还向运行时提供了额外的信息。添加了访问标记read\_only，让运行时知道只读取该数据，而不生成新值。正如在线性依赖链的缓冲区和访问器示例中所示，最终的内核通过更新第三个内核产生的值来对自身排序。通过声明一个主机访问器来获取计算的最终值，该访问器将等待最终内核完成执行，然后将数据移回主机，在那里可以读取数据，并断言内核是否计算出了正确的结果。\par 
 
 \hspace*{\fill} \par %插入空行
-\textbf{When Are the Parts of a CG Executed?}
+\textbf{CG的各个部分是什么时候执行的?}
 
-Since task graphs are asynchronous, it makes sense to wonder when exactly command groups are executed. By now, it should be clear that kernels may be executed as soon as their dependences have been satisfied, but what happens with the host portion of a command group?\par
+因为任务图是异步的，所以知道命令组究竟是什么时候执行是有意义的。目前为止，只要满足了内核的依赖关系，就可以执行内核，但是命令组的主机部分会发生什么呢?\par
 
-When a command group is submitted to a queue, it is executed immediately on the host (before the submit call returns). This host portion of the command group is executed only once. Any kernel or explicit data operation defined in the command group is enqueued for execution on the device.\par
+当命令组提交到队列时，会立即在主机上执行(在submit返回之前)。命令组的主机部分只执行一次，在命令组中定义的任何内核或显式数据操作，都将排队在设备上执行。\par
 
 
 
