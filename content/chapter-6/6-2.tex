@@ -1,35 +1,35 @@
-While USM is based on C++ pointers, not all pointers are created equal. USM defines three different types of allocations, each with unique semantics. A device may not support all types (or even any type) of USM allocation. We will learn how to query what a device supports later. The three types of allocations and their characteristics are summarized in Figure 6-1.\par
+虽然USM是基于指针，但并不是所有指针都相同。USM定义了三种不同的分配类型，每种分配都有单独的方式。设备可能不支持所有类型的USM(甚至不支持任何类型)，稍后会去了解到如何查询设备支持的USM类型。先来了解一下这三种类型的分配及其特征，如图6-1所示。\par
 
 \hspace*{\fill} \par %插入空行
 Figure 6-1. USM allocation types
-\begin{table}[]
+\begin{table}[H]
 	\begin{tabular}{|l|l|l|l|l|}
 		\hline
-		Type   & Description                                & Accessible on host? & Accessible on device? & Located on                          \\ \hline
-		device & Allocations in device memory               & ×                   & √                     & device                              \\ \hline
-		host   & Allocations in host memory                 & √                   & √                     & host                                \\ \hline
-		shared & Allocations shated between host and device & √                   & √                     & Can migrate between host and device \\ \hline
+		类型   & 描述                                & 主机端可访问? & 设备端可访问? & 位于                          \\ \hline
+		device & 在设备内存上进行分配              & \XSolidBrush                   & \Checkmark                      & 设备                              \\ \hline
+		host   & 在主机内存上进行分配                 & \Checkmark                   & \Checkmark                     & 主机端                                \\ \hline
+		shared & 可在主机端和设备端共享 & \Checkmark                    & \Checkmark                     & 可以在主机和设备之间迁移 \\ \hline
 	\end{tabular}
 \end{table}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Device Allocations}
+\textbf{设备端分配}
 
-This first type of allocation is what we need in order to have a pointer into a device’s attached memory, such as (G)DDR or HBM. Device allocations can be read from or written to by kernels running on a device, but they cannot be directly accessed from code executing on the host. Trying to access a device allocation on the host can result in either incorrect data or a program crashing due to an error. We must copy data between host and device using the explicit USM memcpy mechanisms, which specify how much data must be copied between two places, that will be covered later in this chapter.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Host Allocations}
-
-This second type of allocation is easier to use than device allocations since we do not have to manually copy data between the host and the device. Host allocations are allocations in host memory that are accessible on both the host and the device. These allocations, while accessible on the device, cannot migrate to the device’s attached memory. Instead, kernels that read from or write to this memory do it remotely, often over a slower bus such as PCI-Express. This tradeoff between convenience and performance is something that we must take into consideration. Despite the higher access costs that host allocations can incur, there are still valid reasons to use them. Examples include rarely accessed data or large data sets that cannot fit inside device attached memory.\par
+我们需要这种类型的分配，以便拥有指向设备内存(如(G)DDR或HBM)的指针。设备分配可以由运行在设备上的内核函数读取或写入，但是不能从主机直接访问。尝试直接访问设备端分配的内存，可能导致数据不正确或程序崩溃。必须显式使用USM的memcpy机制在主机和设备之间复制数据，对两个位置上的数据进行复制，这将在本章后面继续讨论。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Shared Allocations}
+\textbf{主机端分配}
 
-The final type of allocation combines attributes of both device and host allocations, combining the programmer convenience of host allocations with the greater performance afforded by device allocations. Like host allocations, shared allocations are accessible on both the host and device. The difference between them is that shared allocations are free to migrate between host memory and device attached memory, automatically, without our intervention. If an allocation has migrated to the device, any kernel executing on that device accessing it will do so with greater performance than remotely accessing it from the host. However, shared allocations do not give us all the benefits without any drawbacks.\par
+第二种类型的分配比设备端分配更容易使用，不需要在主机和设备之间复制数据。主机分配是在主机和设备上都可以访问的主机内存中的分配，虽然在设备上可以访问，但不能迁移到设备端内存。对该内存进行读写的内核通常通过较慢的总线(如PCI-Express)进行远程操作，我们必须权衡编程复杂性和性能之间的平衡。尽管主机端的分配可能导致高访问成本，但也有其使用的场景，比如：很少访问的数据或设备内存中无法容纳的大型数据集。\par
 
-Automatic migration can be implemented in a variety of ways. No matter which way the runtime chooses to implement shared allocations, they usually pay a price of increased latency. With device allocations, we know exactly how much memory needs to be copied and can schedule the copy to begin as quickly as possible. The automatic migration mechanisms cannot see the future and, in some cases, do not begin moving data until a kernel tries to access it. The kernel must then wait, or block, until the data movement has completed before it can continue executing. In other cases, the runtime may not know exactly how much data the kernel will access and might conservatively move a larger amount of data than is required, also increasing latency for the kernel.\par
+\hspace*{\fill} \par %插入空行
+\textbf{共享分配}
 
-We should also note that while shared allocations can migrate, it does not necessarily mean that all implementations of DPC++ will migrate them. We expect most implementations to implement shared allocations with migration, but some devices may prefer to implement them identically to host allocations. In such an implementation, the allocation is still visible on both host and device, but we may not see the performance gains that a migrating implementation could provide.\par
+最后一种类型的分配结合了设备分配和主机分配的属性，结合了主机分配对编程复杂性的便利和设备分配提供的更好的性能。与主机分配一样，共享分配也可以在主机和设备上访问。它们之间的区别是，共享分配可以自动地在主机内存和设备附加内存之间迁移，无需显式干预。如果分配已经迁移到该设备，那么在该设备上执行的内核访问该段数据，都会比从主机远程访问该数据有更好的性能。不过，也有缺点。\par
+
+自动迁移可以通过多种方式实现。不管运行时选择哪种方式来实现共享分配，通常都要付出延迟增加的代价。通过设备分配，可以确切地知道需要复制多少内存，并可以尽可能快地安排数据的复制。自动迁移机制无法预见未来，在某些情况下，直到内核尝试访问数据时才开始移动数据。然后，内核函数必须等待或阻塞，直到数据移动完成。其他情况下，运行时可能不知道内核函数将访问多少数据，可能移动更多的数据，这也增加了内核函数的延迟。\par
+
+我们还应该注意，虽然共享分配可以迁移，但并不一定意味着DPC++的所有实现都会迁移。我们希望大多数实现都通过迁移实现共享分配，但有些设备可能希望实现与宿主分配相同的分配。在这样的实现中，分配在主机和设备上仍然可见，但是我们可能看不到迁移所带来的性能提升。\par
 
 
 
