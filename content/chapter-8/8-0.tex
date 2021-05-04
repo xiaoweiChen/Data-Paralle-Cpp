@@ -2,11 +2,10 @@
 	\includegraphics[width=0.3\textwidth]{content/chapter-8/images/1}
 \end{center}
 
-We need to discuss our role as the concert master for our parallel programs. The proper orchestration of a parallel program is a thing of beauty—code running full speed without waiting for data, because we have arranged for all data to arrive and depart at the proper times. Code well-decomposed to keep the hardware maximally busy. It is the thing that dreams are made of!\par
+我们需要对并行大师的角色进行讨论。编排并行程序是一件美妙的事情——因为把所有数据安排的明明白白，所以代码无需等待就能全速运行。并且代码进行了分解，以保持硬件最大程度的使用。\par
 
-Life in the fast lanes—not just one lane!—demands that we take our 
-work as the conductor seriously. In order to do that, we can think of our job in terms of task graphs.\par
+生活在快车道上——而不仅仅是一条车道!——我们要认真地对待调度工作。为了做到这一点，可以用任务图来规划工作。\par
 
-Therefore, in this chapter, we will cover task graphs, the mechanism that is used to run complex sequences of kernels correctly and efficiently. There are two things that need sequencing in an application: kernels and data movement. Task graphs are the mechanism that we use to achieve proper sequencing.\par
+在本章中，我们将讨论任务图，用于正确有效地运行复杂的内核序列的机制。在应用程序中有两件事情需要排序:内核和数据移动。任务图是我们用来实现正确排序的机制。\par
 
-First, we will quickly review how we can use dependences to order tasks from Chapter 3. Next, we will cover how the DPC++ runtime builds graphs. We will discuss the basic building block of DPC++ graphs, the command group. We will then illustrate the different ways we can build graphs of common patterns. We will also discuss how data movement, both explicit and implicit, is represented in graphs. Finally, we will discuss the various ways to synchronize our graphs with the host.\par
+首先，快速回顾如何使用依赖项来编排第3章中的任务。接下来，将介绍DPC++运行时如何构建图。我们将讨论DPC++图的基本构造块，即命令组。然后，将说明构建公共模式图的不同方法。还会讨论数据移动(包括显式和隐式)如何用图表示。最后，我们将讨论与主机同步图的各种方法。\par
