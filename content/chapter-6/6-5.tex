@@ -1,29 +1,11 @@
-Finally, not all devices support every feature of USM. We should not assume 
-that all USM features are available if we want our programs to be portable 
-across different devices. USM defines several things that we can query. 
-These queries can be separated into two categories: pointer queries and 
-device capability queries. Figure 6-9 shows a simple utilization of each.\par
+最后，并不是所有设备都支持USM的所有特性。如果希望程序可以在不同的设备上移植，不应该假设所有的USM功能都可用。USM定义了几个可以查询的东西。这些查询可以分为两类:指针查询和设备功能查询。图6-9显示了每种方法的简单使用方法。\par
 
-The pointer queries in USM answer two questions. The first question 
-is “What type of USM allocation does this pointer point to?” The get\_
-pointer\_type function takes a pointer and DPC++ context and returns 
-a result of type usm::alloc, which can have four possible values: host, 
-device, shared, or unknown. The second question is “What device was this 
-USM pointer allocated against?” We can pass a pointer and a context to the 
-function get\_pointer\_device and get back a device object. This is mostly 
-used with device or shared USM allocations since it does not make much 
-sense with host allocations.\par
+USM中的指针查询需要回答两个问题。第一个问题是“这个指针指向哪种USM分配类型?”get\_pointer\_type函数接受一个指针和DPC++上下文，并返回一个usm::alloc类型的结果，它可以有四种可能的值:host、device、shared或unknown。第二个问题是“这个USM指针分配给了什么设备?”我们可以向函数get\_pointer\_device传递一个指针和一个上下文，并获得一个设备对象。这主要用于设备或共享USM分配，对主机分配没什么意义。\par
 
-The second type of query provided by USM concerns the capabilities 
-of a device. USM extends the list of device information descriptors that 
-can be queried by calling get\_info on a device object. These queries can 
-be used to test which types of USM allocations are supported by a device. 
-Additionally, we can query if shared allocations are restricted on the device in the ways we previously described in this chapter. The full list of 
-queries is shown in Figure 6-10. In Chapter 12, we will look at the query 
-mechanism in more detail.\par
+USM提供的第二种查询关系到设备的性能。USM扩展了可以通过在设备对象上调用get\_info来查询的设备信息描述符列表。这些查询可用于测试设备支持哪种USM分配类型。此外，可以查询设备上的共享分配是否按照本章前面描述的方式进行了限制。完整的查询列表如图6-10所示。第12章中，我们将更详细地了解查询机制。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 6-9. Queries on USM pointers and devices
+图6-9 查询USM指针和设备
 \begin{lstlisting}[caption={}]
 constexpr int N = 42;
 
@@ -66,15 +48,15 @@ if (use_USM) {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure 6-10. USM device information descriptors
-\begin{table}[]
-	\begin{tabular}{|l|l|l|}
+图6-10 USM设备信息描述符
+\begin{table}[H]
+	\begin{tabular}{|l|l|p{6cm}|}
 		\hline
-		Device Descriptor                                  & Type & Description                                                                                   \\ \hline
-		info::device::usm\_device\_allocations             & bool & Returns true if the device supports device allocations                                        \\ \hline
-		info::device::usm\_host\_allocations               & bool & Returns true if the device can access host allocations                                        \\ \hline
-		info::device::usm\_shared\_allocations             & bool & Returns true is this device supports shared allocations                                       \\ \hline
-		info::device::usm\_restricted\_shared\_allocations & bool & Returns true if shared allocations are governed by the restrictions described in this chapter \\ \hline
+		设备描述符                                  & 类型 & 描述                                                                                   \\ \hline
+		info::device::usm\_device\_allocations             & bool & 如果该设备支持设备分配，则返回true                                       \\ \hline
+		info::device::usm\_host\_allocations               & bool & 如果设备可以访问主机分配，则返回true                                       \\ \hline
+		info::device::usm\_shared\_allocations             & bool & 如果该设备支持共享分配，则返回true                                       \\ \hline
+		info::device::usm\_restricted\_shared\_allocations & bool & 如果共享分配受本章描述的限制约束，则返回true \\ \hline
 	\end{tabular}
 \end{table}
 
