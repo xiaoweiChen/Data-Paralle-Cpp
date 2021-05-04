@@ -190,9 +190,9 @@ auto handle_async_error = [](exception_list elist) {
 运行时在特定时间调用异步处理程序。错误发生时不会立即报告，如果有这种情况，管理错误和程序编程(特别是多线程)将变得更加困难。异步处理程序会在以下特定时间调用:\par
 
 \begin{enumerate}
-	\item 当主程序在听定队列上调用\textbf{queue::throw\_asynchronous()}时
-	\item 当主程序在听定队列上调用\textbf{queue::wait\_and\_throw()}时
-	\item 当主程序在听定事件上调用\textbf{event::wait\_and\_throw()}时
+	\item 当主程序在特定队列上调用\textbf{queue::throw\_asynchronous()}时
+	\item 当主程序在特定队列上调用\textbf{queue::wait\_and\_throw()}时
+	\item 当主程序在特定事件上调用\textbf{event::wait\_and\_throw()}时
 	\item 当一个\textbf{队列}销毁时
 	\item 当一个\textbf{上下文}销毁时
 \end{enumerate}
