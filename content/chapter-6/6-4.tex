@@ -1,32 +1,32 @@
-Now that we understand how to allocate memory using USM, we will discuss how data is managed. We can look at this in two pieces: data initialization and data movement.\par
+现在我们了解了如何使用USM分配内存，我们将讨论如何管理数据。我们可以将其分为两部分:数据初始化和数据移动。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Initialization}
+\textbf{初始化}
 
-Data initialization concerns filling our memory with values before we perform computations on it. One example of a common initialization pattern is to fill an allocation with zeroes before it is used. If we were to do this using USM allocations, we could do it in a variety of ways. First, we could write a kernel to do this. If our data set is particularly large or the initialization requires complex calculations, this is a reasonable way to go since the initialization can be performed in parallel (and it makes the initialized data ready to go on the device). Second, we could implement this as a loop over all the elements of an allocation that sets each to zero. However, there is potentially a problem with this approach. A loop would work fine for host and shared allocations since these are accessible on the host. However, since device allocations are not accessible on the host, a loop in host code would not be able to write to them. This brings us to the third option.\par
+数据初始化关注的是对内存执行计算之前内存的填充值，常见初始化模式是在使用之前用零填充。如果要使用USM分配来实现这一点，可以通过多种方式来实现。首先，可以写一个内核函数来做这个。如果数据集特别大，或者初始化需要复杂的计算，这是合理的方法。其次，我们可以将其实现为遍历分配的所有元素的循环，将每个元素设置为0。然而，这种方法存在一个问题。循环可以很好地用于主机和共享分配，因为它们可以在主机上访问。但在主机上不能访问设备分配，主机代码中的循环将不能对进行写入。这就引出了第三种选择。\par
 
-The memset function is designed to efficiently implement this initialization pattern. USM provides a version of memset that is a member function of both the handler and queue classes. It takes three arguments: the pointer representing the base address of the memory we want to set, a byte value representing the byte pattern to set, and the number of bytes to set to that pattern. Unlike a loop on the host, memset happens in parallel and also works with device allocations.\par
+memset函数设计用来实现这个初始化模式。USM提供了一个memset，它是处理程序和队列类的成员函数。它有三个参数:表示要设置的内存基址的指针，表示要设置的模式的字节值，以及要设置为该模式的字节数。与主机上的循环不同，memset是并行发生的，并且与设备分配一起工作。\par
 
-While memset is a useful operation, the fact that it only allows us to specify a byte pattern to fill into an allocation is rather limiting. USM also provides a fill method (as a member of the handler and queue classes) that lets us fill memory with an arbitrary pattern. The fill method is a function templated on the type of the pattern we want to write into the allocation. Template it with an int, and we can fill an allocation with the number “42”. Similar to memset, fill takes three arguments: the pointer to the base address of the allocation to fill, the value to fill, and the number of times we want to write that value into the allocation.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Data Movement}
-
-Data movement is probably the most important aspect of USM to understand. If the right data is not in the right place at the right time, our program will produce incorrect results. USM defines two strategies that we can use to manage data: explicit and implicit. The choice of which strategy we want to use is related to the types of USM allocations our hardware supports or that we want to use.\par
+虽然memset是一个有用的操作，但只允许指定一个模式来填充分配。USM提供了fill方法(作为处理程序和队列类的成员)，允许我们用任意模式填充内存。fill是一个函数，模板化在我们想要写入分配的模式的类型上。给它创建一个int型模板，然后用数字“42”填充分配。与memset类似，fill接受三个参数:指向要填充的分配的基址的指针，要填充的值，以及希望将该值写入分配的数量。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Explicit}
+\textbf{数据移动}
 
-The first strategy USM offers is explicit data movement (Figure 6-6). Here, we must explicitly copy data between the host and device. We can do this by invoking the memcpy method, found on both the handler and queue classes. The memcpy method takes three arguments: a pointer to the destination memory, a pointer to the source memory, and the number of bytes to copy between host and device. We do not need to specify in which direction the copy is meant to happen—this is implicit in the source and destination pointers.\par
-
-The most common usage of explicit data movement is copying to or from device allocations in USM since they are not accessible on the host. Having to insert explicit copying of data does require effort on our part. Additionally, it can be a source of bugs: copies could be accidentally omitted, an incorrect amount of data could be copied, or the source or destination pointer could be incorrect.\par
-
-However, explicit data movement does not only come with disadvantages. It gives us large advantage: total control over data movement. Control over both how much data is copied and when the data gets copied is very important for achieving the best performance in some applications. Ideally, we can overlap computation with data movement whenever possible, ensuring that the hardware runs with high utilization.\par
-
-The other types of USM allocations, host and shared, are both accessible on host and device and do not need to be explicitly copied to the device. This leads us to the other strategy for data movement in USM.\par
+数据移动可能是USM需要理解的重点。如果正确的数据没有在正确的时间出现在正确的地点，程序将产生不正确的结果。USM定义了两种用来管理数据的策略:显式和隐式。使用策略的选择与硬件支持，或使用的USM分配的类型有关。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 6-6. USM explicit data movement example
+\textbf{显式}
+
+USM提供的第一个策略是显式数据移动(图6-6)。这里，必须显式地在主机和设备之间复制数据。可以通过调用memcpy方法来完成，该方法可以在处理程序和队列类上找到。memcpy方法有三个参数:指向目标内存的指针，指向源内存的指针，以及要在主机和设备之间复制的字节数。不需要指定复制将要发生的方向——这在源指针和目标指针中是隐式确定的。\par
+
+显式数据移动最常见的用法是使用USM对设备分配内存中的数据进行复制，因为设备端内存在主机上不可访问。此外，这可能会造成错误:副本可能会忽略，不正确的数据量可能被复制，或者源或目标指针可能是不正确的。\par
+
+然而，显式数据移动也有优点。给了我们很大的优势:完全控制数据移动。某些应用程序中，控制复制数据的数量和复制数据的时间对于获得最佳性能非常重要。理想情况下，可以将计算与数据移动重叠，确保硬件以高利用率运行。\par
+
+其他类型的USM分配，不论是host，还是shared，都可以在主机和设备端访问，不需要显式地复制到设备。这就引出了USM中数据移动的另一种策略。\par
+
+\hspace*{\fill} \par %插入空行
+图6-6 USM显式移动数据
 \begin{lstlisting}[caption={}]
 constexpr int N = 42;
 
@@ -63,16 +63,16 @@ free(device_array, Q);
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Implicit}
+\textbf{隐式}
 
-The second strategy that USM provides is implicit data movement (example usage shown in Figure 6-7). In this strategy, data movement happens implicitly, that is, without requiring input from us. With implicit data movement, we do not need to insert calls to memcpy since we can directly access the data through the USM pointers wherever we want to use it. Instead, it becomes the job of the system to ensure that the data will be available in the correct location when it is being used.\par
+USM提供的第二种策略是隐式数据移动(示例用法如图6-7所示)在这个策略中，数据移动是隐式发生的。使用隐式数据移动，不需要插入memcpy，因为可以通过USM指针直接访问数据。而系统的任务是确保数据在使用时，在正确的位置上可用。\par
 
-With host allocations, one could argue whether they really cause data movement. Since, by definition, they always remain pointers to host memory, the memory represented by a given host pointer cannot be stored on the device. However, data movement does occur as host allocations are accessed on the device. Instead of the memory being migrated to the device, the values we read or write are transferred over the appropriate interface to or from the kernel. This can be useful for streaming kernels where the data does not need to remain resident on the device.\par
+对于主机分配，人们可能会争论是否真的进行了数据移动。根据定义，它们始终指向主机内存，因此给定的主机指针表示的内存不能存储在设备上。但当在设备上访问主机分配时，数据移动就会发生。不是将内存迁移到设备，而是通过适当的接口将读或写的值传输到内核中。这对于数据不需要驻留在设备上的流内核很有用。\par
 
-Implicit data movement mostly concerns USM shared allocations. This type of allocation is accessible on both host and device and, more importantly, can migrate between host and device. The key point is that this migration happens automatically, or implicitly, simply by accessing the data in a different location. Next, we will discuss several things to think about when it comes to data migration for shared allocations.\par
+隐式数据移动主要与USM共享分配有关。这种类型的分配可以在主机和设备上访问，并且可以在主机和设备之间迁移。这种迁移是自动进行的，或者是隐式地进行的，只需访问不同位置的数据即可。接下来，我们将讨论在为共享分配进行数据迁移时需要考虑的几个问题。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 6-7. USM implicit data movement example
+图6-7 USM隐式数据移动
 \begin{lstlisting}[caption={}]
 constexpr int N = 42;
 
@@ -97,29 +97,29 @@ free(host_array, Q);
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Migration}
+\textbf{迁移}
 
-With explicit data movement, we control how much data movement occurs. With implicit data movement, the system handles this for us, but it might not do it as efficiently. The DPC++ runtime is not an oracle—it cannot predict what data an application will access before it does it. Additionally, pointer analysis remains a very difficult problem for compilers, which may not be able to accurately analyze and identify every allocation that might be used inside a kernel. Consequently, implementations of the mechanisms for implicit data movement may make different decisions based on the capabilities of the device that supports USM, which affects both how shared allocations can be used and how they perform.\par
+通过显式数据移动，可以控制发生多少数据移动。使用隐式数据移动，系统可处理这一问题，但可能没有那么高效。DPC++运行时不是oracle——它不能预测应用将访问什么数据。此外，指针分析对于编译器来说仍然非常困难，它可能无法准确地分析和识别内核中可能使用的每个分配。因此，隐式数据移动机制的实现，可能会根据支持USM设备的功能做出不同的决定，这既影响共享分配的使用方式，也影响了它们的执行方式。\par
 
-If a device is very capable, it might be able to migrate memory on demand. In this case, data movement would occur after the host or device attempts to access an allocation that is not currently in the desired location. On-demand data greatly simplifies programming as it provides the desired semantic that a USM shared pointer can be accessed anywhere and just work. If a device cannot support on-demand migration (Chapter 12 explains how to query a device for capabilities), it might still be able to guarantee the same semantics with extra restrictions on how shared pointers can be used.\par
+如果设备非常有能力，它可能能够根据需要迁移内存。这种情况下，数据移动将在主机或设备试图访问当前不在所需位置的分配之后发生。按需获取数据极大地简化了编程，因为它提供了语义，可以在任何地方访问USM共享指针，并且可以正常工作。如果设备不支持按需迁移(第12章解释了如何查询设备的功能)，仍然能够保证相同的语义，并对共享指针的使用方式进行限制。\par
 
-The restricted form of USM shared allocations governs when and where shared pointers may be accessed and how big shared allocations can be. If a device cannot migrate memory on demand, that means the runtime must be conservative and assume that a kernel might access any allocation in its device attached memory. This brings a couple of consequences.\par
+限制形式的USM共享分配管理着何时何地可以访问共享指针，以及共享分配的大小。如果设备不能按需迁移内存，则运行时必须保守，并假定内核可以访问其设备附加内存中的任何分配。这会带来两种后果。\par
 
-First, it means that the host and device should not try to access a shared allocation at the same time. Applications should instead alternate access in phases. The host can access an allocation, then a kernel can compute using that data, and finally the host can read the results.\par
+首先，这意味着主机和设备不应该同时尝试访问共享分配。程序应该以阶段替代访问。主机可以访问分配，然后内核可以使用该数据进行计算，最后主机读取结果。\par
 
-Without this restriction, the host is free to access different parts of an allocation than a kernel is currently touching. Such concurrent access typically happens at the granularity of a device memory page. The host could access one page, while the device accesses another. Atomically accessing the same piece of data will be covered in Chapter 19.\par
+如果没有这个限制，主机可以访问内核的不同分配。这种并发访问通常发生在设备内存页上。主机可以访问一个页，而设备可以访问另一个页。第19章将介绍原子访问相同的数据块。\par
 
-The next consequence of this restricted form of shared allocations is that allocations are limited by the total amount of memory attached to a device. If a device cannot migrate memory on demand, it cannot migrate data to the host to make room to bring in different data. If a device does support on-demand migration, it is possible to oversubscribe its attached memory, allowing a kernel to compute on more data than the device’s memory could normally contain, although this flexibility may come with a performance penalty due to extra data movement.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Fine-Grained Control}
-
-When a device supports on-demand migration of shared allocations, data movement occurs after memory is accessed in a location where it is not currently resident. However, a kernel can stall while waiting for the data movement to complete. The next statement it executes may even cause more data movement to occur and introduce additional latency to the kernel execution.\par
-
-DPC++ gives us a way to modify the performance of the automatic migration mechanisms. It does this by defining two functions: prefetch and mem\_advise. Figure 6-8 shows a simple utilization of each. These functions let us give hints to the runtime about how kernels will access data so that the runtime can choose to start moving data before a kernel tries to access it. Note that this example uses the queue shortcut methods that directly invoke parallel\_for on the queue object instead of inside a lambda passed to the submit method (a command group).\par
+这种受限的共享分配形式的第二个后果是，分配受到设备内存总量的限制。如果设备不能按需迁移内存，则无法将数据迁移到主机，以便为不同的数据腾出空间。如果设备支持按需迁移，则可能会超量使用内存，从而允许内核计算超过设备内存通常包含的数据，而这种灵活性可能会因为数据移动，从而产生性能损失。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 6-8. Fine-grained control via prefetch and mem\_advise
+\textbf{细粒度控制}
+
+当设备支持按需迁移共享分配时，当访问内存位置上没有相应数据时，需要进行数据移动。这时，内核在等待数据移动完成时可能会停止。接下来执行的语句甚至会产生更多的数据移动，并给内核执行带来更多的延迟。\par
+
+DPC++为我们提供了一种修改自动迁移机制性能的方法。通过定义两个函数来做到这一点:prefetch和mem\_advise。图6-8展示了每种方法，这些函数让向运行时提供了内核函数如何访问数据的提示，以便运行时选择在内核访问数据之前开始移动数据。请注意，这个例子使用了直接在队列对象上调用parallel\_for的队列快捷方法，而不是在传递给submit(命令组)一个lambda调用。\par
+
+\hspace*{\fill} \par %插入空行
+图6-8 通过prefetch和mem\_advise进行细粒度控制
 \begin{lstlisting}[caption={}]
 // Appropriate values depend on your HW
 constexpr int BLOCK_SIZE = 42;
@@ -159,9 +159,9 @@ free(data, Q);
 free(read_only_data, Q);
 \end{lstlisting}
 
-The simplest way for us to do this is by invoking prefetch. This function is invoked as a member function of the handler or queue class and takes a base pointer and number of bytes. This lets us inform the runtime that certain data is about to be used on a device so that it can eagerly start migrating it. Ideally, we would issue these prefetch hints early enough such that by the time the kernel touches the data, it is already resident on the device, eliminating the latency we previously described.\par
+最简单的方法是调用预取(prefetch)。此函数作为处理程序或队列类的成员函数调用，并接受基指针和字节数。这可以通知运行时某些数据将在设备上使用，以便能够及时地迁移。理想情况下，应该尽早发出这些提示，这样当内核访问到数据时，数据已经驻留在设备上，从而消除之前所说的延迟。\par
 
-The other function provided by DPC++ is mem\_advise. This function allows us to provide device-specific hints about how memory will be used in kernels. An example of such possible advice that we could specify is that the data will only be read in a kernel, not written. In that case, the system could realize it could copy, or duplicate, the data on the device, so that the host’s version does not need to be updated after the kernel is complete. However, the advice passed to mem\_advise is specific to a particular device, so be sure to check the documentation for hardware before using this function.\par
+DPC++提供的另一个函数是mem\_advise。这个函数允许提供，如何在内核中使用特定于设备内存的提示。我们可以指定这样一个通知，数据只在内核中读取，而不是写入。这样，系统可以意识到这个操作可以复制或复制设备上的数据，这样在内核完成后就不需要更新主机的数据。但是，传递给mem\_advise的建议是特定于设备的，所以使用此函数之前，请查阅硬件的文档。\par
 
 
 
