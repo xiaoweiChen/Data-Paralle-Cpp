@@ -1,90 +1,90 @@
-In the “Sub-Groups” section of this chapter, we described collective functions and how collective functions express common communication patterns. We specifically discussed the broadcast collective function, which is used to communicate a value from one work-item in a group to the other work-items in the group. This section describes additional collective functions.\par
+本章的“子组”部分，我们描述了集合功能以及集合功能如何表达公共通信模式。我们特别讨论了广播集合功能，它用于将值从组中的一个工作项传递到组中的其他工作项。本节介绍其他集合函数。\par
 
-Although the collective functions described in this section can be implemented directly in our programs using features such as atomics, work-group local memory, and barriers, many devices include dedicated hardware to accelerate collective functions. Even when a device does not include specialized hardware, vendor-provided implementations of collective functions are likely tuned for the device they are running on, so calling a built-in collective function will usually perform better than a general-purpose implementation that we might write.\par
+虽然本节中描述的集合函数，可以在程序中使用原子、工作组本地内存和屏障等特性直接实现，但许多设备包括专用硬件对集合函数进行了加速。即使设备不包括专门的硬件，供应商提供的集合函数的实现可能针对它们所运行的设备进行调优，因此调用内置集合函数通常会比编写的通用实现执行得更好。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Use collective functions for common communication patterns to simplify code and increase performance!
+为公共通信模式使用集合函数来简化代码并提高性能!
 \end{tcolorbox}
 
-Many collective functions are supported for both work-groups and sub-groups. Other collective functions are supported only for sub-groups\par
+工作组和子工作组都支持许多集合功能。其他集合功能仅支持子工作组\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Broadcast}
+\textbf{广播}
 
-The broadcast function enables one work-item in a group to share the value of a variable with all other work-items in the group. A diagram showing how the broadcast function works can be found in Figure 9-12. The broadcast function is supported for both work-groups and subgroups.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Votes}
-
-The any\_of and all\_of functions (henceforth referred to collectively as “vote” functions) enable work-items to compare the result of a Boolean condition across their group: any\_of returns true if the condition is true for at least one work-item in the group, and all\_of returns true only if the condition is true for all work-items in the group. A comparison of these two functions for an example input is shown in Figure 9-15.\par
+广播功能允许组中的一个工作项与组中其他工作项共享变量的值。广播功能的工作原理如图9-12所示。工作组和子工作组都支持广播功能。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-15. Comparison of the any\_of and all\_of functions
+\textbf{投票}
+
+any\_of和all\_of功能(今后将共同称为“投票”功能)使工作项比较的结果一个布尔条件在他们组：any\_of返回true，如果至少一个工作项的条件为真，和all\_of返回true只有在所有工作项的条件为真。对于一个输入示例，这两个函数的比较如图9-15所示。\par
+
+\hspace*{\fill} \par %插入空行
+图9-15 比较any\_of函数和all\_of函数
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-9/images/8}
 \end{center}
 
-The any\_of and all\_of vote functions are supported for both workgroups and sub-groups.\par
+工作组和子工作组都支持any\_of和all\_of投票函数。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Shuffles}
+\textbf{打乱}
 
-One of the most useful features of sub-groups is the ability to communicate directly between individual work-items without explicit memory operations. In many cases, such as the sub-group matrix multiplication kernel, these shuffle operations enable us to remove work-group local memory usage from our kernels and/or to avoid unnecessary repeated accesses to global memory. There are several flavors of these shuffle functions available.\par
+子工作组最有用的特性之一是能够在单个工作项之间直接通信，而不需要显式的内存操作。许多情况下，例如：子工作组矩阵乘法内核，这些打乱操作使我们能够从内核中删除工作组本地内存的使用和/或避免对全局内存不必要的重复访问。这些打乱函数有几种类型。\par
 
-The most general of the shuffle functions is called shuffle, and as shown in Figure 9-16, it allows for arbitrary communication between any pair of work-items in the sub-group. This generality may come at a performance cost, however, and we strongly encourage making use of the more specialized shuffle functions wherever possible.\par
+最通用的打乱函数被称为shuffle，如图9-16所示，它允许子工作组中的任何工作项之间进行通信。然而，这种通用性可能会以性能为代价，我们强烈鼓励尽可能使用更特化的shuffle函数。\par
 
-In Figure 9-16, a generic shuffle is used to sort the x values of a subgroup using pre-computed permutation indices. Arrows are shown for one work-item in the sub-group, where the result of the shuffle is the value of x for the work-item with local\_id equal to 7.\par
+图9-16中，使用shuffle对预先计算的置换索引对子组的x值进行排序。展示了子工作组中一个工作项的箭头，其中shuffle的结果是local\_id等于7的工作项的x值。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-16. Using a generic shuffle to sort x values based on precomputed permutation indices
+图9-16 使用shuffle对预先计算的排列索引对x值排序
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-9/images/9}
 \end{center}
 
-Note that the sub-group broadcast function can be thought of as a specialized version of the general-purpose shuffle function, where the shuffle index is the same for all work-items in the sub-group. When the shuffle index is known to be the same for all work-items in the sub-group, using broadcast instead of shuffle provides the compiler additional information and may increase performance on some implementations.\par
+注意，可以将子工作组广播函数视为shuffle的特化版本，其中shuffle索引对于子工作组中的所有工作项是相同的，使用broadcast而不是shuffle将为编译器提供信息，并可能提高某些实现的性能。\par
 
-The shuffle\_up and shuffle\_down functions effectively shift the contents of a sub-group by a fixed number of elements in a given direction, as shown in Figure 9-17. Note that the values returned to the last five work-items in the sub-group are undefined and are shown as blank in Figure 9-17. Shifting can be useful for parallelizing loops with loopcarried dependences or when implementing common algorithms such as exclusive or inclusive scans.\par
+shuffle\_up和shuffle\_down函数有效地将子工作组的内容向给定方向移动一定数量元素的长度，如图9-17所示。注意，返回到子工作组中最后五个工作项的值是未定义的，并且在图9-17中显示为空白。对于并行化带有循环依赖的循环，或者在实现扫描等常见算法时，移位非常有用。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-17. Using shuffle\_down to shift x values of a sub-group by five items
+图9-17 使用shuffle\_down将子组的x值移动5个元素的长度
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-9/images/10}
 \end{center}
 
-The shuffle\_xor function swaps the values of two work-items, as specified by the result of an XOR operation applied to the work-item's sub-group local id and a fixed constant. As shown in Figures 9-18 and 9-19, several common communication patterns can be expressed using an XOR: for example, swapping pairs of neighboring values.\par
+shuffle\_xor函数交换两个工作项的值，这些值由应用于工作项的子工作组本地id和常量的XOR操作结果的的指定。如图9-18和9-19所示，几种常见的通信模式可以用异或表示，例如：交换相邻值对。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-18. Swapping neighboring pairs of x using a shuffle\_xor
+图9-18 使用shuffle\_xor交换相邻的x对
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-9/images/11}
 \end{center}
 
-or reversing the sub-group values.\par
+或者反转子组值。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-19. Reverse the values of x using a shuffle\_xor
+图9-19 使用shuffle\_xor反转x的值
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-9/images/12}
 \end{center}
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=SUB-GROUP OPTIMIZATIONS USING BROADCAST VOTE AND COLLECTIVES]
-The behavior of broadcast, vote, and other collective functions applied to subgroups is identical to when they are applied to work-groups, but they deserve additional attention because they may enable aggressive optimizations in certain compilers. For example, a compiler may be able to reduce register usage for variables that are broadcast to all work-items in a sub-group or may be able to reason about control flow divergence based on usage of the any\_of and all\_of functions.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=使用优化的广播，投票和集合函数]
+应用于子组的广播、投票和其他集合函数的行为与应用于工作组的行为是相同的，但是需要注意的是，因为它们会在某些编译器中启用主动优化，例如：编译器可能能够减少广播到子工作组中所有工作项的变量的寄存器使用，或者能够基于any\_of和all\_of函数的使用推断出控制流的方向。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Loads and Stores}
+\textbf{加载和存储}
 
-The sub-group load and store functions serve two purposes: first, informing the compiler that all work-items in the sub-group are loading contiguous data starting from the same (uniform) location in memory and, second, enabling us to request optimized loads/stores of large amounts of contiguous data.\par
+子工作组的加载和存储函数有两个目的:第一，通知编译器子工作组中的所有工作项都从内存中的相同(统一)位置加载连续数据;第二，能够请求优化的加载/存储大量连续数据。\par
 
-For an ND-range parallel\_for, it may not be clear to the compiler how addresses computed by different work-items relate to one another. For example, as shown in Figure 9-20, accessing a contiguous block of memory from indices [0, 32) appears to have a strided access pattern from the perspective of each work-item.\par
+对于ND-Range parallel\_for，编译器可能不清楚由不同工作项计算的地址如何相互关联。例如，如图9-20所示，从每个工作项的角度来看，从索引[0,32)访问一个连续的内存块似乎有跨越式访问模式。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-20. Memory access pattern of a sub-group accessing four contiguous blocks
+图9-20 一个子工作组访问四个连续块的内存访问模式
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-9/images/13}
 \end{center}
 
-Some architectures include dedicated hardware to detect when workitems in a sub-group access contiguous data and combine their memory requests, while other architectures require this to be known ahead of time and encoded in the load/store instruction. Sub-group loads and stores are not required for correctness on any platform, but may improve performance on some platforms and should therefore be considered as an optimization hint.\par
+有些体系结构包括专用硬件，用于检测子工作组中的工作项何时访问连续数据并组合它们的内存请求，而其他体系结构要求提前知道这一点并将其编码到加载/存储指令中。子工作组的加载和存储在任何平台上，都不是为了正确性而需要的，但在某些平台上可能会提高性能，因此应视为一种优化提示。\par
 
 
 
