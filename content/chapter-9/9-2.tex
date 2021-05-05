@@ -1,58 +1,58 @@
-This section describes building blocks that support efficient communication between work-items in a group. Some are fundamental building blocks that enable construction of custom algorithms, whereas others are higher level and describe common operations used by many kernels.\par
+本节介绍了提供组中工作项间通信的构建块。一些是基本的构建块，可以构建自定义算法，而另一些级别更高，描述了许多内核的常规操作。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Synchronization via Barriers}
+\textbf{通过栅栏进行同步}
 
-The most fundamental building block for communication is the barrier function. The barrier function serves two key purposes:\par
+通讯最基本的组成部分是栅栏功能。栅栏功能有两个目的:\par
 
-First, the barrier function synchronizes execution of work-items in a group. By synchronizing execution, one work-item can ensure that another work-item has completed an operation before using the result of that operation. Alternatively, one work-item is given time to complete its operation before another work-item uses the result of the operation.\par
+首先，栅栏功能可以同步组中工作项的执行。通过同步，工作项可以确保另一个工作项在使用该操作的结果之前完成操作。或者，在另一个工作项使用操作的结果之前，让工作项完成操作。\par
 
-Second, the barrier function synchronizes how each work-item views the state of memory. This type of synchronization operation is known as enforcing memory consistency or fencing memory (more details in Chapter 19). Memory consistency is at least as important as synchronizing execution since it ensures that the results of memory operations performed before the barrier are visible to other work-items after the barrier. Without memory consistency, an operation in one work-item is like a tree falling in a forest, where the sound may or may not be heard by other work-items!\par
+其次，栅栏函数同步每个工作项，并检查内存状态。这种类型的同步操作称为强制内存一致性或隔离内存(详见第19章)。内存一致性至少与同步执行一样重要，因为它在栅栏前执行的内存操作对栅栏之后执行的其他工作项可见。如果没有内存一致性，工作项中的操作就像森林中倒下的一棵树，其他工作项可能听到声音，也可能听不到!\par
 
-Figure 9-2 shows four work-items in a group that synchronize at a barrier function. Even though the execution time for each work-item may differ, no work-items can execute past the barrier until all work-items execute the barrier. After executing the barrier function, all work-items have a consistent view of memory.\par
+图9-2显示了在栅栏功能上同步的组中的四个工作项。尽管每个工作项的执行时间可能不同，但没有任何工作项可以通过屏障执行，直到所有工作项都遇到了栅栏。在执行栅栏功能之后，所有工作项就有一个一致的内存视图。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-2. Four work-items in a group synchronize at a barrier function
+图9-2 一个组中的四个工作项在栅栏功能上的同步
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-9/images/3}
 \end{center}
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=WHY ISN’T MEMORY CONSISTENT BY DEFAULT?]
-For many programmers, the idea of memory consistency—and that different work-items can have different views of memory—can feel very strange. Wouldn’t it be easier if all memory was consistent for all work-items by default? The short answer is that it would, but it would also be very expensive to implement. By allowing work-items to have inconsistent views of memory and only requiring memory consistency at defined points during program execution, accelerator hardware may be cheaper, may perform better, or both.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=为什么内存在默认情况下不一致?]
+对于许多开发者来说，内存一致性的概念——以及不同的工作项可以有不同的内存视图——可能感觉非常奇怪。如果默认情况下所有工作项的所有内存都是一致的，不是更容易吗?是的，但实现的代价非常昂贵。允许工作项具有不一致的内存视图，并且只要求程序执行期间定义的点上的内存一致性，这样加速器硬件可能更便宜，性能更好。
 \end{tcolorbox}
 
-Because barrier functions synchronize execution, it is critically important that either all work-items in the group execute the barrier or no work-items in the group execute the barrier. If some work-items in the group branch around any barrier function, the other work-items in the group may wait at the barrier forever—or at least until the user gives up and terminates the program!\par
+因为栅栏功能同步执行，所以要么组中的所有工作项执行栅栏操作，要么组中没有工作项执行栅栏操作，这是非常重要的。如果组分支中的某些工作项围绕过栅栏功能，则组中的其他工作项可能永远在栅栏处等待——或者要等到用户终止程序!\par
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=COLLECTIVE FUNCTIONS]
-When a function is required to be executed by all work-items in a group, it may be called a collective function, since the operation is performed by the group and not by individual work-items in the group. Barrier functions are not the only collective functions available in SYCL. Other collective functions are described later in this chapter.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=集合功能]
+当一个功能需要由组中的所有工作项执行时，可以将其称为集合功能，因为操作由工作组执行，而不由组中的单个工作项执行。栅栏函数并不是SYCL中唯一可用的集合函数。本章稍后将介绍其他集合功能。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Work-Group Local Memory}
+\textbf{工作组的本地内存}
 
-The work-group barrier function is sufficient to coordinate communication among work-items in a work-group, but the communication itself must occur through memory. Communication may occur through either USM or buffers, but this can be inconvenient and inefficient: it requires a dedicated allocation for communication and requires partitioning the allocation among work-groups.\par
+工作组栅栏功能可以协调工作组中工作项的通信，但是通信必须通过内存进行。通信可以通过USM或缓冲区进行，但这可能不方便且效率低下:需要专用的通信分配内存，并需要在工作组之间进行分配。\par
 
-To simplify kernel development and accelerate communication between work-items in a work-group, SYCL defines a special local memory space specifically for communication between work-items in a work-group.\par
+为了简化内核开发并加速工作组中工作项之间的通信，SYCL定义了专用于工作组中工作项之间通信的本地内存空间。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-3. Each work-group may access all global memory, but only its own local memory
+图9-3 每个工作组可以访问所有全局内存，但只能访问自己的本地内存
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-9/images/4}
 \end{center}
 
-In Figure 9-3, two work-groups are shown. Both work-groups may access USM and buffers in the global memory space. Each work-group may access variables in its own local memory space, but cannot access variables in another work-group’s local memory.\par
+如图9-3所示。两个工作组都可以访问全局内存空间中的USM和缓冲区。每个工作组可以访问自己的本地内存空间中的变量，但不能访问另一个工作组的本地内存中的变量。\par
 
-When a work-group begins, the contents of its local memory are uninitialized, and local memory does not persist after a work-group finishes executing. Because of these properties, local memory may only be used for temporary storage while a work-group is executing.\par
+当一个工作组开始时，其本地内存的内容未初始化，并且本地内存在工作组执行完毕后不会持续存在。由于这些属性，本地内存只能在工作组执行时作为临时存储使用。\par
 
-For some devices, such as for many CPU devices, local memory is a software abstraction and is implemented using the same memory subsystems as global memory. On these devices, using local memory is primarily a convenience mechanism for communication. Some compilers may use the memory space information for compiler optimizations, but otherwise using local memory for communication will not fundamentally perform better than communication via global memory on these devices.\par
+对于某些设备，例如许多CPU设备，本地内存是一种抽象，使用与全局内存相同的内存子系统来实现。设备上使用本地内存，主要是以便利的通信机制使用。一些编译器可能会使用内存空间信息进行编译器优化，否则，这些设备上使用本地内存进行通信，并不会比通过全局内存进行通信的性能更好。\par
 
-For other devices though, such as many GPU devices, there are dedicated resources for local memory, and on these devices, communicating via local memory will perform better than communicating via global memory.\par
+对于其他设备，比如：多GPU设备，有专用的本地内存资源。这些设备上，通过本地内存通信比通过全局内存通信性能更好。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Communication between work-items in a work-group can be more convenient and faster when using local memory!
+使用本地内存时，工作组中工作项之间的通信可以更方便、更快捷!
 \end{tcolorbox}
 
-We can use the device query info::device::local\_mem\_type to determine whether an accelerator has dedicated resources for local memory or whether local memory is implemented as a software abstraction of global memory. Please refer to Chapter 12 for more information about querying properties of a device and to Chapters 15, 16, and 17 for more information about how local memory is typically implemented for CPUs, GPUs, and FPGAs.\par
+可以使用设备查询info::device::local\_mem\_type来确定加速器是否为本地内存提供了专用资源，或者本地内存是否实现为全局内存的抽象。有关查询设备属性的更多信息请参见第12章，有关本地内存通常如何为CPU、GPU和FPGA实现的更多信息详见第15、16和17章。\par
 
 
 
