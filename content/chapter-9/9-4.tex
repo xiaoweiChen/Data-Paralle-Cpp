@@ -1,17 +1,16 @@
-So far in this chapter, work-items have communicated with other workitems in the work-group by exchanging data through work-group local memory and by synchronizing via implicit or explicit barrier functions, depending on how the kernel is written.\par
+到目前为止，工作项已经通过工作组本地内存交换数据，并通过隐式或显式barrier函数进行同步(这取决于内核是如何编写的)，与工作组中的其他工作项进行了通信。\par
 
-In Chapter 4, we discussed another grouping of work-items. A subgroup is an implementation-defined subset of work-items in a work-group that execute together on the same hardware resources or with additional scheduling guarantees. Because the implementation decides how to group work-items into sub-groups, the work-items in a sub-group may be able to communicate or synchronize more efficiently than the work-items in an arbitrary work-group.\par
+第4章中，我们讨论了另一种工作项分组。子工作组是工作组中定义子工作集，在相同的硬件资源或附加的调度保证上一起执行。因为实现决定如何将工作项分组到子工作组中，子工作组中的工作项可能比任意工作组中的工作项更有效地通信或同步。\par
 
-This section describes the building blocks for communication 
-among work-items in a sub-group. Note that sub-groups are currently implemented only for ND-range kernels and sub-groups are not expressible through hierarchical kernels.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Synchronization via Sub-Group Barriers}
-
-Just like how the work-items in a work-group in an ND-range kernel may synchronize using a work-group barrier function, the work-items in a sub-group may synchronize using a sub-group barrier function. Whereas the work-items in a work-group synchronize by calling a group\_barrier function or the barrier function in the nd\_item class, the work-items in a sub-group synchronize by calling a group\_barrier function or the barrier function in a special sub\_group class that may be queried from the nd\_item class, as shown in Figure 9-11.\par
+本节描述子工作组中工作项之间通信的构建块。注意，子工作组目前仅为ND-Range内核实现，并且子工作组不能通过分层内核表示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-11. Querying and using the sub\_group class
+\textbf{同步操作与子工作组的栅栏}
+
+就像ND-Range内核中工作组中的工作项，可以使用工作组barrier功能进行同步一样，子工作组中的工作项可以使用子工作组栅栏功能进行同步。而在工作组同步通过调用工作项group\_barrier函数或nd\_item类的barrier功能，子工作组中的工作项的同步，是通过调用group\_barrier函数或sub\_group类上的barrier函数(可使用nd\_item类查询)，如图9-11。\par
+
+\hspace*{\fill} \par %插入空行
+图9-11 查询和使用sub\_group类
 \begin{lstlisting}[caption={}]
 h.parallel_for(nd_range{{size}, {16}}, [=](nd_item<1> item) {
 	auto sg = item.get_sub_group();
@@ -21,29 +20,29 @@ h.parallel_for(nd_range{{size}, {16}}, [=](nd_item<1> item) {
 });
 \end{lstlisting}
 
-Like the work-group barrier, the sub-group barrier may accept optional arguments to more precisely control the barrier operation. Regardless of whether the sub-group barrier function is synchronizing global memory or local memory, synchronizing only the work-items in the sub-group is likely cheaper than synchronizing all of the work-items in the work-group.\par
+像工作组栅栏一样，子工作组展览可以接受可选参数，来更精确地控制栅栏操作。无论子工作组栅栏功能是同步全局内存还是本地内存，只同步子工作组中的工作项，都可能比同步工作组中的所有工作项要划算。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Exchanging Data Within a Sub-Group}
+\textbf{在子工作组内交换数据}
 
-Unlike work-groups, sub-groups do not have a dedicated memory space for exchanging data. Instead, work-items in the sub-group may exchange data through work-group local memory, through global memory, or more commonly by using sub-group collective functions.\par
+与工作组不同，子工作组没有用于交换数据的专用内存空间。相反，子工作组中的工作项可以通过工作组的本地内存、全局内存或通过使用子工作组集合函数来交换数据。\par
 
-As described previously, a collective function is a function that describes an operation performed by a group of work-items, not an individual work-item, and because a barrier synchronization function is an operation performed by a group of work-items, it is one example of a collective function.\par
+如前所述，集合功能是描述由一组工作项执行的操作的功能，而不是单个工作项，并且因为栅栏同步功能是由一组工作项执行的操作，所以它是集合功能。\par
 
-Other collective functions express common communication patterns. We will describe the semantics for many collective functions in detail later in this chapter, but for now, we will briefly describe the broadcast collective function that we will use to implement matrix multiplication using sub-groups.\par
+其他集合功能表示公共通信模式。我们将在本章后面详细描述许多集合函数的语义，现在简要描述广播集合函数，将使用子工作组来实现矩阵乘法。\par
 
-The broadcast collective function takes a value from one work-item in the group and communicates it to all other work-items in the group. An example is shown in Figure 9-12. Notice that the semantics of the broadcast function require that the local\_id identifying which value in the group to communicate must be the same for all work-items in the group, ensuring that the result of the broadcast function is also the same for all work-items in the group.\par
+广播集合函数从组中的一个工作项中获取值，并将其传递给组中的所有其他工作项。配置示例如图9-12所示。注意，广播函数的语义要求标识组中哪个值要通信的local\_id对于组中的所有工作项必须相同，以确保广播函数的结果对于组中的所有工作项也是相同的。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-12. Processing by the broadcast function
+图9-12 广播功能
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-9/images/7}
 \end{center}
 
-If we look at the innermost loop of our local memory matrix multiplication kernel, shown in Figure 9-13, we can see that the access to the matrix tile is a broadcast, since each work-item in the group reads the same value out of the matrix tile.\par
+如果查看本地内存矩阵乘法内核的最内层循环，如图9-13所示，可以看到对矩阵块的访问是一个广播，因为组中的每个工作项从矩阵块中读取相同的值。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-13. Matrix multiplication kernel includes a broadcast operation
+图9-13 包含广播操作的矩阵乘法内核
 \begin{lstlisting}[caption={}]
 h.parallel_for<class MatrixMultiplication>(
 	nd_range<2>{ {M, N}, {1, tileSize} }, [=](nd_item<2> item) {
@@ -61,15 +60,15 @@ h.parallel_for<class MatrixMultiplication>(
 });
 \end{lstlisting}
 
-We will use the sub-group broadcast function to implement a matrix multiplication kernel that does not require work-group local memory or barriers. On many devices, sub-group broadcasts are faster than broadcasting with work-group local memory and barriers.\par
+使用子组广播功能来实现不需要工作组本地内存或栅栏的矩阵乘法内核。在许多设备上，子工作组广播比使用工作组本地内存和栅栏的广播更快。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{A Full Sub-Group ND-Range Kernel Example}
+\textbf{一个完整的子组ND-Range内核示例}
 
-Figure 9-14 is a complete example that implements matrix multiplication using sub-groups. Notice that this kernel requires no work-group local memory or explicit synchronization and instead uses a sub-group broadcast collective function to communicate the contents of the matrix tile among work-items.\par
+图9-14使用子工作组实现矩阵乘法的完整示例。注意，此内核不需要工作组本地内存或显式同步，而是使用子工作组广播集合函数在工作项之间通信矩阵块的内容。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-14. Tiled matrix multiplication kernel expressed with NDrange parallel\_for and sub-group collective functions
+图9-14 用NDrange parallel\_for和子组集合函数表示块矩阵乘法内核
 \begin{lstlisting}[caption={}]
 // Note: This example assumes that the sub-group size is 
 // greater than or equal to the tile size!
