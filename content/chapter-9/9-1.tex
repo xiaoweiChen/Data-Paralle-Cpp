@@ -1,14 +1,14 @@
-Recall from Chapter 4 that explicit ND-range and hierarchical parallel kernels organize work-items into work-groups and that the work-items in a workgroup are guaranteed to execute concurrently. This property is important, because when work-items are guaranteed to execute concurrently, the workitems in a work-group can cooperate to solve a problem.\par
+回想第4章，显式的ND-Range和分层并行内核将工作项组织到工作组中，并且工作组中的工作项可以并发执行。此属性很重要，因为工作项可以保证并发时，工作组中的工作项中的协作问题才能解决。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 9-1. Two-dimensional ND-range of size (8, 8) divided into four work-groups of size (4,4)
+图9-1 二维ND-Range尺寸(8,8)分为尺寸(4,4)四个工作组
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-9/images/2}
 \end{center}
 
-Figure 9-1 shows an ND-range divided into work-groups, where each work-group is represented by a different color. The work-items in each work-group are guaranteed to execute concurrently, so a work-item may communicate with other work-items that share the same color.\par
+图9-1将ND-Range划分为不同的工作组，每个工作组用不同的颜色表示。每个工作组中的工作项可以同时执行，因此工作项可以与其他相同颜色的工作项通信。\par
 
-Because the work-items in different work-groups are not guaranteed to execute concurrently, a work-item with one color cannot reliably communicate with a work-item with a different color, and a kernel may deadlock if one work-item attempts to communicate with another workitem that is not currently executing. Since we want our kernels to complete execution, we must ensure that when one work-item communicates with another work-item, they are in the same work-group.\par
+因为不同工作组中的工作项不能保证并发执行，所以同一种颜色的工作项不能可靠地与具有不同颜色的工作项通信，并且如果一个工作项试图与当前未执行的另一个工作项通信，可能会导致内核死锁。由于我们希望内核完成执行，必须确保当一个工作项与另一个工作项通信时，在同一个工作组中。\par
 
 
 
