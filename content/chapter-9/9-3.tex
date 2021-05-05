@@ -6,7 +6,7 @@
 本书中，矩阵乘法内核用于演示内核中的变化如何影响性能。尽管使用本章的技术可以在某些设备上提高矩阵乘法的性能，但矩阵乘法是非常常见的操作，以至于许多供应商已经实现了矩阵乘法的高度优化版本。厂商投入大量的时间和精力来实现和验证特定设备的功能，并且在某些情况下使用在标准并行内核中难以或不可能使用的功能或技术。
 \end{tcolorbox}
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=USE VENDOR-PROVIDED LIBRARIES!]
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=使用供应商提供的库!]
 当供应商提供函数的库实现时，使用它而不是将函数重新实现!对于矩阵乘法，我们可以将oneMKL作为DPC++开发者英特尔oneAPI解决方案工具包的一部分。
 \end{tcolorbox}
 
