@@ -2,6 +2,6 @@
 	\includegraphics[width=0.3\textwidth]{content/chapter-9/images/1}
 \end{center}
 
-In Chapter 4, we discussed ways to express parallelism, either using basic data-parallel kernels, explicit ND-range kernels, or hierarchical parallel kernels. We discussed how basic data-parallel kernels apply the same operation to every piece of data independently. We also discussed how explicit ND-range kernels and hierarchical parallel kernels divide the execution range into work-groups of work-items.\par
+第4章中，讨论了表达并行性的方法，包括使用数据并行内核、显式的ND-Range内核或分层并行内核。讨论了数据并行内核如何将相同的操作独立地应用到每一块数据上。还讨论了显式的ND-Range内核和分层并行内核如何将执行范围划分为工作组中的工作项。\par
 
-In this chapter, we will revisit the question of how to break up a problem into bite-sized chunks in our continuing quest to Think Parallel. This chapter provides more detail regarding explicit ND-range kernels and hierarchical parallel kernels and describes how groupings of work-items may be used to improve the performance of some types of algorithms. We will describe how groups of work-items provide additional guarantees for how parallel work is executed, and we will introduce language features that support groupings of work-items. Many of these ideas and concepts will be important when optimizing programs for specific devices in Chapters 15, 16, and 17 and to describe common parallel patterns in Chapter 14.\par
+本章提供了关于显式ND-Range内核和分层并行内核的更多细节，并描述了如何使用工作项分组来提高某些类型算法的性能。描述工作项/组如何并行工作，以及如何执行提供额外的保证，并且引入支持工作项/组的特性。在第15、16、17章中针对特定设备的程序优化时，以及在第14章中描述常见并行模式，这些思想和概念都非常重要。\par
