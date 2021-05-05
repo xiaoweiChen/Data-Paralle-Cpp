@@ -1,14 +1,14 @@
-This chapter discussed how work-items in a group may communicate and cooperate to improve the performance of some types of kernels.\par
+本章讨论了一个组中的工作项如何交流和合作以提高某些类型内核的性能。\par
 
-We first discussed how ND-range kernels and hierarchical kernels support grouping work-items into work-groups. We discussed how grouping work-items into work-groups changes the parallel execution model, guaranteeing that the work-items in a work-group execute concurrently and enabling communication and synchronization.\par
+首先讨论了ND-Range内核和分层内核如何支持将工作项分组到工作组中。讨论了如何将工作项分组到工作组中，从而更改并行执行模型，以确保工作组中的工作项并发执行，并支持通信和同步。\par
 
-Next, we discussed how the work-items in a work-group may synchronize using barriers and how barriers are expressed explicitly for NDrange kernels or implicitly between work-group and work-item scopes for hierarchical kernels. We also discussed how communication between workitems in a work-group can be performed via work-group local memory, both to simplify kernels and to improve performance, and we discussed how work-group local memory is represented using local accessors for ND-range kernels or allocations at work-group scope for hierarchical kernels.\par
+接下来，讨论了工作组中的工作项如何使用barrier进行同步，以及如何在ND-Range内核中显式地表示barrier，或者在分层内核的工作组和工作项范围中隐式地表示barrier。还讨论了如何通过工作组本地内存执行工作组中工作项之间的通信，以简化内核并提高性能，以及如何使用用于ND-Range内核的本地访问器来表示工作组本地内存，以及如何使用用于分层内核的工作组范围内的分配。\par
 
-We discussed how work-groups in ND-range kernels may be further divided into sub-groupings of work-items, where the sub-groups of workitems may support additional communication patterns or scheduling guarantees.\par
+讨论了如何将ND-Range内核中的工作组进一步划分为工作项的子工作组，其中工作项的子工作组可能支持额外的通信模式或调度。\par
 
-For both work-groups and sub-groups, we discussed how common communication patterns may be expressed and accelerated through use of collective functions.\par
+对于工作组和子工作组，我们讨论了如何通过使用集合功能来表达和加速公共通信模式。\par
 
-The concepts in this chapter are an important foundation for understanding the common parallel patterns described in Chapter 14 and for understanding how to optimize for specific devices in Chapters 15, 16, and 17.\par
+本章中的概念是理解第14章中描述的常见并行模式，以及理解第15、16和17章中如何针对特定设备进行优化的基础。\par
 
 
 \newpage
