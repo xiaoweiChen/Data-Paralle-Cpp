@@ -1,16 +1,16 @@
-Named function objects, also known as functors, are an established pattern in C++ that allows operating on an arbitrary collection of data while maintaining a well-defined interface. When used to represent a kernel, the member variables of a named function object define the state that the kernel may operate on, and the overloaded function call operator() is invoked for each work-item in the parallel execution space.\par
+命名函数对象，也称为函子，允许在定义良好的接口的同时操作任意数据集合。当用于表示内核时，已命名函数对象的成员变量定义了内核可能操作的状态，重载函数调用operator()将为并行执行的每个工作项调用。\par
 
-Named function objects require more code than lambda expressions to express a kernel, but the extra verbosity provides more control and additional capabilities. It may be easier to analyze and optimize kernels expressed as named function objects, for example, since any buffers and data values used by the kernel must be explicitly passed to the kernel, rather than captured automatically.\par
+命名函数对象需要比Lambda表达式更多的代码来表示内核，但是额外的控制提供了额外的功能。例如，更容易分析和优化以命名函数对象表示的内核，因为内核使用的任何缓冲区和数据值都必须显式地传递给内核，而不是自动捕获。\par
 
-Finally, because named function objects are just like any other C++ class, kernels expressed as named function objects may be templated, unlike kernels expressed as lambda expressions. Kernels expressed as named function objects may also be easier to reuse and may be shipped as part of a separate header file or library.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Elements of a Kernel Named Function Object}
-
-The code in Figure 10-6 describes the elements of a kernel represented as a named function object.\par
+最后，因为命名函数对象就像任何其他C++类一样，表示为命名函数对象的内核可以模板化。以命名函数对象表示的内核也更容易重用，可以作为单独头文件或库的一部分。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 10-6. Kernel as a named function object
+\textbf{内核命名函数对象的组件}
+
+图10-6中的代码描述了用命名函数对象表示的内核。\par
+
+\hspace*{\fill} \par %插入空行
+图10-6 内核作为命名函数对象
 \begin{lstlisting}[caption={}]
 class Add {
 public:
@@ -45,11 +45,11 @@ int main() {
 });
 \end{lstlisting}
 
-When a kernel is expressed as a named function object, the named function object type must follow C++11 rules to be trivially copyable. Informally, this means that the named function objects may be safely copied byte by byte, enabling the member variables of the named function object to be passed to and accessed by kernel code executing on a device.\par
+当内核表示为命名函数对象时，必须遵循C++11规则才能复制。这意味着命名函数对象可以安全地一个字节一个字节地复制，使命名函数对象的成员变量能够传递给在设备上执行的内核代码。\par
 
-The arguments to the overloaded function call operator() depend on how the kernel is launched, just like for kernels expressed as lambda expressions.\par
+重载函数调用operator()的参数取决于内核，就像用Lambda表达式表示的内核一样。\par
 
-Because the function object is named, the host code compiler can use the function object type to associate with the kernel code produced by the device code compiler, even if the function object is templated. As a result, no additional kernel name template parameter is needed to name a kernel function object.\par
+因为函数对象是命名的，所以宿主代码编译器可以使用函数对象类型与设备代码编译器生成的内核代码相关联。因此，命名内核函数对象不需要额外的内核名称。\par
 
 
 
