@@ -1,9 +1,9 @@
-C++ lambda expressions, also referred to as anonymous function objects, unnamed function objects, closures, or simply lambdas, are a convenient way to express a kernel right where it is used. This section describes how to represent a kernel as a C++ lambda expression. This expands on the introductory refresher on C++ lambda functions, in Chapter 1, which included some coding samples with output.\par
+C++ Lambda表达式，也称为匿名函数对象、未命名函数对象、闭包，是一种表示内核很方便的方法。本节介绍了如何将内核表示为C++ Lambda表达式。本节扩展了第1章中关于C++ Lambda函数的介绍。\par
 
-C++ lambda expressions are very powerful and have an expressive syntax, but only a specific subset of the full C++ lambda expression syntax is required (and supported) when expressing a kernel.\par
+C++ Lambda表达式非常强大，在表示内核时，只需要(并支持)完整C++ Lambda表达式语法的一个子集即可。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 10-2. Kernel defined using a lambda expression
+图10-2 使用Lambda表达式定义的内核
 \begin{lstlisting}[caption={}]
 h.parallel_for(size,
 	// This is the start of a kernel lambda expression:
@@ -15,44 +15,44 @@ h.parallel_for(size,
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Elements of a Kernel Lambda Expression}
+\textbf{内核Lambda表达式的构成}
 
-Figure 10-2 shows a kernel written as a typical lambda expression—the code examples so far in this book have used this syntax.\par
+图10-2展示了用Lambda表达式编写的内核———书中目前为止的代码示例都使用这种语法。\par
 
-The illustration in Figure 10-3 shows more elements of a lambda expression that may be used with kernels, but many of these elements are not typical. In most cases, the lambda defaults are sufficient, so a typical kernel lambda expression looks more like the lambda expression in Figure 10-2 than the more complicated lambda expression in Figure 10-3.\par
+图10-3中的插图显示了可以与内核一起使用的Lambda表达式的更多组件，其中许多都不是必须的。大多数情况下，默认值就足够了，所以典型的内核Lambda表达式看起来更像图10-2中的表达式，而不是图10-3中的那样。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 10-3. More elements of a kernel lambda expression, including  optional elements
+图10-3 内核Lambda表达式的更多元素，包括可选组件
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-10/images/2}
 \end{center}
 
 \begin{enumerate}
-	\item The first part of a lambda expression describes the lambda captures. Capturing a variable from a surrounding scope enables it to be used within the lambda expression, without explicitly passing it to the lambda expression as a parameter.\\
-	C++ lambda expressions support capturing a variable by copying it or by creating a reference to it, but for kernel lambda expressions, variables may only be captured by copy. General practice is to simply use the default capture mode [=], which implicitly captures all variables by value, although it is possible to explicitly name each captured variable as well. Any variable used within a kernel that is not captured by value will cause a compile-time error.
-	\item The second part of a lambda expression describes parameters that are passed to the lambda expression, just like parameters that are passed to named functions.\\
-	For kernel lambda expressions, the parameters depend on how the kernel was invoked and usually identify the index of the work-item in the parallel execution space. Please refer to Chapter 4 for more details about the various parallel execution spaces and how to identify the index of a work-item in each execution space.
-	\item The last part of the lambda expression defines the lambda function body. For a kernel lambda expression, the function body describes the operations that should be performed at each index in the parallel execution space.\\
-	There are other parts of a lambda expression that are supported for kernels, but are either optional or infrequently used:
-	\item Some specifiers (such as mutable) may be supported, but their use is not recommended, and support may be removed in future versions of SYCL (it is gone in the provisional SYCL 2020) or DPC++. None is shown in the example code.
-	\item The exception specification is supported, but must be noexcept if provided, since exceptions are not supported for kernels.
-	\item Lambda attributes are supported and may be used to control how the kernel is compiled. For example, the reqd\_work\_group\_size attribute can be used to require a specific work-group size for a kernel.
-	\item The return type may be specified, but must be voidif provided, since non-void return types are not supported for kernels.
+	\item Lambda表达式的第一部分描述捕获。从周围范围捕获变量使其可以在Lambda表达式中使用，而不用显式地将其作为参数传递给表达式。\\
+	C++ Lambda表达式支持通过复制或创建对变量的引用的方式来捕获变量，但对于内核Lambda表达式，变量只能通过复制来捕获。一般的做法是简单地使用默认捕获模式[=]，它隐式地按值捕获所有变量，不过也可以显式地命名每个捕获的变量。在内核中使用的任何未捕获的变量都会将导致编译时错误。
+	\item Lambda表达式的第二部分是传递给表达式的参数，就像传递参数给命名函数一样。\\
+	对于内核Lambda表达式，参数取决于调用内核的方式，并且通常标识为并行执行空间中工作项的索引。关于各种并行执行空间，以及如何识别执行空间中工作项的索引的细节信息，请参阅第4章。
+	\item Lambda表达式的最后一部分定义了函数体。对于内核Lambda表达式，函数体描述了在并行执行空间中的每个索引处执行的操作。\\
+	内核也支持Lambda表达式的其他部分，要么是可选的，要么不常用:
+	\item 可能会支持一些说明符(比如mutable)，但不建议使用它们，并且在未来的SYCL版本(在SYCL 2020中已经没有了)或DPC++中可能会删除这种支持。这个在示例代码中没有展示。
+	\item 异常是支持的，如果提供了异常，就必须是noexcept，因为内核不支持异常。
+	\item 支持Lambda属性，可以用来控制如何编译内核。例如，reqd\_work\_group\_size属性可用与定义工作组大小。
+	\item 可以指定返回类型，但必须提供void类型，因为内核不支持非void返回类型。
 \end{enumerate}
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=LAMBDA CAPTURES: IMPLICIT OR EXPLICIT?]
-Some C++ style guides recommend against implicit (or default) captures for lambda expressions due to possible dangling pointer issues, especially when lambda expressions cross scope boundaries. The same issues may occur when lambdas are used to represent kernels, since kernel lambdas execute asynchronously on the device, separately from host code.\\
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=Lambda捕获:隐式还是显式?]
+一些C++风格指南建议不要使用隐式(或默认)捕获Lambda表达式，因为可能存在悬空指针问题，特别是在表达式跨越作用域边界时。当Lambda用于表示内核时，也会出现同样的问题，因为内核在设备上与主机代码分开异步执行。\\
 
-Because implicit captures are useful and concise, it is common practice for SYCL kernels and a convention we use in this book, but it is ultimately our decision whether to prefer the brevity of implicit captures or the clarity of explicit captures.
+因为隐式捕获简单好用，是SYCL内核的常见做法，也是本书中经常使用的一种方法，但最终需要权衡隐式捕获的简洁和显式捕获的清晰。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Naming Kernel Lambda Expressions}
+\textbf{命名表示内核的Lambda表达式}
 
-There is one more element that must be provided in some cases when a kernel is written as a lambda expression: because lambda expressions are anonymous, at times SYCL requires an explicit kernel name template parameter to uniquely identify a kernel written as a lambda expression.\par
+当内核写成Lambda表达式时，某些情况下必须提供另外一个标识:因为表达式是匿名的，有时SYCL需要显式的内核名称模板参数来标识写成表达式的内核。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 10-4. Naming kernel lambda expressions
+图10-4 命名内核的Lambda表达式
 \begin{lstlisting}[caption={}]
 // In this example, "class Add" names the kernel lambda:
 
@@ -61,12 +61,12 @@ h.parallel_for<class Add>(size, [=](id<1> i) {
 });
 \end{lstlisting}
 
-Naming a kernel lambda expression is a way for a host code compiler to identify which kernel to invoke when the kernel was compiled by a separate device code compiler. Naming a kernel lambda also enables runtime introspection of a compiled kernel or building a kernel by name, as shown in Figure 10-9.\par
+命名内核lambda表达式是宿主代码编译器确定，在由单独的设备代码编译器编译内核时要调用哪个内核的一种方法。命名内核lambda还可以对已编译的内核进行运行时内省或通过名称构建内核，如图10-9所示。\par
 
-To support more concise code when the kernel name template parameter is not required, the DPC++ compiler supports omitting the kernel name template parameter for a kernel lambda via the -fsyclunnamed-lambda compiler option. When using this option, no explicit kernel name template parameter is required, as shown in Figure 10-5.\par
+为了在不需要内核名的情况下支持更简洁的代码，DPC++编译器支持通过-fsyclnamed -lambda编译器选项来省略内核名。使用该选项时，不需要显式的内核名模板参数，如图10-5所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 10-5. Using unnamed kernel lambda expressions
+图10-5 使用未命名的内核lambda表达式
 \begin{lstlisting}[caption={}]
 // In many cases the explicit kernel name template parameter
 // is not required.
@@ -75,10 +75,10 @@ h.parallel_for(size, [=](id<1> i) {
 });
 \end{lstlisting}
 
-Because the kernel name template parameter for lambda expressions is not required in most cases, we can usually start with an unnamed lambda and only add a kernel name in specific cases when the kernel name template parameter is required.\par
+因为大多数情况下不需要Lambda表达式的内核名称模板参数，所以通常可以从未命名的Lambda开始，只有在需要内核名称在特定情况下添加内核名称。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-When the kernel name template parameter is not required, using unnamed kernel lambdas is preferred to reduce verbosity.
+当不需要内核名称时，首选使用未命名的内核Lambdas。
 \end{tcolorbox}
 
 
