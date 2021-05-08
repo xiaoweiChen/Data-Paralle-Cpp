@@ -1,6 +1,6 @@
 
-There are multiple interpretations of the term vector within programming languages, and understanding the interpretation that a particular language or compiler has been built around is important when we want to write performant and scalable code. DPC++ and the DPC++ compiler have been built around the idea that vectors in source code are convenience functions local to a work-item and that implicit vectorization by the compiler across work-items may map to SIMD instructions in the hardware. When we want to write code which maps directly to vector hardware explicitly, we should look to vendor documentation and future extensions to SYCL and DPC++. Writing our kernels using multiple work-items (e.g., ND-range) and relying on the compiler to vectorize across work-items should be how most applications are written because doing so leverages the powerful abstraction of SPMD, which provides an easy-to-reason-about programming model, and that provides scalable performance across devices and architectures.\par
+编程语言中，向量一词有多种解释，想要编写高性能和可扩展的代码时，理解特定语言或编译器的解释很重要。DPC++编译器围绕这样的思想构建:源码中的向量是工作项的局部函数，编译器跨工作项的隐式向量值，可能映射到硬件中的SIMD指令。当我们想要编写显式映射到SIMD指令集时，我们应该查看供应商的文档和对SYCL和DPC++的扩展。使用多个工作项(例如ND-Range)编写内核，并依赖编译器跨工作项向量化应该是大多数应用程序的方式，这样做利用了SPMD强大的抽象功能，它提供了一个简单的编程模型，提供了跨设备和架构的可扩展性。\par
 
-This chapter has described the vec interface, which offers convenience out of the box when we have groupings of similarly typed data that we want to operate on (e.g., a pixel with multiple color channels). It has also touched briefly on SIMD instructions in hardware, to prepare us for more detailed discussions in Chapters 15 and 16.\par
+本章描述了vec接口，想要对类似类型的数据进行操作(例如，一个具有多个颜色通道的像素)时，它提供了开箱即用的便利。本章还简要介绍了硬件中的SIMD指令，以便在第15和16章中进行更详细的讨论。\par
 
 \newpage
