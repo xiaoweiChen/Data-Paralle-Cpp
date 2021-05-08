@@ -1,60 +1,59 @@
-A SYCL or DPC++ compiler is designed to act and feel like any other C++ compiler we have ever used. A notable difference is that a regular C++ compiler produces code only for a CPU. It is worth understanding the inner workings, at a high level, that enable a compiler to produce code for a host CPU and devices.\par
+SYCL或DPC++编译器的设计，与之前使用过的任何其他C++编译器一样。不过，一个显著的区别是，普通C++编译器只为CPU生成代码。有必要在较高的层次上理解内部工作原理，它使编译器能够为主机CPU和设备生成代码。\par
 
-The platform model (Figure 13-1), used by SYCL and DPC++, specifies a host that coordinates and controls the compute work that is performed on the devices. Chapter 2 describes how to assign work to devices, and Chapter 4 dives into how to program devices. Chapter 12 describes using the platform model at various levels of specificity.\par
+SYCL和DPC++所使用的平台模型(图13-1)指定了一个主机来协调和控制在设备上执行的计算工作。第2章描述了如何将工作分配给设备，第4章深入研究了如何对设备进行编程。第12章描述了在不同层次上使用平台模型的特殊性。\par
 
-As we discussed in Chapter 2, there is always a device corresponding to the host, known as the host device. Providing this guaranteed-to-beavailable target for device code allows device code to be written assuming that at least one device is available, even if it is the host itself! The choice of the devices on which to run device code is under program control—it is entirely our choice as programmers if, and how, we want to execute code on specific devices.\par
+正如第2章中讨论的，总有一个与主机相对应的设备，称为主机设备。为设备代码提供保证可用的目标，并允许在编写设备代码时至少有一个设备可用，即使它是主机本身!在哪个设备上运行设备代码是在程序控制下的——作为开发者，如果想在特定的设备上执行代码，以及如何执行代码，这完全由自己选择。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 13-1. Platform model: Can be used abstractly or with specificity
+图13-1 平台模型:可以抽象地使用，也可以有针对性地使用
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-13/images/2}
 \end{center}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Multiarchitecture Binaries}
+\textbf{多体系结构二进制文}
 
-Since our goal is to have a single-source code to support a heterogeneous machine, it is only natural to want a single executable file to be the result.\par
+由于我们的目标是使用单一源代码来支持异构机器，因此很自然地希望结果是单个可执行文件。\par
 
-A multiarchitecture binary (aka a fat binary) is a single binary file that has been expanded to include all the compiled and intermediate code needed for our heterogeneous machine. The concept of multiarchitecture binaries is not new. For example, some operating systems support multiarchitecture 32-bit and 64-bit libraries and executables. A multiarchitecture binary acts like any other a.out or A.exe we are used to—but it contains everything needed for a heterogeneous machine. This helps to automate the process of picking the right code to run for a particular device. As we discuss next, one possible form of the device code in a fat binary is an intermediate format that defers the final creation of device instructions until runtime.\par
+一个多体系结构二进制文件(又名宽二进制文件)是一个单独的二进制文件，已经被扩展到包含异构机器所需的所有已编译的和中间代码。多架构二进制文件的概念并不新鲜。例如，一些操作系统支持32位和64位的多架构库和可执行文件。一个多架构二进制文件的作用就像我们常用的任何a.out或A.exe一样，但它包含异构机器所需的一切。这有助于自动化为特定设备选择正确的代码运行的过程。正如下面要讨论的，一种可能的设备代码形式是中间格式，它将设备指令的最终创建推迟到运行时。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Compilation Model}
+\textbf{编译模型}
 
-The single-source nature of SYCL and DPC++ allows compilations to act and feel like regular C++ compilations. There is no need for us to invoke additional passes for devices or deal with bundling device and host code. That is all handled automatically for us by the compiler. Of course, understanding the details of what is happening can be important for several reasons. This is useful knowledge if we want to target specific architectures more effectively, and it is important to understand if we need to debug a failure happening in the compilation process.\par
+SYCL和DPC++的单源特性允许编译操作像普通的C++编译。我们不需要为设备调用额外的工具，也不需要处理设备和主机代码的绑定，这些都是编译器自动处理的。当然，了解事情的细节可能很重要，原因有几个。如果希望更有效地针对特定的体系结构，这是非常有用的知识，并且了解是否需要调试编译过程中发生的故障是非常重要的。\par
 
-We will review the compilation model so that we are educated for when that knowledge is needed. Since the compilation model supports code that executes on both a host and potentially several devices simultaneously, the commands issued by the compiler, linker, and other supporting tools are more complicated than the C++ compilations we are used to (targeting only one architecture). Welcome to the heterogeneous world!\par
+我们回顾编译模型，以便了解何时需要该知识。由于编译模型支持同时在主机和可能同时在多个设备上执行的代码，因此编译器、链接器和其他支持工具发出的命令比我们习惯的C++编译(只针对一种体系结构)要复杂得多。欢迎来到异构的世界!\par
 
-This heterogeneous complexity is intentionally hidden from us by the DPC++ compiler and “just works.”\par
+DPC++编译器向我们隐藏了这种异构的复杂性。\par
 
-The DPC++ compiler can generate target-specific executable code similar to traditional C++ compilers (ahead-of-time (AOT) compilation, sometimes referred to as offline kernel compilation), or it can generate an intermediate representation that can be just-in-time (JIT) compiled to a specific target at runtime.\par
+DPC++编译器可以生成与传统C++编译器类似的特定于目标的可执行代码(提前(AOT)编译，有时称为脱机编译)，或者它可以生成一个中间表示，可以在运行时将其即时(JIT)编译为特定的目标。\par
 
-The compiler can only compile ahead of time if the device target is known ahead of time (at the time when we compile our program). Deferring for just-in-time compilation gives more flexibility, but requires the compiler and the runtime to perform additional work while our application is running.\par
+只有在设备目标提前已知(在编译程序时)时，编译器才能提前编译。延迟即时编译提供了更多的灵活性，但需要编译器和运行时在应用程序运行时执行额外的工作。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-DPC++ compilation can be “ahead-of-time” or “just-in-time.”
+DPC++编译可以是“提前编译”或“即时编译”。
 \end{tcolorbox}
 
-By default, when we compile our code for most devices, the output for device code is stored in an intermediate form. At runtime, the device handler on the system will just-in-time compile the intermediate form into code to run on the device(s) to match what is available on the system.\par
+默认情况下，当为大多数设备编译代码时，设备代码的输出以中间形式存储。在运行时，系统上的设备处理程序将实时地将中间形式编译为在设备上运行的代码，以匹配系统上可用的内容。\par
 
-We can ask the compiler to compile ahead-of-time for specific devices or classes of devices. This has the advantage of saving runtime, but it has the disadvantage of added compile time and fatter binaries! Code that is compiled ahead-of-time is not as portable as just-in-time because it cannot adjust at runtime. We can include both in our binary to get the benefits of both.\par
+我们可以要求编译器为特定的设备或设备类进行提前编译。这样做的优点是节省运行时间，但缺点是增加了编译时间和更宽的二进制文件!提前编译的代码不如即时编译的代码可移植性好，因为它不能在运行时进行调整。我们可以将两者都包含在我们的二进制文件中，以获得两者的好处。\par
 
-Compiling for a specific device ahead-of-time also helps us to check at build time that our program should work on that device. With just-in-time compilation, it is possible that a program will fail to compile at runtime (which can be caught using the mechanisms in Chapter 5). There are a few debugging tips for this in the upcoming “Debugging” section of this chapter, and Chapter 5 details how these errors can be caught at runtime to avoid requiring that our applications abort.\par
+提前编译特定设备还有助于，在构建时检查程序应该在该设备上工作。使用即时编译，程序可能会在运行时编译失败(这可以通过第5章中的机制捕捉到)。第5章详细介绍了如何在运行时捕获这些错误，以避免要求应用程序中止。\par
 
+图13-2说明了DPC++从源代码到宽二进制文件(可执行文件)的编译过程。无论我们选择什么组合，都会组合成一个宽宽的二进制。款二进制文件在应用程序执行时由运行时使用(在主机上执行的就是这个二进制文件!)有时，可能希望在单独的编译中编译特定设备的设备代码。希望这样一个单独编译的结果最终组合到宽二进制文件中。完全编译(进行完全合成位置和路由)时间很长时，这对于FPGA开发非常有用，而且实际上FPGA开发需要避免在运行时系统上安装合成工具。图13-3显示了此类需求所支持的绑定/解绑定活动的流程。总是可以一次编译所有内容，但是在开发过程中，拆分编译的选项非常有用。\par
 
-Figure 13-2 illustrates the DPC++ compilation process from source code to fat binary (executable). Whatever combinations we choose are combined into a fat binary. The fat binary is employed by the runtime when the application executes (and it is the binary that we execute on the host!). At times, we may want to compile device code for a particular device in a separate compile. We would want the results of such a separate compilation to eventually be combined into our fat binary. This can be very useful for FPGA development when full compile (doing a full synthesis place-and-route) times can be very long and is in fact a requirement for FPGA development to avoid requiring the synthesis tools to be installed on a runtime system. Figure 13-3 shows the flow of the bundling/unbundling activity supported for such needs. We always have the option to compile everything at once, but during development, the option to break up compilation can be very useful.\par
+每个SYCL和DPC++编译器都有一个具有相同目标的编译模型，但是确切的实现细节会有所不同。这里显示的图表是DPC++编译器工具链。\par
 
-Every SYCL and DPC++ compiler has a compilation model with the same goal, but the exact implementation details will vary. The diagrams shown here are for the DPC++ compiler toolchain.\par
-
-One DPC++-specific component is shown in Figure 13-2 as the integration header generator that will not be mentioned again in this book. We can program without ever needing to know what it is or what it does. Nevertheless, to satisfy the curious, here is a little information: The integration header generator generates a header file providing information about SYCL kernels found in the translation unit. This includes how the names of SYCL kernel types map to symbolic names and information about kernel parameters and their locations within the corresponding lambda or functor object created by the compiler to capture them. The integration header is the mechanism used to implement the convenient style of kernel invocation from host code via C++ lambda/functor objects, which frees us from the time-consuming task of setting individual arguments, resolving kernels by name, and so on.\par
+特定于DPC++的组件如图13-2所示，作为集成头文件生成器，本书中将不再提及。我们不需要知道它是什么，或者能做什么就可以编程。然而，这里有一些信息需要知道:集成头文件生成器会生成一个头文件，提供关于在转译单元中找到的SYCL内核的信息。这包括SYCL内核类型名称如何映射到符号名称，以及关于内核参数及其在相应Lambda或functor对象中的位置的信息，这些信息是由编译器创建。集成头文件是一种机制，用于通过C++ Lambda/functor对象从宿主代码实现方便的内核使用风格，可以将我们从设置单个参数、按名称解析内核等耗时的任务中解放出来。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 13-2. Compilation process: Ahead-of-time and just-in-time options
+图13-2 编译过程:提前和即时
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-13/images/3}
 \end{center}
 
 \hspace*{\fill} \par %插入空行
-Figure 13-3. Compilation process: Offload bundler/unbundler
+图13-3 编译过程:组合打包/分解打包
 \begin{center}
 	\includegraphics[width=1.\textwidth]{content/chapter-13/images/4}
 \end{center}
