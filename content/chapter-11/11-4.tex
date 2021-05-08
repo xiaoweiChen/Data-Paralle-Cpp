@@ -1,9 +1,9 @@
-As described in Chapters 4 and 9, a work-item is the leaf node of the parallelism hierarchy and represents an individual instance of a kernel function. Work-items can be executed in any order and cannot communicate or synchronize with each other except through atomic memory operations to local and global memory or through group collective functions (e.g., shuffle, barrier).\par
+如第4章和第9章所述，工作项是并行层次结构的叶节点，并表示内核函数的单个实例。工作项可以以任何顺序执行，并且不能相互通信或同步，除非通过对局部和全局内存的原子内存操作，或者通过组集合函数(例如shuffle、barrier)。\par
 
-As described at the start of this chapter, a vector in DPC++ should be interpreted as a convenience for us when writing code. Each vector is local to a single work-item (instead of relating to vectorization in hardware) and can therefore be thought of as equivalent to a private array of numElements in our work-item. For example, the storage of a “float4 y4” declaration is equivalent to float y4[4]. Consider the example shown in Figure 11-8.\par
+正如本章开始所描述的，在编写代码时，DPC++中的向量是为了方便使用。每个向量对于单个工作项都是局部的(而不是与硬件中的向量化相关)，因此可以看作是工作项中的numElements的私有数组。例如，“float4 y4”声明的存储等价于float y4[4]。如图11-8所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 11-8. Vector execution example
+图11-8 向量执行示例
 \begin{lstlisting}[caption={}]
 Q.prallel_for(8, [=](id<1> i){
 	...
@@ -13,10 +13,10 @@ Q.prallel_for(8, [=](id<1> i){
 });
 \end{lstlisting}
 
-For the scalar variable x, the result of kernel execution with multiple work-items on hardware that has SIMD instructions (e.g., CPUs, GPUs) might use a vector register and SIMD instructions, but the vectorization is across work-items and unrelated to any vector type in our code. Each work-item could operate on a different location in the implicit vec\_x, as shown in Figure 11-9. The scalar data in a work-item can be thought of as being implicitly vectorized (combined into SIMD hardware instructions) across work-items that happen to execute at the same time, in some implementations and on some hardware, but the work-item code that we write does not encode this in any way—this is at the core of the SPMD style of programming.\par
+对于标量变量x，在具有SIMD指令(例如，CPU、GPU)的硬件上使用多个工作项的内核执行可能会使用向量寄存器和SIMD指令，但是向量化是跨工作项的，并且与代码中的任何向量类型无关。每个工作项可以在vec\_x中的不同位置上操作，如图11-9所示。工作项中的标量数据，可以看作在某些实现和硬件上同时执行的工作项之间的隐式向量化(合并到SIMD硬件指令中)，但是我们编写的工作项代码没有以任何方式对此进行编码——这是SPMD编程风格的核心。
 
 \hspace*{\fill} \par %插入空行
-Figure 11-9. Vector expansion from scalar variable x to vec\_x[8]
+图11-9 从标量变量x到vec\_x[8]的向量展开
 \begin{table}[H]
 	\begin{tabular}{|l|l|l|l|l|l|l|l|l|}
 		\hline
@@ -25,12 +25,12 @@ Figure 11-9. Vector expansion from scalar variable x to vec\_x[8]
 	\end{tabular}
 \end{table}
 
-With the implicit vector expansion from scalar variable x to vec\_x[8] by the compiler as shown in Figure 11-9, the compiler creates a SIMD operation in hardware from a scalar operation that occurs in multiple work-items.\par
+通过编译器从标量变量x到vec\_x[8]的隐式向量展开(如图11-9所示)，编译器从出现在多个工作项中的标量操作创建一个SIMD操作。\par
 
-For the vector variable y4, the result of kernel execution for multiple work-items, for example, eight work-items, does not process the vec4 by using vector operations in hardware. Instead each work-item independently sees its own vector, and the operations on elements on that vector occur across multiple clock cycles/instructions (the vector is scalarized by the compiler), as shown in Figure 11-10.\par
+对于向量变量y4，内核执行多个工作项(例如：8个工作项)的结果不会通过在硬件中使用向量操作来处理vec4。相反，每个工作项独立地使用向量，并且该向量上的元素的操作发生在多个时钟周期/指令上(该向量被编译器扩展了)，如图11-10所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 11-10. Vertical expansion to equivalent of vec\_y[8][4] of y4 across eight work-items
+图11-10 垂直展开到y4的vec\_y[8][4]的等量，横跨8个工作项
 \begin{table}[]
 	\begin{tabular}{|l|l|l|l|l|}
 		\hline
@@ -46,10 +46,10 @@ Figure 11-10. Vertical expansion to equivalent of vec\_y[8][4] of y4 across eigh
 	\end{tabular}
 \end{table}
 
-Each work-item sees the original data layout of y4, which provides an intuitive model to reason about and tune. The performance downside is that the compiler has to generate gather/scatter memory instructions for both CPUs and GPUs, as shown in Figure 11-11, (the vectors are contiguous in memory and neighboring work-items operating on different vectors in parallel), so scalars are often an efficient approach over explicit vectors when a compiler will vectorize across work-items (e.g., across a sub-group). See Chapters 15 and 16 for more details.\par
+每个工作项都看到y4的原始数据布局，这提供了一个直观的模型来进行推理和调优。性能的缺点是编译器必须为CPU和GPU生成收集/分散内存指令，如图11-11所示(向量在内存中是连续的，并且相邻的工作项并行地在不同的向量上操作)，因此，当编译器将跨工作项(例如：跨子组)向量化时，标量通常是显式向量的有效方法。详见第15章和第16章。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 11-11. Vector code example with address escaping
+图11-11 带有地址转义的向量代码示例
 \begin{lstlisting}[caption={}]
 Q.prallel_for(8, [=](id<1> i){
 	...
@@ -61,10 +61,10 @@ Q.prallel_for(8, [=](id<1> i){
 });
 \end{lstlisting}
 
-When the compiler is able to prove that the address of y4 does not escape from the current kernel work-item or all callee functions are to be inlined, then the compiler may perform optimizations that act as if there was a horizontal unit-stride expansion to vec\_y[4][8] from y4 using a set of vector registers, as shown in Figure 11-12. In this case, compilers can achieve optimal performance without generating gather/scatter SIMD instructions for both CPUs and GPUs. The compiler optimization reports provide information to programmers about this type of transformation, whether it occurred or not, and can provide hints on how to tweak our code for increased performance.\par
+当编译器能够证明y4的地址没有从当前内核工作项中转移，或者所有调用的函数都将内联，那么编译器可能会执行优化，就像使用一组向量寄存器从y4水平展开到vec\_y[4][8]一样，如图11-12所示。这种情况下，编译器可以在不收集/分散SIMD指令的情况下获得最佳性能。编译器优化报告向程序员提供了关于这种类型转换的信息，无论它是否发生，都可以提供关于如何调整代码以提高性能的提示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 11-12. Horizontal unit-stride expansion to vec\_y[4][8] of y4
+图11-12 将y4扩展到vec\_y[4][8]
 \begin{table}[H]
 	\begin{tabular}{|l|l|l|l|l|l|l|l|l|}
 		\hline
