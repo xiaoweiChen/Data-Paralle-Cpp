@@ -1,26 +1,26 @@
-When a SYCL implementation is built on top of another API, the implementation may be able to interoperate with kernels defined using mechanisms of the underlying API. This allows an application to easily and incrementally integrate SYCL into existing codebases.\par
+当SYCL实现构建在另一个API之上时，该实现可能能够与使用底层API机制定义的内核进行互操作。这允许应用程序轻松地将SYCL集成到现有代码库中。\par
 
-Because a SYCL implementation may be layered on top of many other APIs, the functionality described in this section is optional and may not be supported by all implementations. The underlying API may even differ depending on the specific device type or device vendor!\par
+因为SYCL实现可能建立在许多API之上，所以本节中描述的功能是可选的，并不是所有实现都支持。底层API甚至可能根据特定的设备类型，或设备供应商而有所不同!\par
 
-Broadly speaking, an implementation may support two interoperability mechanisms: from an API-defined source or intermediate representation (IR) or from an API-specific handle. Of these two mechanisms, the ability to create a kernel from an API-defined source or intermediate representation is more portable, since some source or IR formats are supported by multiple APIs. For example, OpenCL C kernels may be directly consumed by many APIs or may be compiled into some form understood by an API, but it is unlikely that an API-specific kernel handle from one API will be understood by a different API.\par
+广义地说，一个实现可能支持两种互操作性机制:从API定义的源或中间表示(IR)或从特定于API的句柄。这两种机制中，从API定义的源或中间表示创建内核的能力更具可移植性，因为一些源或IR格式由多个API支持。例如，OpenCL C内核可直接使用，或者可以编译成某个API可以理解的形式，但是来自某个API的特定于API的内核句柄不太可能让另一个API理解。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Remember that all forms of interoperability are optional!\\
-Different SYCL implementations may support creating kernels from different API-specific handles—or not at all.\\
-Always check the documentation for details!
+记住，所有形式的互操作性都是可选的!\\
+不同的SYCL实现可能支持从不同API句柄创建的内核——或者根本不支持。\\
+要了解详细信息，请查看文档!
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Interoperability with API-Defined Source Languages}
+\textbf{与API定义源语言的互动性}
 
-With this form of interoperability, the contents of the kernel are described as source code or using an intermediate representation that is not defined by SYCL, but the kernel objects are still created using SYCL API calls. This form of interoperability allows reuse of kernel libraries written in other source languages or use of domain-specific languages (DSLs) that generate code in an intermediate representation.\par
+使用这种形式的互动性，内核的内容描述为源代码或使用不是由SYCL定义的中间表示，但是内核对象仍然使用SYCL API创建。这种形式的互动性允许重用，使用其他源语言编写的内核库，或者使用以中间表示形式生成代码的特定语言(DSl)。\par
 
-An implementation must understand the kernel source code or intermediate representation to utilize this form of interoperability. For example, if the kernel is written using OpenCL C in source form, the implementation must support building SYCL programs from OpenCL C kernel source code.\par
+实现必须理解内核源代码或中间表示，才能利用这种形式的互动性。例如，如果内核以源代码的形式使用OpenCL C编写，那么实现必须支持从OpenCL C内核源代码构建SYCL程序。\par
 
-Figure 10-7 shows how a SYCL kernel may be written as OpenCL C kernel source code.\par
+图10-7展示了如何将SYCL内核编写为OpenCL C内核源代码。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 10-7. Kernel created from OpenCL C kernel source
+图10-7 使用OpenCL C内核源码创建SYCL内核
 \begin{lstlisting}[caption={}]
 // Note: This must select a device that supports interop!
 queue Q{ cpu_selector{} };
@@ -46,19 +46,19 @@ Q.submit([&](handler& h) {
 });
 \end{lstlisting}
 
-In this example, the kernel source string is represented as a C++ raw string literal in the same file as the SYCL host API calls, but there is no requirement that this is the case, and some applications may read the kernel source string from a file or even generate it just-in-time.\par
+这个例子中，内核以字符串形式表示，在同一个文件中对SYCL的主机API进行调用(但这并不是必须的)，一些程序可以从文件读取内核字符串然后生成内核。\par
 
-Because the SYCL compiler does not have visibility into a SYCL kernel written in an API-defined source language, any kernel arguments must explicitly be passed using the set\_arg() or set\_args() interface. The SYCL runtime and the API-defined source language must agree on a convention to pass objects as kernel arguments. In this example, the accessor dataAcc is passed as the global pointer kernel argument data.\par
+因为SYCL编译器无法看到用内核，所以必须使用set\_arg()或set\_args()接口显式地传递内核参数。SYCL运行时和API定义语言必须将对象作为内核参数传递。本例中，访问器dataAcc作为内核的全局指针参数进行数据传递。\par
 
-The build\_with\_source() interface supports passing optional APIdefined build options to precisely control how the kernel is compiled. In this example, the program build options -cl-fast-relaxed-math are used to indicate that the kernel compiler can use a faster math library with relaxed precision. The program build options are optional and may be omitted if no build options are required.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Interoperability with API-Defined Kernel Objects}
-
-With this form of interoperability, the kernel objects themselves are created in another API and then imported into SYCL. This form of interoperability enables one part of an application to directly create and use kernel objects using underlying APIs and another part of the application to reuse the same kernels using SYCL APIs. The code in Figure 10-8 shows how a SYCL kernel may be created from an OpenCL kernel object.\par
+build\_with\_source()接口支持传递API定义的构建选项，来控制内核的编译方式。例子中，编译选项为-cl-fast- relaxation -math，用于表示内核编译器可以使用更快、低精度的数学库。编译选项是可选的，如果不需要生成选项，可以省略。。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 10-8. Kernel created from an OpenCL kernel object
+\textbf{与API定义内核对象的互动性}
+
+内核对象本身在另一个API中创建，然后导入SYCL。这种形式的互动性使，应用程序的一部分可以使用底层API直接创建和使用内核对象，而应用程序的另一部分可以使用SYCL API重用相同的内核。图10-8中的代码展示了如何从OpenCL内核对象创建SYCL内核。\par
+
+\hspace*{\fill} \par %插入空行
+图10-8 从OpenCL内核对象创建的内核
 \begin{lstlisting}[caption={}]
 // Note: This must select a device that supports interop 
 // with OpenCL kernel objects!
@@ -93,7 +93,7 @@ clReleaseProgram(p);
 clReleaseKernel(k);
 \end{lstlisting}
 
-As with other forms of interoperability, the SYCL compiler does not have visibility into an API-defined kernel object. Therefore, kernel arguments must be explicitly passed using the set\_arg() or set\_args() interface, and the SYCL runtime and the underlying API must agree on a convention to pass kernel arguments.\par
+与其他形式的互动性一样，SYCL编译器对API定义的内核对象不可见。因此，必须使用set\_arg()或set\_args()接口显式传递参数，并且SYCL运行时和底层API必须遵循传递参数的约定。\par
 
 
 
