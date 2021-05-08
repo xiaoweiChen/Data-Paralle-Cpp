@@ -1,32 +1,32 @@
-Vectors are a surprisingly controversial topic when we talk with parallel programming experts, and in the authors’ experience, this is because different people define and think about the term in different ways.\par
+当与并行编程专家交谈时，向量是一个有争议话题，根据作者的经验，这是因为不同的人以不同的方式定义和思考这个术语。\par
 
-There are two broad ways to think about vector data types (a collection of data):\par
+有两种对向量数据类型(数据的集合)的理解:\par
 
 \begin{enumerate}
-	\item \textbf{As a convenience type}, which groups data that you might want to refer to and operate on as a group, for example, grouping the color channels of a pixel (e.g., RGB, YUV) into a single variable (e.g., float3), which could be a vector. We could define a pixel class or struct and define math operators like + on it, but vector types conveniently do this for us out of the box. Convenience types can be found in many shader languages used to program GPUs, so this way of thinking is already common among many GPU developers.
-	\item As a mechanism to describe how code maps to a \textbf{SIMD instruction set} in hardware. For example, in some languages and implementations, operations on a float8 could in theory map to an eight-lane SIMD instruction in hardware. Vector types are used in multiple languages as a convenient highlevel alternative to CPU-specific SIMD intrinsics for specific instruction sets, so this way of thinking is already common among many CPU developers.
+	\item \textbf{作为一种方便类型}：例如，将像素的颜色通道(例如RGB、YUV)分组为单个变量(例如：float3)，可以是一个向量。可以定义一个像素类或结构，并在其上定义像+这样的数学运算符，但向量类型可以方便地开箱即用。便利类型可以在许多着色器语言中找到，所以这种思维方式在许多GPU开发者中已经是共识了。
+	\item 作为一种机制来描述代码，如何映射到硬件适配的\textbf{SIMD指令集}。例如，在一些语言和实现中，float8上的操作在理论上可以映射到硬件中的8通道SIMD指令。Vector类型在多种语言中用作特定指令集的特定CPU SIMD本质的一种方便的高级替代。
 \end{enumerate}
 
-Although these two interpretations are very different, they unintentionally became combined and muddled together as SYCL and other languages became applicable to both CPUs and GPUs. A vector in the SYCL 1.2.1 specification is compatible with either interpretation (we will revisit this later), so we need to clarify our recommended thinking in DPC++ before going any further.\par
+尽管这两种解释非常不同，但当SYCL和其他语言同时适用于CPU和GPU时，它们无意间组合在一起。SYCL 1.2.1规范中的向量与这两种理解兼容(稍后将再次讨论这一点)。在进一步讨论之前，需要了解DPC++中推荐的理解。\par
 
-Throughout this book, we talk about how work-items can be grouped together to expose powerful communication and synchronization primitives, such as sub-group barriers and shuffles. For these operations to be efficient on vector hardware, there is an assumption that different workitems in a sub-group combine and map to SIMD instructions. Said another way, multiple work-items are grouped together by the compiler, at which point they can map to SIMD instructions in the hardware. Remember from Chapter 4 that this is a basic premise of SPMD programming models that operate on top of vector hardware, where a single work-item constitutes a lane of what might be a SIMD instruction in hardware, instead of a work-item defining the entire operation that will be a SIMD instruction in the hardware. You can think of the compiler as always vectorizing across work-items when mapping to SIMD instructions in hardware, when programming in a SPMD style with the DPC++ compiler.\par
+本书中，讨论了如何将工作项组合在一起以暴露强大的通信和同步原语，例如：子工作组障碍和混洗。为了使这些操作在向量硬件上效率最优，假设子工作组中的不同工作项可以合并，并映射到SIMD指令。换句话说，编译器将多个工作项组合在一起，可以映射到硬件的SIMD指令上。第4章中，一个基本前提的SPMD编程模型操作需要在支持向量操作的硬件上，一个通道的工作项构成的SIMD指令，而不是一个工作项定义了整个操作的SIMD指令。当在硬件中映射到SIMD指令时，使用DPC++编译器以SPMD风格编程时，可以认为编译器总是在跨工作项进行向量化。\par
 
-For the features and hardware described in this book, vectors are useful primarily for the first interpretation in this section—vectors are convenience types that should not be thought of as mapping to SIMD instructions in hardware. Work-items are grouped together to form SIMD instructions in hardware, on the platforms where that applies (CPUs, GPUs). Vectors should be thought of as providing convenient operators such as swizzles and math functions that make common operations on groups of data concise within our code (e.g., adding two RGB pixels).\par
+对于本书中描述的特性和硬件，向量主要用于本节的第一个解释——向量是一种方便的类型，不应该认为是对SIMD指令的映射。工作项分组在一起，在指令的(CPU、GPU)硬件上形成SIMD指令。向量应该认为是提供方便的操作符，如swizles和math函数，使代码中对数据组的通用操作更加方便(例如，添加两个RGB像素)。\par
 
-For developers coming from languages that don’t have vectors or from GPU shading languages, we can think of SYCL vectors as local to a work-item in that if there is an addition of two four-element vectors, that addition might take four instructions in the hardware (it would be scalarized from the perspective of the work-item). Each element of the vector would be added through a different instruction/clock cycle in the hardware. With this interpretation, vectors are a convenience in that we can add two vectors in a single operation in our source code, as opposed to performing four scalar operations in the source.\par
+若开发者没有接触过有GPU渲染语言中的向量，可以将SYCL向量作为一个本地工作项，如果有两个具有4个元素向量做加法，可能需要四个指令的硬件(这是从标量的角度)。向量的每个元素可以通过不同的指令/时钟周期相加。解释一下应该很容易懂，可以在源代码的单个操作中直接操作两个向量，而非对四个标量进行操作。\par
 
-For developers coming from a CPU background, we should know that implicit vectorization to SIMD hardware occurs by default in the compiler in a few ways independent of the vector types. The compiler performs this implicit vectorization across work-items, extracts the vector operations from well-formed loops, or honors vector types when mapping to vector instructions—see Chapter 16 for more information.\par
+对于来自CPU背景的开发人员，应该知道对SIMD硬件的隐式向量在编译器中以几种独立于向量类型的方式默认发生。编译器在工作项之间执行这种隐式向量化，从循环中提取向量操作，或者在映射到指令操作的向量类型—更多信息请参见第16章。\par
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=OTHER IMPLEMENTATIONS POSSIBLE!]
-Different compilers and implementations of SYCL and DPC++ can in theory make different decisions on how vector data types in code map to vector hardware instructions. We should read a vendor’s documentation and optimization guides to understand how to write code that will map to efficient SIMD instructions. This book is written principally against the DPC++ compiler, so documents the thinking and programming patterns that it is built around.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=其他可能的实现]
+SYCL和DPC++的不同编译器和实现在理论上，可以对代码中的向量数据类型如何映射到向量硬件指令做出不同的决定。应该阅读供应商的文档和优化指南，以理解如何编写将映射到有效SIMD指令的代码。本书主要是针对DPC++编译器编写，因此记录了围绕它的思维和编程模式。
 \end{tcolorbox}
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=CHANGES ARE ON THE HORIZON]
-We have just said to consider vector types as convenience types and to expect vectorization across work-items when thinking about the mapping to hardware on devices where that makes sense. This is expected to be the default interpretation in the DPC++ compiler and toolchain going forward. However, there are two additional future-looking changes to be aware of.\\
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=变化即将发生]
+刚刚说过，要将向量类型视为方便类型，并在考虑到设备上的硬件映射，并期待跨工作项的向量化。这将成为DPC++编译器和工具链的默认行为。然而，还有另外两个面向未来的变化需要注意。\\
 
-First, we can expect some future DPC++ features that will allow us to write explicit vector code that maps directly to SIMD instructions in the hardware, particularly for experts who want to tune details of code for a specific architecture and take control from the compiler vectorizers. This is a niche feature that will be used by very few developers, but we can expect programming mechanisms to exist eventually where this is possible. Those programming mechanisms will make it very clear which code is written in an explicit vector style, so that there isn’t confusion between the code we write today and that new more explicit (and less portable) style.\\
+首先，可以期待一些DPC++特性，这些特性将允许编写直接映射到硬件中SIMD指令的代码，特别是对于那些希望为特定体系结构调优代码细节，并从编译器向量器获得控制权的专家来说。这是一个只会有少数开发人员使用的小众特性，但是可以期待这种编程机制。这些编程机制将确定代码风格(显式向量化风格)，这样就不会在编写现有代码时，与显式(且不那么可移植)风格之间产生混淆。\\
 
-Second, the need for this section of the book (talking about interpretations of vectors) highlights that there is confusion on what a vector means, and that will be solved in SYCL in the future. There is a hint of this in the SYCL 2020 provisional specification where a math array type (marray) has been described, which is explicitly the first interpretation from this section—a convenience type unrelated to vector hardware instructions. We should expect another type to also eventually appear to cover the second interpretation, likely aligned with the C++ std::simd templates. With these two types being clearly associated with specific interpretations of a vector data type, our intent as programmers will be clear from the code that we write. This will be less error prone and less confusing and may even reduce the number of heated discussions between expert developers when the question arises “What is a vector?”
+其次，本书这一节(讨论向量的解释)的需要强调了向量的含义存在混淆，这将在SYCL中解决。SYCL 2020临时规范中描述了一种数学数组类型(marray)，这是本节的第一个解释——一种与向量硬件指令无关的类型。应该期望另一种类型最终也会覆盖第二种解释，很可能与C++的std::simd模板一致。有了这两种类型与向量数据类型的特定解释相关联，作为开发者的意图将从编写的代码中清楚地传递。这将减少错误和混乱，当“什么是向量?”问题出现时，甚至可能减少专家级开发人员之间的激烈讨论，
 \end{tcolorbox}
 
 
