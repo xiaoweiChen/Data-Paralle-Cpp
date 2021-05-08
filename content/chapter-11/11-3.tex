@@ -1,11 +1,11 @@
-The functionality of vector types is exposed through the class vec. The vec class represents a set of data elements that are grouped together. The interfaces of the constructors, member functions, and non-member functions of the vec class template are described in Figures 11-1, 11-4, and 11-5.\par
+vector类型的功能是通过vec类公开使用的。vec类表示一组在一起的数据元素。vec类模板的构造函数、成员函数和非成员函数的接口描述在图11-1、11-4和11-5中。\par
 
-The XYZW members listed in Figure 11-2 are available only when numElements <= 4. RGBA members are available only when numElements == 4.\par
+图11-2中的XYZW成员只有在numElements <= 4时才可用。RGBA成员只有在numElements == 4时可用。\par
 
-The members lo, hi, odd, and even shown in Figure 11-3 are available only when numElements > 1.\par
+图11-3中的成员lo、hi、odd和even只有在numElements > 1的情况下才可用。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 11-1. vec class declaration and member functions
+图11-1 vec类声明和成员函数
 \begin{lstlisting}[caption={}]
 vec Class declaration
 template <typename dataT, int numElements> class vec; 
@@ -31,7 +31,7 @@ template <typename asT> asT as() const;
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure 11-2. swizzled\_vec member functions
+图11-2 swizzled\_vec的成员函数
 \begin{lstlisting}[caption={}]
 template<int… swizzleindexes>
 __swizzled_vec__ swizzle() const; 
@@ -52,7 +52,7 @@ __swizzled_vec__ RGBA_SWIZZLE() const;
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure 11-3. vec operator interface
+图11-3 vec的函数操作符
 \begin{lstlisting}[caption={}]
 __swizzled_vec__ lo() const; 
 __swizzled_vec__ hi() const; 
@@ -74,11 +74,11 @@ vec<dataT, numElements> operator~();
 
 
 \hspace*{\fill} \par %插入空行
-Figure 11-4. vec member functions
+图11-4 vec的成员函数
 \begin{table}[H]
 	\begin{tabular}{|l|l|l|}
 		\hline
-		Member function with OP variable                                                                                                                                     & \begin{tabular}[c]{@{}l@{}}For all\\ types, OP\\ may be\end{tabular}                                                                 & \begin{tabular}[c]{@{}l@{}}For\\ Integral\\ types, Op\\ may be\end{tabular}                                                                         \\ \hline
+		成员函数(OP)类型                                                                                                                                     & \begin{tabular}[c]{@{}l@{}}对于所有类型\\可能支持的操作 \end{tabular}                                                                 & \begin{tabular}[c]{@{}l@{}}对于整型可能\\支持的操作\end{tabular}                                                                         \\ \hline
 		\begin{tabular}[c]{@{}l@{}}vec\textless{}dataT, numElements\textgreater\\ operatorOP(const vec\textless{}dataT, numElements\textgreater{}\&rhs) const;\end{tabular}  & \multirow{2}{*}{+,-,*,/}                                                                                                             & \multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}\%,\&,|,\textasciicircum{},\\ \textless{}\textless{},\textgreater{}\textgreater{}\end{tabular}}          \\ \cline{1-1}
 		\begin{tabular}[c]{@{}l@{}}vec\textless{}dataT, numElements\textgreater\\ operatorOP(const dataT \&rhs) const\end{tabular}                                           &                                                                                                                                      &                                                                                                                                                     \\ \hline
 		\begin{tabular}[c]{@{}l@{}}vec\textless{}dataT, numElements\textgreater\\ \&operatorOP(const vec\textless{}dataT, numelements\textgreater \&rhs) const;\end{tabular} & \multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}+=,-=,*=,\\ /=\end{tabular}}                                                              & \multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}\%=,\&=,|=,\\ \textasciicircum{}=,\textless{}\textless{}=,\\ \textgreater{}\textgreater{}=\end{tabular}} \\ \cline{1-1}
@@ -92,23 +92,23 @@ Figure 11-4. vec member functions
 
 
 \hspace*{\fill} \par %插入空行
-Figure 11-5. vec non-member functions
+图11-5 vec的非成员函数
 \begin{table}[H]
 	\begin{tabular}{|l|l|l|}
 		\hline
-		Non-member function with OP variable                                                                                                                                                                                                                 & \begin{tabular}[c]{@{}l@{}}For all\\ types, Op\\ may be\end{tabular}                                                & \begin{tabular}[c]{@{}l@{}}For non\\ floating-point\\ types, OP may be\end{tabular} \\ \hline
+		成员函数(OP)类型                                                                                                                                                                                                               & \begin{tabular}[c]{@{}l@{}}对于所有类型\\可能支持的操作\end{tabular}                                                & \begin{tabular}[c]{@{}l@{}}对于非浮点类型\\可能支持的操作\end{tabular} \\ \hline
 		\begin{tabular}[c]{@{}l@{}}template\textless{}typename dataT, int numElements\textgreater\\ vec\textless{}dataT, numElements\textgreater\\ operatorOP(const dataT, \&lhs,\\ const vec\textless{}dataT, numElements\textgreater \& rhs);\end{tabular} & +,-,*,/                                                                                                             & \%,\&,|,\textasciicircum{},\textless{}\textless{}.\textgreater{}\textgreater{}      \\ \hline
 		\begin{tabular}[c]{@{}l@{}}template\textless{}typename dataT, int numElements\textgreater\\ vec\textless{}RET, numElements\textgreater\\ operatorOP(const dataT \&lhs,\\ const vec\textless{}dataT, numElements\textgreater \&rhs);`\end{tabular}    & \begin{tabular}[c]{@{}l@{}}\&\&,||,==,\\ !=,\textless{},\textgreater{},\textless{}=,\\ \textgreater{}=\end{tabular} &                                                                                     \\ \hline
 	\end{tabular}
 \end{table}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Load and Store Member Functions}
+\textbf{加载和存储成员函数}
 
-Vector load and store operations are members of the vec class for loading and storing the elements of a vector. These operations can be to or from an array of elements of the same type as the channels of the vector. An example is shown in Figure 11-6.\par
+向量的加载和存储操作，是用于加载和存储向量元素的vec类的成员。这些操作可以是指向或来自与向量通道类型相同的元素数组。如图11-6所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 11-6. Use of load and store member functions.
+图11-6 使用加载和存储成员函数。
 \begin{lstlisting}[caption={}]
 buffer fpBuf(fpData);
 queue Q;
@@ -125,30 +125,30 @@ Q.submit([&](handler& h){
 });
 \end{lstlisting}
 
-In the vec class, dataT and numElements are template parameters that reflect the component type and dimensionality of a vec.\par
+vec类中，dataT和numElements是反映vec的组件类型和维数的模板参数。\par
 
-The load() member function template will read values of type dataT from the memory at the address of the multi\_ptr, offset in elements of dataT by numElements*offset, and write those values to the channels of the vec.\par
+load()成员函数模板从multi\_ptr地址的内存中读取dataT类型的值，dataT元素的offset乘以numElements*offset，并将这些值写入vec的通道中。\par
 
-The store() member function template will read channels of the vecand write those values to the memory at the address of the multi\_ptr, offset in elements of dataT by numElements*offset.\par
+store()成员函数模板将读取向量的通道，并将这些值写入multi\_ptr地址的内存中，dataT元素中的offset乘以numElements*offset。\par
 
-The parameter is a multi\_ptr rather than an accessor so that locally created pointers can also be used as well as pointers passed from the host.\par
+形参是一个multi\_ptr，而不是一个访问器，因此可以使用本地创建的指针以及从主机传递的指针。\par
 
-The data type of the multi\_ptr is dataT, the data type of the components of the vec class specialization. This requires that the pointer passed to either load() or store() must match the type of the vec instance itself.\par
+multi\_ptr的数据类型是dataT，即vec类专门化组件的数据类型。这要求传递给load()或store()的指针必须与vec实例本身的类型匹配。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Swizzle Operations}
+\textbf{混合(Swizzle)操作}
 
-In graphics applications, swizzling means rearranging the data elements of a vector. For example, if a = \{1, 2, 3, 4,\}, and knowing that the components of a four-element vector can be referred to as \{x, y, z, w\}, we could write b = a.wxyz(). The result in the variable b would be \{4, 1, 2, 3\}. This form of code is common in GPU applications where there is efficient hardware for such operations. Swizzles can be performed in two ways:\par
+在图形应用程序中，混合意味着重新安排矢量的数据元素。例如，如果a = \{1,2,3,4，\}，并且知道一个四元向量的分量可以称为\{x, y, z, w\}，可以写成b = a.wxyz()，变量b的结果是\{4,1,2,3 \}。这种形式的代码在GPU程序中很常见，GPU应用程序中有高效的硬件进行此类操作。混合可以通过两种方式进行:\par
 
 \begin{itemize}
-	\item By calling the swizzle member function of a vec, which takes a variadic number of integer template arguments between 0 and numElements-1, specifying swizzle indices
-	\item By calling one of the simple swizzle member functions such as XYZW\_SWIZZLE and RGBA\_SWIZZLE
+	\item 通过调用vec的swizzle成员函数，该函数接受从0到numElements-1之间的可变数目的整型模板参数，指定swizzle索引
+	\item 通过调用简单的swizzle成员函数，如XYZW\_SWIZZLE和RGBA\_SWIZZLE
 \end{itemize}
 
-Note that the simple swizzle functions are only available for up to four-element vectors and are only available when the macro SYCL\_SIMPLE\_SWIZZLES is defined before including sycl.hpp. In both cases, the return type is always an instance of \_\_swizzled\_vec\_\_, an implementationdefined temporary class representing a swizzle of the original vec instance. Both the swizzle member function template and the simple swizzle member functions allow swizzle indexes to be repeated. Figure 11-7 shows a simple usage of \_\_swizzled\_vec\_\_.\par
+请注意，简单的swizzles函数只对最多4个元素的向量可用，并且只有在包含SYCL.hpp之前定义了宏SYCL\_SIMPLE\_SWIZZLES时才可用。这两种情况下，返回类型是一个\_\_swizzled\_vec\_\_实例，实现定义的临时类表示原始vec实例的swizzle。swizle成员函数模板和简单的swizle成员函数都允许重复swizle索引。图11-7展示了\_\_swizled \_vec\_\_的简单用法。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 11-7. Example of using the \_\_swizzled\_vec\_\_ class
+图11-7 使用\_\_swizled \_vec\_\_类的示例
 \begin{lstlisting}[caption={}]
 constexpr int size = 16;
 
