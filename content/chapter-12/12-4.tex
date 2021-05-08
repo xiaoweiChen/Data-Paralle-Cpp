@@ -1,8 +1,9 @@
-Like platforms and devices, we can query information about our kernels using a get\_info function. Such information (e.g., supported work-group sizes, preferred work-group size, the amount of private memory required per work-item) is device-specific, and so the get\_info member function of the kernel class accepts a device as an argument.\par
+像平台和设备一样，我们可以使用get\_info函数查询关于内核的信息。这些信息(例如，支持的工作组大小、首选工作组大小、每个工作项所需的私有内存量)是特定于设备的，因此内核类的get\_info成员函数接受一个设备作为参数。\par
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=DEVICE-SPECIFIC KERNEL INFORMATION IN SYCL 1.2.1]
-For historical reasons dating back to OpenCL naming, SYCL inherited a combination of queries named kernel::get\_info and kernel::get\_work\_group\_info, returning information about a kernel object and information pertaining to a kernel’s execution on a specific device, respectively.\\
-Use of overloading in DPC++ and SYCL (as of 2020 provisional) allows for both types of information to be supported through a single get\_info API.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=SYCL 1.2.1中的设备有关内核的特定信息]
+从OpenCL命名开始的历史原因，SYCL继承了kernel::get\_info和kernel::get\_work\_group\_info的查询组合，分别返回关于内核对象的信息和关于内核在特定设备上执行的信息。\\
+
+在DPC++和SYCL中使用重载(截至2020年临时)允许通过单个get\_info API支持这两种类型的信息。
 \end{tcolorbox}
 
 
