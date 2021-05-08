@@ -2,21 +2,21 @@
 	\includegraphics[width=0.3\textwidth]{content/chapter-12/images/1}
 \end{center}
 
-Chapter 2 introduced us to the mechanisms that direct work to a particular device—controlling where code executes. In this chapter, we explore how to adapt to the devices that are present at runtime.\par
+第2章向介绍了将工作导向特定设备的机制——控制代码执行的位置。本章中，我们将探索如何适应运行时出现的设备。\par
 
-We want our programs to be portable. In order to be portable, we need our programs to adapt to the capabilities of the device. We can parameterize our programs to only use features that are present and to tune our code to the particulars of devices. If our program is not designed to adapt, then bad things can happen including slow execution or program failures.\par
+我们希望程序可以移植，程序需要适应设备的功能。我们可以将程序参数化，只使用现有的特性，并根据设备的具体情况调整代码。如果程序不能适应环境，那么糟糕的事情就会发生，包括执行缓慢或失败。\par
 
-Fortunately, the creators of the SYCL specification thought about this and gave us interfaces to let us solve this problem. The SYCL specification defines a device class that encapsulates a device on which kernels may be executed. The ability to query the device class, so that our program can adapt to the device characteristics and capabilities, is the heart of what this chapter teaches.\par
+幸运的是，SYCL规范的创建者考虑到了这一点，并为提供了解决这个问题的接口。SYCL规范定义了一个设备类，封装了可以执行内核的设备。查询设备类的能力，使程序能够适应设备的特性和能力，这是本章的核心内容。\par
 
-Many of us will start with having logic to figure out “Is there a GPU present?” to inform the choices our program will make as it executes. That is the start of what this chapter covers. As we will see, there is much more information available to help us make our programs robust and performant.\par
+我们中的许多人将从逻辑开始思考“是否存在GPU?”通知程序在执行时做出的选择，这是本章的开始。正如我们将看到的，有更多的信息可以帮助我们使程序健壮和性能良好。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Parameterizing a program can help with correctness, portability, performance portability, and future proofing.
+对程序进行参数化可以帮助提高程序的正确性、可移植性、性能可移植性。
 \end{tcolorbox}
 
-This chapter dives into the most important queries and how to use them effectively in our programs.\par
+本章将深入探讨查询，以及如何在程序中如何有效地使用。\par
 
-Device-specific properties are queryable using get\_info, but DPC++ diverges from SYCL 1.2.1 in that it fully overloads get\_info to alleviate the need to use get\_work\_group\_info for work-group information that is really device-specific information. DPC++ does not support use of get\_work\_group\_info. This change means that device-specific kernel and work-group properties are properly found as queries for device-specific properties (get\_info). This corrects a confusing historical anomaly still present in SYCL 1.2.1 that was inherited from OpenCL.\par
+设备特定的属性可以使用get\_info查询，但是DPC++不同于SYCL 1.2.1，完全重载了get\_info，以减少使用get\_work\_group\_info获取工作组信息，而工作组信息实际上是设备特定的信息。DPC++不支持get\_work\_group\_info，这意味着特定于设备的内核和工作组属性可以作为查询特定于设备的属性(get\_info)。这纠正了SYCL 1.2.1中存在的从OpenCL继承而来的历史问题。\par
 
 
 
