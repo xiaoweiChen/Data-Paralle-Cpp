@@ -1,25 +1,25 @@
-There are a few additional parameters that can be considered as finetuning parameters for our kernels. These can be ignored without jeopardizing the correctness of a program. These allow our kernels to really utilize the particulars of the hardware for performance.\par
+还有一些附加参数可以作为内核的微调参数。这些可以忽略，而不会影响程序的正确性。这使得我们的内核能够真正利用硬件的特性来提高性能。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Paying attention to the results of these queries can help when tuning for a cache (if it exists).
+在调优缓存(如果存在的话)时，这些查询的结果会有所帮助。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Device Queries}
+\textbf{设备查询}
 
-global\_mem\_cache\_line\_size: Size of global memory cache line in bytes.\par
+global\_mem\_cache\_line\_size: 全局内存缓存行的大小(字节)。\par
 
-global\_mem\_cache\_size: Size of global memory cache in bytes.\par
+global\_mem\_cache\_size: 全局内存缓存大小(以字节为单位)。\par
 
-local\_mem\_type: The type of local memory supported. This can be info::local\_mem\_
-type::local implying dedicated local memory storage such as SRAM or info::local\_mem\_type::global. The latter type means that local memory is just implemented as an abstraction on top of global memory with no performance gains. For custom devices (only), the local memory type can also be info::local\_mem\_type::none, indicating local memory is not supported.\par
+local\_mem\_type: 支持的本地内存类型。可以是info::local\_mem\_
+type::local表示专用的本地内存存储，如SRAM或info::local\_mem\_type::global。后一种类型意味着本地内存只是作为全局内存之上的抽象实现的，没有任何性能提高。本地内存类型也可以是info::local\_mem\_type::none，表示不支持本地内存。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Kernel Queries}
+\textbf{内核查询}
 
-preferred\_work\_group\_size: The preferred work-group size for executing a kernel on a specific device.\par
+preferred\_work\_group\_size: 在特定设备上执行内核的首选工作组大小。\par
 
-preferred\_work\_group\_size\_multiple: The preferred work-group size for executing a kernel on a specific device\par
+preferred\_work\_group\_size\_multiple: 在特定设备上执行内核的首选工作组大小。\par
 
 
 
