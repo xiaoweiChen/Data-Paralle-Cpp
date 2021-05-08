@@ -1,13 +1,13 @@
-We will divide the specifics into information about necessary conditions (correctness) and information useful for tuning but not necessary for correctness.\par
+我们将把细节划分为关于必要条件(正确性)的信息，和对调优有用但对正确性不是必需的信息。\par
 
-In this first correctness category, we will enumerate conditions that should be met in order for kernels to launch properly. Failure to abide by these device limitations will lead to program failures. Figure 12-7 shows how we can fetch a few of these parameters in a way that the values are available for use in host code and in kernel code (via lambda capture). We can modify our code to utilize this information; for instance, it could guide our code on buffer sizing or work-group sizing.\par
+第一个正确性类别中，将列举内核正确启动所应满足的条件，不遵守这些设备限制将导致程序失败。图12-7显示了我们如何获取这些参数中的一些，这些值可以在宿主代码和内核代码中使用(通过Lambda捕获)。可以修改代码来利用这些信息，例如：可以指导我们的代码调整缓冲区大小或工作组大小。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Submitting a kernel that does not satisfy these conditions will generate an error.
+提交一个不满足这些条件的内核将生成一个错误。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-Figure 12-7. Fetching parameters that can be used to shape a kernel
+图12-7 获取可用于形成内核的参数
 \begin{lstlisting}[caption={}]
 std::cout << "We are running on:\n"
 		  << dev.get_info<info::device::name>() << "\n";
@@ -24,56 +24,56 @@ std::cout << "Max WG size is " << maxWG
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Device Queries}
+\textbf{查询设备}
 
-\textit{device\_type}: cpu, gpu, accelerator, custom,2 automatic, host, all. These are most often tested by is\_host(), is\_cpu, is\_gpu(), and so on (see Figure 12-6):\par
+\textit{device\_type}: cpu, gpu, accelerator, custom,automatic, host, all。最常使用的是is\_host()， is\_cpu, is\_gpu() (见图12-6):\par
 
-\textit{max\_work\_item\_sizes}: The maximum number of work-items that are permitted in each dimension of the work-group of the nd\_range. The minimum value is (1, 1, 1) for non-custom devices.\par
+\textit{max\_work\_item\_sizes}: nd\_range的工作组的每个维度中允许的最大工作项数。对于非定制设备，最小值为(1,1,1)。\par
 
-\textit{max\_work\_group\_size:} The maximum number of work-items that are permitted in a work-group executing a kernel on a single compute unit. The minimum value is 1.\par
+\textit{max\_work\_group\_size}:单个计算单元上执行内核的工作组中允许的最大工作项数。最小值为1。\par
 
-\textit{global\_mem\_size}: The size of global memory in bytes.\par
+\textit{global\_mem\_size}: 全局内存大小(以字节为单位)。\par
 
-\textit{local\_mem\_size}: The size of local memory in bytes. Except for custom devices, the minimum size is 32 K.\par
+\textit{local\_mem\_size}: 本地内存大小(以字节为单位)。除定制设备外，最小为32K。\par
 
-\textit{extensions}: Device-specific information not specifically detailed in the SYCL specification, often vendor-specific, as illustrated in our verycurious program (Figure 12-6).\par
+\textit{extensions}: 特定于设备的信息在SYCL规范中没有特别详细，通常是特定于供应商的，如verycurious 程序所示(图12-6)。\par
 
-\textit{max\_compute\_units}: Indicative of the amount of parallelism available on a device—implementationdefined, interpret with care!\par
+\textit{max\_compute\_units}: 说明一个设备实现定义的可用并行性的数量，请谨慎使用!\par
 
-\textit{sub\_group\_sizes}: Returns the set of sub-group sizes supported by the device.\par
+\textit{sub\_group\_sizes}: 返回设备支持的子工作组大小。\par
 
-\textit{usm\_device\_allocations}: Returns true if this device supports device allocations as described in explicit USM.\par
+\textit{usm\_device\_allocations}: 如果该设备支持显式USM中描述的设备分配，则返回true。\par
 
-\textit{usm\_host\_allocations}: Returns true if this device can access host allocations.\par
+\textit{usm\_host\_allocations}: 如果该设备可以访问主机分配，则返回true。\par
 
-\textit{usm\_shared\_allocations}: Returns true if this device supports shared allocations.\par
+\textit{usm\_shared\_allocations}: 如果此设备支持共享分配，则返回true。\par
 
-\textit{usm\_restricted\_shared\_allocations}: Returns true if this device supports shared allocations as governed by the restrictions of “restricted USM” on the device. This property requires that property usm\_shared\_allocations returns true for this device.\par
+\textit{usm\_restricted\_shared\_allocations}: 如果该设备支持受设备上“restricted USM”限制所控制的共享分配，则返回true。此属性要求usm\_shared\_allocations对此设备返回true。\par
 
-\textit{usm\_system\_allocator}: Returns true if the system allocator may be used instead of USM allocation mechanisms for shared allocations on this device.\par
+\textit{usm\_system\_allocator}: 如果系统分配器可能用于此设备上的共享分配而不是USM分配机制，则返回true.\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-We advise avoiding max\_compute\_units in program logic
+我们建议避免在程序逻辑中使用最大计算单元！
 \end{tcolorbox}
 
-We have found that querying the maximum number of compute units should be avoided, in part because the definition isn’t crisp enough to be useful in code tuning. Instead of using max\_compute\_units, most programs should express their parallelism and let the runtime map it onto available parallelism. Relying on max\_compute\_units for correctness only makes sense when augmented with implementation- and device-specific information. Experts might do that, but most developers do not and do not need to do so! Let the runtime do its job in this case!\par
+部分原因是定义不够清晰，在代码调优中没有用处。大多数程序应该表达它们的并行性，并让运行时将其映射到可用的并行性，而不是使用max\_compute\_units。只有在使用特定于实现和设备的信息时，依靠最大计算单元来保证正确性才有意义。专家可能会这样做，但大多数开发人员不这样做，也不需要这样做!在这种情况下，让运行时完成它的工作!\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Kernel Queries}
+\textbf{查询内核}
 
-The mechanisms discussed in Chapter 10, under “Kernels in Program Objects,” are needed to perform these kernel queries:\par
+第10章“程序对象中的内核”中讨论的机制需要执行这些内核查询:\par
 
-work\_group\_size: Returns the maximum workgroup size that can be used to execute a kernel on a specific device\par
+work\_group\_size: 返回可用于在特定设备上执行内核的最大工作组大小\par
 
-compile\_work\_group\_size: Returns the work-group size specified by a kernel if applicable; otherwise returns (0, 0, 0)\par
+compile\_work\_group\_size: 返回由内核指定的工作组大小(如果适用)，否则返回(0,0,0)\par
 
-compile\_sub\_group\_size: Returns the sub-group size specified by a kernel if applicable; otherwise returns 0\par
+compile\_sub\_group\_size: 返回由内核指定的子工作组大小(如果适用)，否则返回0\par
 
-compile\_num\_sub\_groups: Returns the number of sub-groups specified by a kernel if applicable; otherwise returns 0\par
+compile\_num\_sub\_groups: 返回由内核指定的子工作组的数量(如果适用)，否则返回0\par
 
-max\_sub\_group\_size: Returns the maximum subgroup size for a kernel launched with the specified work-group size\par
+max\_sub\_group\_size: 返回以指定工作组大小启动的内核的最大子工作组大小\par
 
-max\_num\_sub\_groups: Returns the maximum number of sub-groups for a kernel\par
+max\_num\_sub\_groups: 返回内核的最大子工作组数\par
 
 
 
