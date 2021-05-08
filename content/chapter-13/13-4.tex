@@ -1,18 +1,18 @@
-Adding the appropriate exploitation of parallelism to an existing C++ program is the first step to using SYCL. If a C++ application is already exploiting parallel execution, that may be a bonus, or it may be a headache. That is because the way we divide the work of an application into parallel execution greatly affects what we can do with it. When programmers talk about refactoring a program, they are referring to rearranging the flow of execution and data within a program to get it ready to exploit parallelism. This is a complex topic that we will only touch briefly upon. There is no one-size-fits-all answer on how to prepare an application for parallelism, but there are some tips worth noting.\par
+向现有C++程序中添加适当的并行性开发是使用SYCL的第一步。如果一个C++应用程序已经在利用并行执行，那么这可能带来额外的好处，也可能带来令人头痛的问题。因为应用程序的工作划分为并行执行的方式，极大地影响了可以使用它做什么。当开发者谈到重构时，他们指的是重新安排程序内的执行流和数据流，以便为利用并行性做好准备。这是一个复杂的话题，我们只会简单地谈一谈。关于如何准备并行性的应用程序没有一个通用的答案，但是有一些技巧值得注意。\par
 
-When adding parallelism to a C++ application, an easy approach to consider is to find an isolated point in the program where the opportunity for parallelism is the greatest. We can start our modification there and then continue to add parallelism in other areas as needed. A complicating factor is that refactoring (e.g., rearranging the program flow and redesigning data structures) may improve the opportunity for parallelism.\par
+向C++应用程序添加并行性时，一种容易考虑的方法是在程序中找到并行性机会最大的点。可以从那里开始修改，然后根据需要继续在其他领域添加并行性。复杂的因素是，重构(例如，重新安排程序流和重新设计数据结构)可能提高并行性的机会。\par
 
-Once we find an isolated point in the program where the opportunity for parallelism is the greatest, we will need to consider how to use SYCL at that point in the program. That is what the rest of the book teaches.\par
+当程序找到并行性机会最大的点，我们就需要考虑如何在程序中使用SYCL。\par
 
-At a high level, the key steps for introducing parallelism consist of\par
+在高层次上，引入并行性的关键步骤包括：\par
 
 \begin{enumerate}
-	\item Safety with concurrency (commonly called thread safety in conventional CPU programming): Adjusting all shared mutable data (data that can 	change and is shared concurrently) to be used concurrently
-	\item Introducing concurrency and/or parallelism
-	\item Tuning for parallelism (best scaling, optimizing for throughput or latency)
+	\item 并发性的安全性(在传统CPU编程中通常称为线程安全性):将所有共享的可变数据(可以更改和并发共享的数据)调整为并发使用
+	\item 引入并发和/或并行
+	\item 并行性调优(最佳扩展、吞吐量或延迟优化)
 \end{enumerate}
 
-It is important to consider step \#1 first. Many applications have already been refactored for concurrency, but many have not. With SYCL as the sole source of parallelism, we focus on safety for the data being used within kernels and possibly shared with the host. If we have other techniques in our program (OpenMP, MPI, TBB, etc.) that introduce parallelism, that is an additional concern on top of our SYCL programming. It is important to note that it is okay to use multiple techniques inside a single program—SYCL does not need to be the only source of parallelism within a program. This book does not cover the advanced topic of mixing with other parallelism techniques.\par
+许多应用程序已经为并发性进行了重构，但也有许多没有。将SYCL作为并行性的唯一来源，关注内核中使用的数据以及可能与主机共享的数据的安全性。如果我们的程序中有其他引入并行性的技术(OpenMP、MPI、TBB等)，这是SYCL编程之上的另一个关注点。需要注意的是，单个程序中使用多种技术是可以的——SYCL不是程序中并行性的唯一来源。本书不涉及与其他并行技术混合的高级主题。\par
 
 
 
