@@ -1,17 +1,17 @@
-In this section, we dive into a topic that causes confusion for new users of SYCL and that leads to the most common (in our experience) first bugs that we encounter as new SYCL developers.\par
+本节中，我们将深入讨论一个主题，其会给SYCL的新用户带来困惑，并导致我们作为新SYCL开发人员遇到的最常见(以我们的经验)的第一个bug。\par
 
-Put simply, when we create a buffer from a host memory allocation (e.g., array or vector), we can’t access the host allocation directly until the buffer has been destroyed. The buffer owns any host allocation passed to it at construction time, for the buffer’s entire lifetime. There are rarely used mechanisms that do let us access the host allocation while a buffer is still alive (e.g., buffer mutex), but those advanced features don’t help with the early bugs described here.\par
+简单地说，当我们从主机内存分配(例如，数组或向量)创建一个缓冲区时，我们不能直接访问主机分配，直到缓冲区销毁。在缓冲区的整个生命周期内，缓冲区拥有在构造时传递给它的任何主机分配。很少有机制允许我们在缓冲区还存在时访问主机分配(例如，缓冲区互斥)，但是这些高级特性对调试早期bug没有帮助。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-If we construct a buffer from a host memory allocation, we must not directly access the host allocation until the buffer has been destroyed! While it is alive, the buffer owns the allocation.
+如果从一个主机内存分配构造缓冲区，不能直接访问主机分配内存，直到缓冲区销毁!当缓冲区处于活动状态时，它拥有分配的内存。
 \end{tcolorbox}
 
-A common bug appears when the host program accesses a host allocation while a buffer still owns that allocation. All bets are off once this happens, because we don’t know what the buffer is using the allocation for. Don’t be surprised if the data is incorrect—the kernels that we’re trying to read the output from may not have even started running yet! As described in Chapters 3 and 8, SYCL is built around an asynchronous task graph mechanism. Before we try to use output data from task graph operations, we need to be sure that we have reached synchronization points in the code where the graph has executed and made data available to the host. Both buffer destruction and creation of host accessors are operations that cause this synchronization.\par
+当主机程序访问主机分配内存，而缓冲区仍然拥有该内存时，会出现一个错误，因为我们不知道缓冲区分配的目的是什么。如果数据是错误的，不要感到惊讶——试图读取输出的内核可能还没有开始运行!如第3章和第8章所述，SYCL是围绕一个异步任务图构建的。尝试使用任务图操作的输出数据之前，需要确保已经到达了代码中的同步点，即执行了图，并使数据对主机可用。缓冲区销毁和主机访问器的创建都会导致这种同步的操作。\par
 
-Figure 13-6 shows a common pattern of code that we often write, where we cause a buffer to be destroyed by closing the block scope that it was defined within. By causing the buffer to go out of scope and be destroyed, we can then safely read kernel results through the original host allocation that was passed to the buffer constructor.\par
+图13-6展示了经常编写代码的模式，通过关闭定义缓冲区的块作用域来销毁缓冲区。通过使缓冲区超出作用域时销毁，可以通过给缓冲区构造函数的主机分配内存，安全地读取内核结果。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 13-6. Common pattern—buffer creation from a host allocation
+图13-6 从主机分配内存创建通用模式的缓冲区
 \begin{lstlisting}[caption={}]
 constexpr size_t N = 1024;
 
@@ -63,21 +63,21 @@ for (int i=0; i<N; i++)
 	std::cout << "out_vec[" << i << "]=" << out_vec[i] << "\n";
 \end{lstlisting}
 
-There are two common reasons to associate a buffer with existing host memory like in Figure 13-6:\par
+将缓冲区与现有主机内存关联有两个常见的原因，如图13-6所示:\par
 
 \begin{enumerate}
-	\item To simplify initialization of data in a buffer. We can just construct the buffer from host memory that we(or another part of the application) have already initialized.
-	\item To reduce the characters typed because closing scope with a ‘\}’ is slightly more concise (though more error prone) than creating a host\_accessor to the buffer.
+	\item 简化缓冲区中数据的初始化。可以从已经初始化的主机内存(或应用程序的其他部分)中构造缓冲区。
+	\item 减少输入的字符，因为用“\}”关闭作用域比创建缓冲区的host\_accessor更简洁(更容易出错)。
 \end{enumerate}
 
-If we use a host allocation to dump or verify the output values from a kernel, we need to put the buffer allocation into a block scope (or other scopes) so that we can control when it is destroyed. We must then make sure that the buffer is destroyed before we access the host allocation to obtain the kernel output. Figure 13-6 shows this done correctly, while Figure 13-7 shows a common bug where the output is accessed while the buffer is still alive.\par
+如果使用主机分配来内存转储或验证内核的输出值，需要将缓冲区分配放入一个块作用域(或其他作用域)，这样就可以控制何时销毁。然后，必须确保在访问主机分配内存，以获得内核输出之前销毁缓冲区。图13-6显示了这一点的正确实现，而图13-7显示了一个错误实现，即在缓冲区仍然活动时访问输出。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Advanced users may prefer to use buffer destruction to return result data from kernels into a host memory allocation. But for most users, and especially new developers, it is recommended to use scoped host accessors.
+高级用户可能更喜欢使用缓冲区销毁将结果数据从内核返回到主机内存分配内存中。对于大多数用户，特别是新手开发者，建议使用作用域内的主机访问器。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-Figure 13-7. Common bug: Reading data directly from host allocation during buffer lifetime
+图13-7 常见错误:在缓冲区生命周期内直接从主机分配内存中读取数据
 \begin{lstlisting}[caption={}]
 constexpr size_t N = 1024;
 
@@ -114,13 +114,13 @@ for (int i=0; i<N; i++)
 \end{lstlisting}
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Prefer to use host accessors instead of scoping of buffers, especially when getting started.
+请使用主机访问器，而不是直接访问内存，特别是在开始时。
 \end{tcolorbox}
 
-To avoid these bugs, we recommend using host accessors instead of buffer scoping when getting started with SYCL and DPC++. Host accessors provide access to a buffer from the host, and once their constructor has finished running, we are guaranteed that any previous writes (e.g., from kernels submitted before the host\_accessor was created) to the buffer have executed and are visible. This book uses a mixture of both styles (i.e., host accessors and host allocations passed to the buffer constructor) to provide familiarity with both. Using host accessors tends to be less error prone when getting started. Figure 13-8 shows how a host accessor can be used to read output from a kernel, without destroying the buffer first.\par
+为了避免这些错误，我们建议在开始使用SYCL和DPC++时使用主机访问器，而不是直接访问内存。主机访问器提供了对来自主机的缓冲区的访问。当它们构造完成时，就可以保证之前对缓冲区的任何写入(例如，创建host\_accessor之前提交的内核)都已经执行并且是可见的。本书混合使用了这两种风格(即，主机访问器和传递给缓冲区构造函数的主机分配)，以便熟悉这两种风格。在开始时，使用主机访问器不容易出错。图13-8展示了如何使用主机访问器从内核读取输出，而不破坏缓冲区。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 13-8. Recommendation: Use a host accessor to read kernel results
+图13-8 建议:使用主机访问器读取内核结果
 \begin{lstlisting}[caption={}]
 constexpr size_t N = 1024;
 
@@ -154,10 +154,10 @@ host_accessor A{out_buf};
 for (int i=0; i<N; i++) std::cout << "A[" << i << "]=" << A[i] << "\n";
 \end{lstlisting}
 
-Host accessors can be used whenever a buffer is alive, such as at both ends of a typical buffer lifetime—for initialization of the buffer content and for reading of results from our kernels. Figure 13-9 shows an example of this pattern.\par
+只要缓冲区没销毁，就可以使用主机访问器，例如在缓冲区生命周期的两端，用于初始化缓冲区内容和从内核读取结果。如图13-9所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 13-9. Recommendation: Use host accessors for buffer initialization and reading of results
+图13-9 建议:使用主机访问器进行缓冲区初始化和读取结果
 \begin{lstlisting}[caption={}]
 constexpr size_t N = 1024;
 
@@ -193,14 +193,14 @@ host_accessor A{out_buf};
 for (int i=0; i<N; i++) std::cout << "A[" << i << "]=" << A[i] << "\n";
 \end{lstlisting}
 
-One final detail to mention is that host accessors sometime cause an opposite bug in applications, because they also have a lifetime. While a host\_accessor to a buffer is alive, the runtime will not allow that buffer to be used by any devices! The runtime does not analyze our host programs to determine when they might access a host accessor, so the only way for it to know that the host program has finished accessing a buffer is for the host\_accessor destructor to run. As shown in Figure 13-10, this can cause applications to appear to hang if our host program is waiting for some kernels to run (e.g., queue::wait() or acquiring another host accessor) and if the DPC++ runtime is waiting for our earlier host accessor(s) to be destroyed before it can run kernels that use a buffer.\par
+最后要提到的细节是，主机访问器有时会在应用程序中导致相反的错误，因为它们也有生命周期。当一个缓冲区的host\_accessor在生命周期中，运行时将不允许任何设备使用该缓冲区!运行时不会分析主程序来确定什么时候可以访问主机访问器，所以它知道主机程序已经完成访问缓冲区的唯一方法是运行host\_accessor析构函数。如图13-10所示，如果主程序正在等待一些内核运行(例如，queue::wait()或获取另一个主机访问器)，如果DPC++运行时正在等待之前的主机访问器销毁，之后才能操作使用缓冲区的内核，这可能会导致应用程序挂起等待。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-When using host accessors, be sure that they are destroyed when no longer needed to unlock use of the buffer by kernels or other host accessors.
+使用主机访问器时，请确保当内核或其他主机访问器不再需要解锁缓冲区时销毁它们。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-Figure 13-10. Bug (hang!) from improper use of host\_accessors
+图13-10 host\_accessors使用不当是会挂起程序
 \begin{lstlisting}[caption={}]
 constexpr size_t N = 1024;
 
