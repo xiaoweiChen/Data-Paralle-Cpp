@@ -1,20 +1,19 @@
-DPC++ paves a portable path to parallelize our applications or to develop parallel applications from scratch. The application performance of a program, when run on CPUs, is largely dependent upon the following factors:\par
+DPC++为并行化应用程序，或从头开始开发并行应用程序铺了一条道路。当一个程序在CPU上运行时，其性能在很大程度上取决于以下因素:\par
 
 \begin{itemize}
-	\item The underlying performance of the single invocation and execution of kernel code
-	\item The percentage of the program that runs in a parallel kernel and its scalability
-	\item CPU utilization, effective data sharing, data locality, and load balancing
-	\item The amount of synchronization and communication between work-items
-	\item The overhead introduced to create, resume, manage, suspend, destroy, and synchronize the threads that work-items execute on, which is made worse by the 
-	number of serial-to-parallel or parallel-to-serial transitions
-	\item Memory conflicts caused by shared memory or falsely shared memory
-	\item Performance limitations of shared resources such as memory, write combining buffers, and memory bandwidth
+	\item 内核代码的单个调用和执行的底层性能
+	\item 在并行内核中运行的程序的百分比及其可扩展性
+	\item CPU利用率、有效的数据共享、数据局部性和负载均衡
+	\item 工作项之间同步化和通信的数量
+	\item 为创建、恢复、管理、挂起、销毁和同步工作项所执行的线程而引入的开销，串行到并行或并行到串行转换的数量会使性能变得更糟
+	\item 由共享内存或错误的共享内存引起的内存冲突
+	\item 共享资源(如内存、写入组合缓冲区和内存带宽)的性能限制
 \end{itemize}
 
-In addition, as with any processor type, CPUs may differ from vendor to vendor or even from product generation to product generation. The best practices for one CPU may not be best practices for a different CPU and configuration.\par
+此外，与任何处理器类型一样，CPU可能因厂商的不同而不同，甚至因产品的不同而不同。对于一个CPU的最佳实践，可能不是针对其他CPU和配置的最佳实践。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-To achieve optimal performance on a CPU, understand as many characteristics of the CPU architecture as possible!
+要在CPU上实现最佳性能，请尽可能多地了解CPU架构的特征!
 \end{tcolorbox}
 
 
