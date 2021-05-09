@@ -1,34 +1,34 @@
-When we want to call functions inside a kernel that are defined in a different translational unit, those functions need to be labeled with SYCL\_EXTERNAL. Without this attribute, the compiler will only compile a function for use outside of device code (making it illegal to call that external function from within device code).\par
+要调用在一个不同的平移单元中定义的内核内部的函数时，这些函数需要用SYCL\_EXTERNAL标记。如果没有此属性，编译器将只编译用于设备代码外部的函数(从设备代码内部调用外部函数是非法的)。\par
 
-There are a few restrictions on SYCL\_EXTERNAL functions that do not apply if we define the function within the same translation unit:\par
+如果在同一个转换单元中定义SYCL\_EXTERNAL函数，则有一些限制并不适用:\par
 
 \begin{itemize}
-	\item SYCL\_EXTERNAL can only be used on functions.
-	\item SYCL\_EXTERNAL functions cannot use raw pointers as parameter or return types. Explicit pointer classes must be used instead.
-	\item SYCL\_EXTERNAL functions cannot call a parallel\_for\_work\_item method.
-	\item SYCL\_EXTERNAL functions cannot be called from within a parallel\_for\_work\_group scope.
+	\item SYCL\_EXTERNAL只能用于函数。
+	\item SYCL\_EXTERNAL函数不能使用原始指针作为形参或返回类型。必须使用显式指针类。
+	\item SYCL\_EXTERNAL函数不能调用parallel\_for\_work\_item方法。
+	\item SYCL\_EXTERNAL函数不能在parallel\_for\_work\_group范围内调用。
 \end{itemize}
 
-If we try to compile a kernel that is calling a function that is not inside the same translation unit and is not declared with SYCL\_EXTERNAL, then we can expect a compile error similar to\par
+如果我们试图编译一个内核，它调用的函数不在同一个转译单元中，并且没有使用SYCL\_EXTERNAL声明，那么可以预期的结果会出现类似于\par
 
 \begin{tcolorbox}[colback=white,colframe=black]
 error: SYCL kernel cannot call an undefined function without SYCL\_EXTERNAL attribute
 \end{tcolorbox}
 
-If the function itself is compiled without a SYCL\_EXTERNAL attribute, we can expect to see either a link or runtime failure such as\par
+如果函数本身在编译时没有SYCL\_EXTERNAL属性，则可以看到链接或运行时失败，例如\par
 
 \begin{tcolorbox}[colback=white,colframe=black]
 terminate called after throwing an instance of 'cl::sycl::compile\_program\_error' ...error: undefined reference to ...
 \end{tcolorbox}
 
-DPC++ supports SYCL\_EXTERNAL. SYCL does not require compilers to support SYCL\_EXTERNAL; it is an optional feature in general.\par
+DPC++支持SYCL\_EXTERNAL。SYCL不需要编译器支持SYCL\_EXTERNAL，这是一个可选的特性。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Performance Implications of Multiple Translation Units}
+\textbf{多重转译单元的性能影响}
 
-An implication of the compilation model (see earlier in this chapter) is that if we scatter our device code into multiple translation units, that may trigger more invocations of just-in-time compilation than if our device code is co-located. This is highly implementation dependent and is subject to changes over time as implementations mature.\par
+编译模型的一个含义(见本章前面的部分)是，如果将设备代码分散到多个转译单元中，那么与设备代码位于同一位置时相比，可能会触发更多的即时编译调用。这是高度依赖于实现，并且会随着实现发生变化。\par
 
-Such effects on performance are minor enough to ignore through most of our development work, but when we get to fine-tuning to maximize code performance, there are two things we can consider to mitigate these effects: (1) group device code together in the same translation unit, and (2) use ahead-of-time compilation to avoid just-in-time compilation effects entirely. Since both of these require some effort on our part, we only do this when we have finished our development and are trying to squeeze every ounce of performance out of our application. When we do resort to this detailed tuning, it is worth testing changes to observe their effect on the exact SYCL implementation that we are using.\par
+这种方式对性能的影响很小，在大多数开发工作中都可以忽略，但当进行微调以最大化代码性能时，可以考虑两件事来减轻影响:(1)将设备代码组合在同一个转译单元中，(2)使用提前编译来完全避免即时编译效应。由于这两种方法都需要付出一定的努力，所以只有在完成开发，并试图从应用程序中榨出每一分性能时才会这样做。当采用这种调优时，有必要进行测试，以观察对正在使用SYCL实现的影响。\par
 
 
 
