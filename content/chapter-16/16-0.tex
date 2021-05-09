@@ -2,13 +2,13 @@
 	\includegraphics[width=0.3\textwidth]{content/chapter-16/images/1}
 \end{center}
 
-Kernel programming originally became popular as a way to program GPUs. As kernel programming is generalized, it is important to understand how our style of programming affects the mapping of our code to a CPU.\par
+内核编程最初是作为一种为GPU编程的方式。由于内核编程是通用的，理解编程风格如何影响代码到CPU的映射很重要。\par
 
-The CPU has evolved over the years. A major shift occurred around 2005 when performance gains from increasing clock speeds diminished. Parallelism arose as the favored solution—instead of increasing clock speeds, CPU producers introduced multicore chips. Computers became more effective in performing multiple tasks at the same time!\par
+CPU在过去的几年里不断发展。在2005年左右发生了一个重大的变化，当时增加时钟速度带来的性能的提升减少了。并行性是最受欢迎的解决方案——CPU生产商引入了多核芯片，而不是提高时钟频率。计算机在同时执行多个任务时变得更加有效!\par
 
-While multicore prevailed as the path for increasing hardware performance, releasing that gain in software required non-trivial effort. Multicore processors required developers to come up with different algorithms so the hardware improvements could be noticeable, and this was not always easy. The more cores that we have, the harder it is to keep them efficiently busy. DPC++ is one of the programming languages that address these challenges, with many constructs that help to exploit various forms of parallelism on CPUs (and other architectures).\par
+虽然多核是提高硬件性能的主流途径，但在软件上释放这种增益需要付出很大的努力。多核处理器要求开发人员提出不同的算法，这样硬件性能增益才会明显，但这并不容易。拥有的核芯越多，就越难让它们高效地工作。DPC++是解决这些挑战的一种编程语言，它有许多结构，有助于在CPU(和其他体系结构)上开发各种形式的并行。\par
 
-This chapter discusses some particulars of CPU architectures, how CPU hardware executes DPC++ applications, and offers best practices when writing a DPC++ code for a CPU platform.\par
+本章讨论了CPU架构的一些细节，CPU硬件如何执行DPC++应用程序，并提供了在为CPU平台编写DPC++代码的最佳实践。\par
 
 
 
