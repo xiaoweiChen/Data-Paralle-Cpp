@@ -1,22 +1,22 @@
-Emergence and rapid advancements in multicore CPUs have driven substantial acceptance of shared memory parallel computing platforms. CPUs offer parallel computing platforms at laptop, desktop, and server levels, making them ubiquitous and exposing performance almost everywhere. The most common form of CPU architecture is cache-coherent Non-Uniform Memory Access (cc-NUMA), which is characterized by access times not being completely uniform. Even many small dual-socket general-purpose CPU systems have this kind of memory system. This architecture has become dominant because the number of cores in a processor, as well as the number of sockets, continues to increase.\par
+多核CPU的出现和快速发展推动了共享内存并行计算平台的接受度。CPU提供了笔记本电脑、台式机和服务器级的并行计算平台，使得它们无处不在。CPU体系结构的最常见形式是缓存相关的非一致内存访问(cc-NUMA)，其特征是访问时间不完全一致。甚至许多小型双插槽通用CPU系统也有这种内存系统。由于处理器中的核心数量和插槽数量不断增加，这种体系结构已占据主导地位。\par
 
-In a cc-NUMA CPU system, each socket connects to a subset of the total memory in the system. A cache-coherent interconnect glues all of the sockets together and provides a single system view for programmers. Such a memory system is scalable, because the aggregate memory bandwidth scales with the number of sockets in the system. The benefit of the interconnect is that an application has transparent access to all of the memory in the system, regardless of where the data resides. However, there is a cost: the latency to access data and instructions, from memory is no longer consistent (e.g., fixed access latency). The latency instead depends on where that data is stored in the system. In a good case, data comes from memory directly connected to the socket where code runs. In a bad case, data has to come from a memory connected to a socket far away in the system, and that cost of memory access can increase due to the number of hops in the interconnect between sockets on a cc-NUMA CPU system.\par
+在cc-NUMA CPU系统中，每个套接字连接到系统中总内存的一个子集。缓存相关交互将所有的套接字粘在一起，并为开发者提供单一的系统视图。这样的内存系统是可扩展的，因为聚合内存带宽随系统中插槽的数量而变化。交互的好处是应用程序可以透明地访问系统中的所有内存，而不管数据驻留在哪里。然而，这是有代价的:从内存访问数据和指令的延迟不再一致(例如，固定的访问延迟)。延迟取决于数据存储在系统中的位置。数据来自直接连接到代码运行的套接字的内存。最坏的情况下，数据必须来自连接到系统中很远的内存，由于cc-NUMA CPU系统上插槽之间的跳数增加，内存访问成本可能会增加。\par
 
-In Figure 16-1, a generic CPU architecture with cc-NUMA memory is shown. This is a simplified system architecture containing cores and memory components found in contemporary, general-purpose, multisocket systems today. Throughout the remainder of this chapter, the figure will be used to illustrate the mapping of corresponding code examples.\par
+图16-1是一个具有cc-NUMA内存的通用CPU架构。这种简化的系统架构，包含当代通用多插槽系统中的核心和内存组件。本章的其余部分，将用来说明对应代码示例的映射。\par
 
-To achieve optimal performance, we need to be sure to understand the characteristics of the cc-NUMA configuration of a specific system. For example, recent servers from Intel make use of a mesh interconnect architecture. In this configuration, the cores, caches, and memory controllers are organized into rows and columns. Understanding the connectivity of processors with memory can be critical when working to achieve peak performance of the system.\par
+为了获得最佳性能，需要确保了解特定系统的cc-NUMA配置的特征。例如，英特尔最近的服务器使用了网状互连架构。这种配置中，核心、缓存和内存控制器组织成行和列。理解处理器与内存的连接性对于实现系统的最佳性能非常重要。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-1. Generic multicore CPU system
+图16-1 通用多核CPU系统
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-16/images/2}
 \end{center}
 
-The system in Figure 16-1 has two sockets, each of which has two cores with four hardware threads per core. Each core has its own level 1 (L1) cache. L1 caches are connected to a shared last-level cache, which is connected to the memory system on the socket. The memory access latency within a socket is uniform, meaning that it is consistent and can be predicted with accuracy.\par
+图16-1中的系统有两个插槽，每个插槽有两个核，每个核有四个硬件线程。每个核都有自己的一级(L1)缓存。L1缓存连接到共享的最后一级缓存，后者连接到套接字上的内存系统。套接字内的内存访问延迟是一致的，这意味着它是一致的。\par
 
-The two sockets are connected through a cache-coherent interconnect. Memory is distributed across the system, but all of the memory may be transparently accessed from anywhere in the system. The memory read and write latency is non-uniform when accessing memory that isn’t in the socket where code making the access is running, which means it imposes a potentially much longer and inconsistent latency when accessing data from a remote socket. A critical aspect of the interconnect, though, is coherency. We do not need to worry about data becoming inconsistent across the memory system (which would be a functional problem) and instead need to worry only about the performance impact of how we’re accessing the distributed memory system.\par
+这两个卡槽是通过缓存相干互连连接起来的。内存分布在整个系统中，但是所有内存都可以从系统中的任何地方访问。当访问不在运行访问代码的内存时，内存读写延迟不一致，这意味着当访问远程数据时，可能会施加更长的、不一致的延迟。然而，互连的关键是一致性。不需要担心跨内存系统的数据变得不一致(这将是一个功能问题)，只需要担心访问分布式内存系统的方式对性能的影响。\par
 
-Hardware threads in CPUs are the execution vehicles. These are the units that execute instruction streams (a thread in CPU terminology). The hardware threads in Figure 16-1 are numbered consecutively from 0 to 15, which is a notation used to simplify discussions on the examples in this chapter. Unless otherwise noted, all references to a CPU system in this chapter are to the reference cc-NUMA system shown in Figure 16-1.\par
+CPU中的硬件线程是执行工具。这些是执行指令流的单元(CPU术语中的线程)。图16-1中的硬件线程从0到15连续编号，这是一个用于简化本章示例讨论的符号。除特别说明外，本章中有关CPU系统的描述均以图16-1中的cc-NUMA系统为参考。\par
 
 
 
