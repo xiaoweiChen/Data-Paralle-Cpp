@@ -1,12 +1,12 @@
-Many of these patterns can be expressed directly using built-in functionality of DPC++ or vendor-provided libraries written in DPC++. Leveraging these functions and libraries is the best way to balance performance, portability, and productivity in real large-scale software engineering projects.\par
+这些模式中的许多都可以直接使用DPC++的内置功能，或用DPC++使用供应商提供的库来编写。利用这些功能和库是在真正的大型软件工程项目中，是平衡性能、可移植性和生产力的最佳方法。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{The DPC++ Reduction Library}
+\textbf{DPC++中的归约库}
 
-Rather than require that each of us maintain our own library of portable and highly performant reduction kernels, DPC++ provides a convenient abstraction for describing variables with reduction semantics. This abstraction simplifies the expression of reduction kernels and makes the fact that a reduction is being performed explicit, allowing implementations to select between different reduction algorithms for different combinations of device, data type, and reduction operation.\par
+DPC++不要求每个人都维护自己的可移植和高性能归约内核库，而是提供了一个方便的抽象来用归约语义描述变量。这种抽象简化了内核的表达式，并使显式执行成为可能，允许实现为不同的设备、数据类型和约简操作组合选择不同的归约算法。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-8. Reduction expressed as an ND-range data-parallel kernel using the reduction library
+图14-8 reduce表示为使用归约库的ND-range数据并行内核
 \begin{lstlisting}[caption={}]
 h.parallel_for(
 	nd_range<1>{N, B},
@@ -17,21 +17,21 @@ h.parallel_for(
 });
 \end{lstlisting}
 
-The kernel in Figure 14-8 shows an example of using the reduction library. Note that the kernel body doesn’t contain any reference to reductions—all we must specify is that the kernel contains a reduction which combines instances of the sum variable using the plus functor. This provides enough information for an implementation to automatically generate an optimized reduction sequence.\par
+图14-8中的内核显示了一个使用归约库的示例。注意，内核体不包含任何对归约的引用——我们必须指定的只是内核包含归约，使用加法函子组合了sum变量的实例。这为实现自动生成优化的归约序列提供了足够的信息。\par
 
-At the time of writing, the reduction library only supports kernels with a single reduction variable. Future versions of DPC++ are expected to support kernels which perform more than one reduction simultaneously, by specifying multiple reductions between the nd\_range and functor arguments passed into parallel\_for and taking multiple reducers as arguments to the kernel functor.\par
+编写本文时，归约库只支持具有单个归约变量的内核。未来版本的DPC++预计将支持同时执行多个归约的内核，方法是在传递给parallel\_for的nd\_range和函数参数之间指定多个归约，并将多个归约作为内核函数的参数。\par
 
-The result of a reduction is not guaranteed to be written back to the original variable until the kernel has completed. Apart from this restriction, accessing the result of a reduction behaves identically to accessing any other variable in SYCL: accessing a reduction result stored in a buffer requires the creation of an appropriate device or host accessor, and accessing a reduction result stored in a USM allocation may require explicit synchronization and/or memory movement.\par
+归约的结果在内核完成之前不能保证写回到原来的变量。除了这个限制，访问归约的结果与访问SYCL中的任何其他变量的行为相同:访问存储在缓冲区中的归约结果需要创建一个适当的设备或主机访问器，访问存储在USM分配中的归约结果可能需要显式的同步和/或内存移动。\par
 
-One important way in which the DPC++ reduction library differs from reduction abstractions found in other languages is that it restricts our access to the reduction variable during kernel execution—we cannot inspect the intermediate values of a reduction variable, and we are forbidden from updating the reduction variable using anything other than the specified combination function. These restrictions prevent us from making mistakes that would be hard to debug (e.g., adding to a reduction variable while trying to compute the maximum) and ensure that reductions can be implemented efficiently on a wide variety of different devices.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{The reduction Class}
-
-The reduction class is the interface we use to describe the reductions present in a kernel. The only way to construct a reduction object is to use one of the functions shown in Figure 14-9.\par
+DPC++的归约库与其他语言中的归约抽象的区别是，限制了在内核执行期间对归约变量的访问——不能检查归约变量的中间值，禁止使用除了指定的组合函数以外的任何东西来更新归约变量。这些限制可以避免一些难以调试的错误(例如，在计算最大值的同时添加一个归约变量)，并确保归约可以在各种不同的设备上有效地实现。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-9. Function prototypes of the reduction function
+\textbf{归约类}
+
+归约类是用来描述内核中归约的接口。构造归约对象的唯一方法是使用图14-9所示的函数。\par
+
+\hspace*{\fill} \par %插入空行
+图14-9 归约函数的原型
 \begin{lstlisting}[caption={}]
 template <typename T, typename BinaryOperation>
 unspecified reduction(T* variable, BinaryOperation combiner);
@@ -40,17 +40,17 @@ template <typename T, typename BinaryOperation>
 unspecified reduction(T* variable, T identity, BinaryOperation combiner);
 \end{lstlisting}
 
-The first version of the function allows us to specify the reduction variable and the operator used to combine the contributions from each work-item. The second version allows us to provide an optional identity value associated with the reduction operator—this is an optimization for user-defined reductions, which we will revisit later.\par
+该函数的第一个版本允许我们指定归约变量和用于组合每个工作项的操作符。第二个版本允许我们提供与归约操作符相关联的可选标识值——这是对用户定义归约的优化。\par
 
-Note that the return type of the reduction function is unspecified, and the reduction class itself is completely implementation-defined. Although this may appear slightly unusual for a C++ class, it permits an implementation to use different classes (or a single class with any number of template arguments) to represent different reduction algorithms. Future versions of DPC++ may decide to revisit this design in order to enable us to explicitly request specific reduction algorithms in specific execution contexts.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{The reducer Class}
-
-An instance of the reducer class encapsulates a reduction variable, exposing a limited interface ensuring that we cannot update the reduction variable in any way that an implementation could consider to be unsafe. A simplified definition of the reducer class is shown in Figure 14-10. Like the reduction class, the precise definition of the reducer class is implementation-defined—a reducer's type will depend on how the reduction is being performed, and it is important to know this at compile time in order to maximize performance. However, the functions and operators that allow us to update the reduction variable are well-defined and are guaranteed to be supported by any DPC++ implementation.\par
+请注意，归约函数的返回类型是未指定的，归约类本身完全是由实现定义的。虽然这对于C++类来说可能有点不寻常，但它允许实现使用不同的类(或具有任意数量模板参数的单个类)来表示不同的约简算法。未来版本的DPC++可能会重新考虑这个设计，以便在特定的执行上下文中显式地请求特定的r归约算法。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-10. Simplified definition of the reducer class
+\textbf{reducer类}
+
+reducer类的实例封装了一个归约变量，暴露了有限的接口，确保我们不能以任何可能实现不安全的归约变量更新方式。reducer类的简化定义如图14-10所示。像归约类一样，reducer类的精确定义是实现定义的——reducer的类型取决于reduce是如何执行的，为了最大化性能，在编译时知道这一点很重要。但是，允许更新归约变量的函数和操作符是定义好的，并且保证DPC++可以支持。\par
+
+\hspace*{\fill} \par %插入空行
+图14-10 reducer类的简化定义
 \begin{lstlisting}[caption={}]
 template <typename T,
 		  typename BinaryOperation,
@@ -65,17 +65,17 @@ template <typename T>
 auto& operator +=(reducer<T,plus::<T>>&, const T&);
 \end{lstlisting}
 
-Specifically, every reducer provides a combine() function which combines the partial result (from a single work-item) with the value of the reduction variable. How this combine function behaves is implementation-defined but is not something that we need to worry about when writing a kernel. A reducer is also required to make other operators available depending on the reduction operator; for example, the += operator is defined for plus reductions. These additional operators are provided only as a programmer convenience and to improve readability; where they are available, these operators have identical behavior to calling combine() directly.\par
+每个reducer都提供一个combine()函数，它将部分结果(来自单个工作项)与reducer变量的值组合在一起。这个组合函数的行为是由实现定义的，但不是在编写内核时需要考虑的问题。还需要一个reducer，使其他操作可依赖于reducer变量，例如：+=运算符被定义为加归约。这些附加操作符仅作为开发者方便和提高可读性而提供。可用时，操作符具有与直接调用combine()相同的行为。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{User-Defined Reductions}
+\textbf{用户定义的归}
 
-Several common reduction algorithms (e.g., a tree reduction) do not see each work-item directly update a single shared variable, but instead accumulate some partial result in a private variable that will be combined at some point in the future. Such private variables introduce a problem: how should the implementation initialize them? Initializing variables to the first contribution from each work-item has potential performance ramifications, since additional logic is required to detect and handle uninitialized variables. Initializing variables to the identity of the reduction operator instead avoids the performance penalty but is only possible when the identity is known.\par
+一些常见的归算法(例如，树状归约)不会看到每个工作项直接更新单个共享变量，而是将一些部分结果积累到一个私有变量中，这些私有变量将在将来的某个时候合并在一起。这样的私有变量引入了一个问题:实现应该如何初始化它们?从每个工作项初始化到第一个贡献的变量有潜在的性能后果，因为需要额外的逻辑来检测和处理未初始化的变量。将变量初始化为归运算符的标识来避免性能损失，但只有当标识已知时才有可能。\par
 
-DPC++ implementations can only automatically determine the correct identity value to use when a reduction is operating on simple arithmetic types and the reduction operator is a standard functor (e.g., plus). For user-defined reductions (i.e., those operating on user-defined types and/or using user-defined functors), we may be able to improve performance by specifying the identity value directly.\par
+DPC++实现只能在还原操作简单算术类型，且还原操作符是标准函数(例如，plus)时自动确定要使用的正确标识值。对于用户定义的归约(例如，对用户定义的类型进行操作和/或使用用户定义的函数)，可以通过指定标识来提高性能。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-11. Using a user-defined reduction to find the location of the minimum value with an ND-range kernel
+图14-11 使用用户定义的归约查找具有ND-Range内核的最小值的位置
 \begin{lstlisting}[caption={}]
 template <typename T, typename I>
 struct pair {
@@ -115,23 +115,23 @@ Q.submit([&](handler& h) {
 std::cout << "minimum value = " << res->val << " at " << res->idx << "\n";
 \end{lstlisting}
 
-Support for user-defined reductions is limited to trivially copyable types and combination functions with no side effects, but this is enough to enable many real-life use cases. For example, the code in Figure 14-11 demonstrates the usage of a user-defined reduction to compute both the minimum element in a vector and its location.\par
+对用户定义归约的支持，仅限于简单的可复制类型和没有副作用的组合函数，但这足以支持许多实际用例。例如，图14-11中的代码演示了如何使用用户定义的归约来计算向量中的最小元素及其位置。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{oneAPI DPC++ Library}
+\textbf{oneAPI DPC++库}
 
-The C++ Standard Template Library (STL) contains several algorithms which correspond to the parallel patterns discussed in this chapter. The algorithms in the STL typically apply to sequences specified by pairs of iterators and—starting with C++17—support an execution policy argument denoting whether they should be executed sequentially or in parallel.\par
+C++标准模板库(STL)包含了几种算法，对应于本章讨论的并行模式。STL中的算法通常适用于由迭代器指定的序列。从C++17开始，可以使用执行策略参数，表示算法应该顺序执行还是并行执行。\par
 
-The oneAPI DPC++ Library (oneDPL) leverages this execution policy argument to provide a high-productivity approach to parallel programming that leverages kernels written in DPC++ under the hood. If an application can be expressed solely using functionality of the STL algorithms, oneDPL makes it possible to make use of the accelerators in our systems without writing a single line of DPC++ kernel code!\par
+oneAPI DPC++库(oneDPL)利用了这个执行策略参数来提供高效的并行编程方法，这种方法在底层利用了用DPC++编写的内核。如果应用程序可以仅使用STL算法的功能来表达，那么oneDPL就可以在系统中使用加速器，而无需编写任何DPC++内核代码!\par
 
-The table in Figure 14-12 shows how the algorithms available in the STL relate to the parallel patterns described in this chapter and to legacy serial algorithms (available before C++17) where appropriate. A more detailed explanation of how to use these algorithms in a DPC++ application can be found in Chapter 18.\par
+图14-12中的表格显示了STL中可用的算法如何与本章描述的并行模式以及在适当的情况下与串行算法(在C++17之前可用)相关。关于如何在DPC++应用程序中，使用这些算法的更详细的说明可以在第18章找到。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-12. Relating parallel patterns with the C++17 algorithm library
+图14-12 将并行模式与C++17算法库相关联
 \begin{table}[H]
 	\begin{tabular}{|l|l|l|}
 		\hline
-		\textbf{Pattern} & \textbf{Serial Algorithm(s)} & \textbf{Parallel Algorithm(s)}                                                                                                      \\ \hline
+		\textbf{模式} & \textbf{串行算法} & \textbf{并行算法}                                                                                                      \\ \hline
 		Map              & transform                    & transform                                                                                                                           \\ \hline
 		Stencil          & transform                    & transform                                                                                                                           \\ \hline
 		Reduction        & accumulate                   & \begin{tabular}[c]{@{}l@{}}reduce\\ transform\_reduc\end{tabular}                                                                   \\ \hline
@@ -142,11 +142,11 @@ Figure 14-12. Relating parallel patterns with the C++17 algorithm library
 \end{table}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Group Functions}
+\textbf{组函数}
 
-Support for parallel patterns in DPC++ device code is provided by a separate library of group functions. These group functions exploit the parallelism of a specific group of work-items (i.e., a work-group or a subgroup) to implement common parallel algorithms at limited scope and can be used as building blocks to construct other more complex algorithms.\par
+DPC++设备代码中对并行模式的支持是由单独的组函数库提供的。这些组函数利用特定工作项组(例如，一个工作组或一个子工作组)的并行性，在有限的范围内实现通用的并行算法，并且可以作为构建块来构建更复杂的算法。\par
 
-Like oneDPL, the syntax of the group functions in DPC++ is based on that of the algorithm library in C++. The first argument to each function accepts a group or sub\_group object in place of an execution policy, and any restrictions from the C++ algorithms apply. Group functions are performed collaboratively by all the work-items in the specified group and so must be treated similarly to a group barrier—all work-items in the group must encounter the same algorithm in converged control flow (i.e., all work-items in the group must similarly encounter or not encounter the algorithm call), and all work-items must provide the same function arguments in order to ensure that they agree on the operation being performed.\par
+如oneDPL一样，DPC++中的组函数的语法是基于C++中的语法。每个函数的第一个参数接受一个group或sub\_group对象来代替执行策略，C++算法的任何限制都适用。组功能是由指定组中的所有工作项协作执行的，因此必须以类似于组栅栏的方式对待——组中的所有工作项必须在控制流中遇到相同的算法(即，组中的所有工作项必须以类似的方式执行或不执行到算法调用)，并且所有工作项必须提供相同的函数参数，以确保它们的操作一致性。\par
 
-At the time of writing, the reduce, exclusive\_scan, and inclusive\_scan functions are limited to supporting only primitive data types and the most common reduction operators (e.g., plus, minimum, and maximum). This is enough for many use cases, but future versions of DPC++ are expected to extend collective support to user-defined types and operators.\par
+编写时，reduce、exclusive\_scan和inclusive\_scan函数仅限于支持基本数据类型和最常用的归约操作符(例如，plus、minimum和maximum)。这对于许多用例来说已经足够了，但DPC++的未来版本预计将扩展对用户定义类型和操作符的支持。\par
 
