@@ -1,38 +1,38 @@
-This section conveys some modest debugging advice, to ease the challenges unique to debugging a parallel program, especially one targeting a heterogeneous machine.\par
-We should never forget that we have the option to debug our applications while they are running on the host device. This debugging tip is described as Method\#2 in Chapter 2. Because the architectures of devices often include fewer debugging hooks, tools can often probe code on a host more precisely. Another advantage of running everything on the host is that many errors relating to synchronization will disappear, including moving memory back and forth between the host and devices. While we eventually need to debug all such errors, this can allow incremental debugging so we can resolve some bugs before others.\par
+本节提供一些调试建议，以减少调试并行程序(特别是针对异构机器的并行程序)的挑战。\par
+
+当应用程序在主机设备上运行时，可以选择调试。这个调试技巧在第2章中描述为方法2。因为设备通常很少包含调试方式，所以调试可以在主机上的完成。在主机上运行的另一个好处是，与同步相关的许多错误将消失，包括在主机和设备之间移动内存导致的问题。虽然最终需要调试所有错误，但这可以允许增量调试，这样就可以先解决一些错误了。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-\textbf{Debugging tip} Running on the host device is a powerful debugging 
-tool.
+\textbf{调试技巧} 功能强大的调试工具可以运行在主机上。
 \end{tcolorbox}
 
-Parallel programming errors, specifically data races and deadlocks, are generally easier for tools to detect and eliminate when running all code on the host. Much to our chagrin, we will most often see program failures from such parallel programming errors when running on a combination of host and devices. When such issues strike, it is very useful to remember that pulling back to host-only is a powerful debugging tool. Thankfully, SYCL and DPC++ are carefully designed to keep this option available to us and easy to access.\par
+当在主机上运行所有代码时，工具通常更容易检测和消除并行编程错误，特别是数据竞争和死锁。我们懊恼的是，当在主机和设备的组合上运行时，经常会看到这种并行编程错误导致的程序运行失败。当出现这样的问题时，记住使用host-only的方式更有助于调试。值得庆幸的是，SYCL和DPC++的精心设计，可以让我们使用这个选项，并且易于访问。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-\textbf{Debugging tip} If a program is deadlocking, check that the host 
-accessors are being destroyed properly
+\textbf{调试技巧} 如果程序出现死锁，请检查主机访问器是否正确销毁。
 \end{tcolorbox}
 
-The following DPC++ compiler options are a good idea when we start debugging:\par
+开始调试时，可以使用下面的DPC++编译器选项:\par
 
 \begin{itemize}
-	\item -g: Put debug information in the output.
-	\item -ferror-limit=1: Maintain sanity when using C++ with template libraries such as SYCL/DPC++.
-	\item -Werror -Wall -Wpedantic: Have the compiler enforce good coding to help avoid producing incorrect code to debug at runtime.
+	\item -g: 在输出中输入调试信息。
+	\item -ferror-limit=1: 当使用带有SYCL/DPC++等C++模板库时，可以保持完整性。
+	\item -Werror -Wall -Wpedantic: 让编译器强制执行编码，以避免生成运行时可调试的错误代码。
 \end{itemize}
 
-We really do not need to get bogged down fixing pedantic warnings just to use DPC++, so choosing to not use -Wpedantic is understandable.\par
-When we leave our code to be compiled just-in-time during runtime, there is code we can inspect. This is highly dependent on the layers used by our compiler, so looking at the compiler documentation for suggestions is a good idea.\par
+不需要仅仅为了使用DPC++而去修复迂腐的警告，所以可以选择不使用-Wpedantic。\par
+
+在运行时让代码及时编译时，我们可以检查代码。这高度依赖于编译器，因此查看编译器文档以获得建议是一个好主意。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Debugging Kernel Code}
+\textbf{调试内核代码}
 
-While debugging kernel code, start by running on the host device (as advised in Chapter 2). The code for device selectors in Chapter 2 can easily be modified to accept runtime options, or compiler-time options, to redirect work to the host device when we are debugging.\par
+调试内核代码时，首先要在主机设备上运行(如第2章所述)。第2章中的设备选择器，可以很容易地修改运行时选项或编译时选项，以便在调试时将工作重定向到主机设备。\par
 
-When debugging kernel code, SYCL defines a C++-style stream that can be used within a kernel (Figure 13-4). DPC++ also offers an experimental implementation of a C-style printf that has useful capabilities, with some restrictions. Additional details are in the online oneAPI DPC++ language reference.\par
+在调试内核代码时，SYCL定义了一个C++风格的流，可以在内核中使用(图13-4)。DPC++还提供了一个C风格printf的实验性实现，功能有一些限制。更多的细节可以参考在在线oneAPI DPC++文档。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 13-4. sycl::stream
+图13-4 sycl::stream
 \begin{lstlisting}[caption={}]
 Q.submit([&](handler &h){
 	stream out(1024, 256, h);
@@ -42,51 +42,51 @@ Q.submit([&](handler &h){
 });
 \end{lstlisting}
 
-When debugging kernel code, experience encourages that we put breakpoints before parallel\_for or inside parallel\_for, but not actually on the parallel\_for. A breakpoint placed on a parallel\_for can trigger a breakpoint multiple times even after performing the next operation. This C++ debugging advice applies to many template expansions like those in SYCL, where a breakpoint on the template call will translate into a complicated set of breakpoints when it is expanded by the compiler. There may be ways that implementations can ease this, but the key point here is that we can avoid some confusion on all implementations by not setting the breakpoint precisely on the parallel\_for itself.\par
+调试内核代码时，经验告诉我们可以在parallel\_for之前或在parallel\_for内部设置断点。即使是在执行下一个操作之后，放置在parallel\_for的断点也可以多次触发。C++调试方式适用于许多模板展开，其中模板调用上的断点将在编译器展开时，转换为一组复杂的断点。可能有一些方法可以缓解这种情况，但这里的关键点是，可以通过在parallel\_for上设置断点来避免在所有实现上出现混淆。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Debugging Runtime Failures}
+\textbf{调试运行时的错误}
 
-When a runtime error occurs while compiling just-in-time, we are either dealing with a compiler/runtime bug, or we have accidentally programmed nonsense that was not detected until it tripped up the runtime and created difficult-to-understand runtime error messages. It can be a bit intimidating to dive into these bugs, but even a cursory look may allow us to get a better idea of what caused a particular issue. It might yield some additional knowledge that will guide us to avoid the issue, or it may just help us submit a short bug report to the compiler team. Either way, knowing that some tools exist to help can be important.\par
+发生运行时错误时，要么是在处理编译器/运行时错误，要么是无意中编写了废代码，直到它触发了难以理解的运行时错误消息。深入研究这些bug可能有点令人生畏，但可以让我们更好地了解导致特定问题的原因。它可能会产生一些额外的信息，指导我们避免这个问题，或者向编译器团队提交错误报告。不管怎样，知道一些能够提供帮助的工具很重要。\par
 
-Output from our program that indicates a runtime failure may look like this:\par
+运行时失败的程序输出如下所示:\par
 
 \begin{tcolorbox}[colback=white,colframe=black]
 origin>: error: Invalid record (Producer: 'LLVM9.0.0' Reader: 'LLVM 9.0.0')\\
-terminate called after throwing an instance of 'cl::sycl::compile\_program\_error'
+terminate called after throwing an instance of 'cl::sycl::compile\_program\_error'
 \end{tcolorbox}
 
-Seeing this throw noted here lets us know that our host program could have been constructed to catch this error. While that may not solve our problem, it does mean that runtime compiler failures do not need to abort our application. Chapter 5 dives into this topic.\par
+看到这里的throw，可以知道主程序可以捕捉这个错误。虽然这可能不能解决问题，但确实意味着运行时编译器失败不需要中止应用程序。第5章会深入探讨这个主题。\par
 
-When we see a runtime failure and have any difficulty debugging it quickly, it is worth simply trying a rebuild using ahead-of-time compilations. If the device we are targeting has an ahead-of-time compilation option, this can be an easy thing to try that may yield easierto-understand diagnostics. If our errors can be seen at compile time instead of JIT or runtime, often much more useful information will be found in the error messages from the compiler instead of the small amount of error information we usually see from a JIT or the runtime. For specific options, check the online oneAPI DPC++ documentation for ahead-of-time compilation.\par
+当看到运行时失败并难以快速调试时，不妨尝试使用提前编译进行重新构建。如果所使用的设备具有提前编译选项，这可能是一件很容易的事情，可能会产生更容易理解的诊断信息。如果错误是在编译时，而不是在JIT或运行时，那么通常会在编译器的错误消息中找到有用的信息，而不是在JIT或运行时看到的少量错误信息。对于特定选项，请查看在线oneAPI DPC++文档，了解提前编译。\par
 
-When our SYCL programs are running on top of an OpenCL runtime and using the OpenCL backend, we can run our programs with the OpenCL Intercept Layer: github.com/intel/opencl-intercept-layer. This is a tool that can inspect, log, and modify OpenCL commands that an application (or higher-level runtime) is generating. It supports a lot of controls, but good ones to set initially are ErrorLogging, BuildLogging, and maybe CallLogging (though it generates a lot of output). Useful dumps are possible with DumpProgramSPIRV. The OpenCL Intercept Layer is a separate utility and is not part of any specific OpenCL implementation, so it works with many SYCL compilers.\par
+当SYCL程序运行在OpenCL运行时之上并使用OpenCL后端时，可以使用OpenCL拦截层:github.com/intel/opencl-intercept-layer运行程序。这是一个可以检查、记录和修改应用程序(或更高级别运行时)生成的OpenCL命令的工具。它支持很多控件，但是最好的初始设置是ErrorLogging、BuildLogging和CallLogging(会生成很多输出)。DumpProgramSPIRV可以提供有用的转储。OpenCL拦截层是一个独立的程序，不是OpenCL实现的一部分，所以可以与SYCL编译器一起工作。\par
 
-For suspected compiler issues on Linux systems with Intel GPUs, we can dump intermediate compiler output from the Intel Graphics Compiler. We do this by setting the environment variable IGC\_ShaderDumpEnable equal to 1 (for some output) or the environment variable IGC\_ShaderDumpEnableAll to 1 (for lots and lots of output). The dumped output goes in /tmp/IntelIGC. This technique may not apply to all builds of the graphics drivers, but it is worth a try to see if it applies to our system.\par
+对于Intel GPU在Linux系统上的编译器问题，可以从Intel图形编译器转储中间编译器输出。通过将环境变量IGC\_ShaderDumpEnable设置为1(用于某些输出)或将环境变量IGC\_ShaderDumpEnableAll设置为1(用于大量输出)来做到这一点。转储的输出在/tmp/IntelIGC目录下。这种技术可能不适用于所有图形驱动程序的构建，但值得一试，确定是否适用于我们的系统。\par
 
-Figure 13-5 lists these and a few additional environment variables (supported on Windows and Linux) supported by compilers or runtimes to aid in advanced debugging. These are DPC++ implementation-dependent advanced debug options that exist to inspect and control the compilation model. They are not discussed or utilized in this book. The online oneAPI DPC++ language reference is a good place to learn more.\par
+图13-5列出了这些变量以及编译器或运行时支持的一些附加环境变量(在Windows和Linux上支持)，以帮助进行高级调试。这些是DPC++实现相关的高级调试选项，用于检查和控制编译模型。\par
 
-These options are not described more within this book, but they are mentioned here to open up this avenue of advanced debugging as needed. These options may give us insight into how to work around an issue or bug. It is possible that our source code is inadvertently triggering an issue that can be resolved by correcting the source code. Otherwise, the use of these options is for very advanced debugging of the compiler itself. Therefore, they are associated more with compiler developers than with users of the compiler. Some advanced users find these options useful; therefore, they are mentioned here and never again in this book. To dig deeper, the GitHub for DPC++ has a document for all environment variables under llvm/sycl/doc/EnvironmentVariables.md.\par
+这些选项在本书中没有详细描述，但是这里提到是为了在需要时打开高级调试的通道。这些选项可以让我们深入了解如何解决问题或bug。使用这些选项是为了对编译器本身进行高级调试。因此，它们更多地与编译器开发人员联系在一起，而不是编译器用户。一些高级用户认为这些选项很有用，因此在这里提及。更多信息可以参考GitHub for dpc++在llvm/sycl/doc/EnvironmentVariables.md下关于所有环境变量的文档。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-\textbf{Debugging tip} When other options are exhausted and we need to debug a runtime issue, we look for dump tools that might give us hints toward the cause.
+\textbf{调试技巧} 当其他选项都用尽，且无法解决需要调试运行时问题时，可能寻找为我们提供有关原因的提示的工具。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-Figure 13-5. DPC++ advanced debug options
+图13-5 DPC++的高级调试选项
 \begin{table}[H]
 	\begin{tabular}{|l|l|l|}
 		\hline
-		Environment variables         & Value                                                                                                                                                                                                                              & Description                                                                                                                                                                                                                                  \\ \hline
-		SYCL\_PI\_TRACE               & \begin{tabular}[c]{@{}l@{}}1(basic),\\ 2(advanced),\\ -1(all)\end{tabular}                                                                                                                                                         & \begin{tabular}[c]{@{}l@{}}Runtime:Value of 1 enables tracing of\\ Runtime Plugin Interface(PI) for plugin\\ and device discovery; Value of 2 enables\\ tracing of all PI calls. Value of -1 unleashes\\ all levels of tracing.\end{tabular} \\ \hline
-		SYCL\_PRINT\_EXECUTION\_GRAPH & \begin{tabular}[c]{@{}l@{}}always(\\ or ask to dump only select\\ files by specifying; \\ before\_addCG, after\_addGC,\\ before\_addCopyBack,\\ after\_addCopyBack,\\ before\_addHostAcc, or \\ after\_addHostAcc\\ )\end{tabular} & \begin{tabular}[c]{@{}l@{}}Runtime: create text files(with DOT extension)\\ tracing the execution graph. Relatively easy to\\ browse traces of what is happening during runtime.\end{tabular}                                                \\ \hline
-		CL\_CONFIG\_USE\_VBECTORIZER  & true or false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}Runtime:ask the Inter CPU compiler to\\ enable or disable vectorizer.\end{tabular}                                                                                                                                \\ \hline
-		CL\_CONFIG\_CPU\_TARGET\_ARCH & skx, core-avx2                                                                                                                                                                                                                     & \begin{tabular}[c]{@{}l@{}}Runtime: ask the Intel CPU compiler to\\ generate code for processors that support\\ Inter Advanced Vector Extensions(Intel\\ AVX512 ans AVX2).\end{tabular}                                                      \\ \hline
-		CL\_CONFIG\_DUMP\_ASM         & true or false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}Runtime:ask the Intel CPU compiler to\\ dump CPU assembly code.\end{tabular}                                                                                                                                      \\ \hline
-		IGC\_ShaderDumpEnable         & 0 or 1                                                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}Linux only.Runtime:ask the Intel Graphics\\ Compiler(JIT) to dump some information.\end{tabular}                                                                                                                  \\ \hline
-		IGC\_ShaderDumpEnableALL      & 0 or 1                                                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}Linux only.Runtime:ask the Intel Graphics\\ Compiler(JIT) to dump lots of information.\end{tabular}                                                                                                               \\ \hline
-		SYCL\_DUMP\_IMAGES            & true or false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}Compile time: Request via SYCL\_DUMP\_IMAGES=1\\ that compiler to dump a SPV file containing\\ the intermediate code which is passed to JIT\\ compiler during exectuion.\end{tabular}                             \\ \hline
-		SYCL\_USE\_KERNEL\_SPV        & \textless{}device binary\textgreater{}                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}Runtime:Load device image from the specified\\ file. If runtime is unable to read the file, \\ cl::sycl::runtime\_error exception is thrown.\end{tabular}                                                         \\ \hline
+		环境变量         & 值                                                                                                                                                                                                                              & 描述                                                                                                                                                                                                                                  \\ \hline
+		SYCL\_PI\_TRACE               & \begin{tabular}[c]{@{}l@{}}1(basic),\\ 2(advanced),\\ -1(all)\end{tabular}                                                                                                                                                         & \begin{tabular}[c]{@{}l@{}}运行时:\\值为1启用运行时插件接口(PI)\\跟踪插件，并寻找设备;\\值为2表示跟踪所有PI呼叫;\\值为-1释放所有级别的跟踪。\end{tabular} \\ \hline
+		SYCL\_PRINT\_EXECUTION\_GRAPH & \begin{tabular}[c]{@{}l@{}}always(\\或者通过指定\\只转储选定文件;\\before\_addcg、\\after\_addgc、\\before\_addcopyback、\\after\_addcopyback、\\before\_addhostacc、\\或after\_addhostacc)\end{tabular} & \begin{tabular}[c]{@{}l@{}}运行时:\\创建跟踪执行图的文本文件\\(DOT扩展名)，这样浏览运行时\\发生的跟踪会更容易。\end{tabular}                                                \\ \hline
+		CL\_CONFIG\_USE\_VBECTORIZER  & true 或 false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}运行时:\\请求CPU间编译器启用\\或禁用向量器。\end{tabular}                                                                                                                                \\ \hline
+		CL\_CONFIG\_CPU\_TARGET\_ARCH & skx, core-avx2                                                                                                                                                                                                                     & \begin{tabular}[c]{@{}l@{}}运行时:\\要求Intel CPU编译器支持\\Inter Advanced Vector Extensions\\(AVX512和AVX2)的代码。\end{tabular}                                                      \\ \hline
+		CL\_CONFIG\_DUMP\_ASM         & true 或 false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}运行时:\\通过英特尔CPU编译器转\\储出CPU汇编代码。\end{tabular}                                                                                                                                      \\ \hline
+		IGC\_ShaderDumpEnable         & 0 或 1                                                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}只限定于Linux。\\运行时:\\通过英特尔图形编译器(JIT)\\转储一些信息。\end{tabular}                                                                                                                  \\ \hline
+		IGC\_ShaderDumpEnableALL      & 0 或 1                                                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}只限定于Linux。\\运行时:\\通过英特尔图形编译器(JIT)\\转储大量信息。\end{tabular}                                                                                                               \\ \hline
+		SYCL\_DUMP\_IMAGES            & true 或 false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}编译时:\\通过SYCL\_DUMP\_IMAGES=1\\请求编译器转储出SPV文件，\\其中包含在执行期间传递给\\JIT编译器的中间码。\end{tabular}                             \\ \hline
+		SYCL\_USE\_KERNEL\_SPV        & \textless{}device binary\textgreater{}                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}运行时:\\从指定文件加载设备镜像。\\如果运行时无法读取该文件，则\\抛出cl::sycl::runtime\_error异常。\end{tabular}                                                         \\ \hline
 	\end{tabular}
 \end{table}
 
