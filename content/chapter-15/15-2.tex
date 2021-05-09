@@ -1,54 +1,49 @@
-This section describes how typical GPUs work and how GPUs differ from other accelerator types.\par
+本节描述了典型GPU的工作原理，以及GPU与其他类型加速器的区别。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{GPU Building Blocks}
+\textbf{GPU构建块}
 
-Figure 15-1 shows a very simplified GPU consisting of three high-level building blocks:\par
+图15-1展示了一个非常简化的GPU，由三个构建块组成:\par
 
 \begin{itemize}
-	\item Execution resources: A GPU’s execution resources are the processors that perform computational work. Different GPU vendors use different names for their execution resources, but all modern GPUs consist of multiple programmable processors. The processors may be heterogeneous and specialized for particular tasks, or they may be homogeneous and interchangeable. Processors for most modern GPUs are homogeneous and interchangeable.
-	\item Fixed functions: GPU fixed functions are hardware units that are less programmable than the execution resources and are specialized for a single task. 
-	When a GPU is used for graphics, many parts of the graphics pipeline such as rasterization or raytracing are performed using fixed functions to improve 
-	power efficiency and performance. When a GPU is used for data-parallel computation, fixed functions may be used for tasks such as workload scheduling, 
-	texture sampling, and dependence tracking.
-	\item Caches and memory: Like other processor types, GPUs frequently have caches to store data accessed by the execution resources. GPU caches may be 
-	implicit, in which case they require no action from the programmer, or may be explicit scratchpad memories, in which case a programmer must purposefully move data into a cache before using it. Many GPUs also have a large pool of memory to provide fast access to data used by the execution 
-	resources.
+	\item 执行资源:GPU的执行资源是执行计算工作的处理器。不同的GPU供应商对其执行资源使用不同的名称，但所有现代GPU都由多个可编程处理器组成。处理器可以是异构的和专门用于特定任务的，也可以是同构的和可互换的。大多数现代GPu的处理器都是同质和可互换的。
+	\item 固定功能:GPU固定功能是硬件单元，其可编程性低于执行资源，专门用于单个任务。当GPU用于图形时，图形管道的许多部分(如栅格化或光线追踪)都使用固定的功能来执行，以提高能效和性能。当GPU用于数据并行计算时，固定的函数可能用于工作负载调度、纹理采样和依赖跟踪等任务。
+	\item 缓存和内存:像其他处理器类型一样，GPU经常有缓存来存储执行资源访问的数据。GPU缓存可能是隐式的，它们不需要开发者做什么，或者显式的暂存存储器，开发者只要在使用数据之前，有目的地将数据移动到缓存中即可。许多GPU也有很大的内存池，来提供对执行资源使用数据的快速访问。
 \end{itemize}
 
 \hspace*{\fill} \par %插入空行
-Figure 15-1. Typical GPU building blocks—not to scale!
+图15-1 典型的GPU构建块-不缩放!
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/2}
 \end{center}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Simpler Processors (but More of Them)}
+\textbf{更简单的处理器}
 
-Traditionally, when performing graphics operations, GPUs process large batches of data. For example, a typical game frame or rendering workload involves thousands of vertices that produce millions of pixels per frame. To maintain interactive frame rates, these large batches of data must be processed as quickly as possible.\par
+以前，在执行图形操作时，GPU处理大量数据。例如，一个典型的游戏帧或渲染工作量涉及数千个顶点，这些顶点每帧产生数百万个像素。为了保持交互帧率，必须尽快处理这些大量数据。\par
 
-A typical GPU design tradeoff is to eliminate features from the processors forming the execution resources that accelerate singlethreaded performance and to use these savings to build additional processors, as shown in Figure 15-2. For example, GPU processors may not include sophisticated out-of-order execution capabilities or branch prediction logic used by other types of processors. Due to these tradeoffs, a single data element may be processed on a GPU slower than it would on another processor, but the larger number of processors enables GPUs to process many data elements quickly and efficiently.\par
+一个典型的GPU设计权衡是消除形成执行资源的处理器特性，从而加速单线程性能，并使用节省来资源进行额外的构建，如图15-2所示。例如，GPU处理器可能不包括复杂的乱序执行能力或其他类型处理器使用的分支预测逻辑。由于这些权衡，单个数据元素在GPU上的处理速度可能会比在其他处理器上慢，但更多的处理器数量使GPU能够快速有效地处理许多数据元素。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-2. GPU processors are simpler, but there are more of them
+图15-2 GPU处理器更简单，但数量多
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/3}
 \end{center}
 
-To take advantage of this tradeoff when executing kernels, it is important to give the GPU a sufficiently large range of data elements to process. To demonstrate the importance of offloading a large range of data, consider the matrix multiplication kernel we have been developing and modifying throughout this book.\par
+为了在执行内核时利用这种权衡，给GPU足够大的数据范围来处理是很重要的。为了说明加载大量数据的重要性，请参考本书中一直在开发和修改的矩阵乘法内核。\par
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=A REMINDER ABOUT MATRIX MULTIPLICATION]
-In this book, matrix multiplication kernels are used to demonstrate how changes in a kernel or the way it is dispatched affects performance. Although matrix multiplication performance are significantly improved using the techniques described in this chapter, matrix multiplication is such an important and common operation that many hardware (GPU, CPU, FPGA, DSP, etc.) vendors have implemented highly tuned versions of many routines including matrix multiplication. Such vendors invest significant time and effort implementing and validating functions for specific devices and in some cases may use functionality or techniques that are difficult or impossible to use in standard kernels.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=关于矩阵乘法]
+本书中，矩阵乘法内核用于演示内核中的更改或它的分派方式是如何影响性能的。虽然使用本章描述的技术可以显著提高矩阵乘法的性能，但矩阵乘法是如此重要和常见的操作，许多硬件(GPU、CPU、FPGA、DSP等)供应商已经实现了许多例程的高度调优版本，包括矩阵乘法。供应商投入大量的时间和精力来实现和验证特定设备的功能，在某些情况下可能会使用在标准内核中难以或不可能使用的功能或技术。
 \end{tcolorbox}
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=USE VENDOR-PROVIDED LIBRARIES!]
-When a vendor provides a library implementation of a function, it is almost always beneficial to use it rather than re-implementing the function as a kernel! For matrix multiplication, one can look to oneMKL as part of Intel’s oneAPI toolkits for solutions appropriate for DPC++ programmers.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=使用供应商提供的库!]
+当供应商提供函数库实现时，使用它而不是重新实现内核!对于矩阵乘法，可以将oneMKL作为适合DPC++开发者的英特尔oneAPI解决方案工具包的一部分。
 \end{tcolorbox}
 
-A matrix multiplication kernel may be trivially executed on a GPU by submitting it into a queue as a single task. The body of this matrix multiplication kernel looks exactly like a function that executes on the host CPU and is shown in Figure 15-3.\par
+矩阵乘法内核可以通过将其作为单个任务，提交到一个队列中来，并在GPU上执行。这个矩阵乘法内核的主体，看起来就像在主机CPU上执行的函数，如图15-3所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-3. A single task matrix multiplication looks a lot like CPU host code
+图15-3 单个任务矩阵乘法看起来很像CPU主机代码
 \begin{lstlisting}[caption={}]
 h.single_task([=]() {
 	for (int m = 0; m < M; m++) {
@@ -62,21 +57,21 @@ h.single_task([=]() {
 });
 \end{lstlisting}
 
-If we try to execute this kernel on a CPU, it will probably perform okay—not great, since it is not expected to utilize any parallel capabilities of the CPU, but potentially good enough for small matrix sizes. As shown in Figure 15-4, if we try to execute this kernel on a GPU, however, it will likely perform very poorly, because the single task will only utilize a single GPU processor.\par
+如果尝试在CPU上执行这个内核，它可能会执行得很好——如果不是很好，因为没利用CPU的并行能力，但对于较小的矩阵大小来说可能就足够了。如图15-4所示，如果试图在GPU上执行这个内核，可能会执行得非常糟糕，因为单个任务将只使用单个GPU处理器。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-4. A single task kernel on a GPU leaves many execution resources idle
+图15-4 GPU上的单个任务内核会使许多执行资源闲置
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/4}
 \end{center}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Expressing Parallelism}
+\textbf{表达并行性}
 
-To improve the performance of this kernel for both CPUs and GPUs, we can instead submit a range of data elements to process in parallel, by converting one of the loops to a parallel\_for. For the matrix multiplication kernel, we can choose to submit a range of data elements representing either of the two outermost loops. In Figure 15-5, we’ve chosen to process rows of the result matrix in parallel.\par
+提高这个内核在CPU和GPU上的性能，我们可以通过将一个循环转换为parallel\_for来代替提交要并行处理的数据元素。对于矩阵乘法内核，可以选择提交表示两个最外层循环的数据元素。图15-5中，我们选择并行处理结果矩阵的行。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-5. Somewhat-parallel matrix multiplication
+图15-5 有点类似矩阵乘法
 \begin{lstlisting}[caption={}]
 h.parallel_for(range{M}, [=](id<1> idx) {
 	int m = idx[0];
@@ -89,27 +84,27 @@ h.parallel_for(range{M}, [=](id<1> idx) {
 });
 \end{lstlisting}
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=CHOOSING HOW TO PARALLELIZE]
-Choosing which dimension to parallelize is one very important way to tune an application for both GPUs and other device types. Subsequent sections in this chapter will describe some of the reasons why parallelizing in one dimension may perform better than parallelizing in a different dimension.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=选择如何并行化]
+选择并行化哪个维度是对GPU和其他设备类型调优的重要方法。本章的后续部分将描述，为什么在一个维度上并行比在不同维度上并行执行得更好的原因。
 \end{tcolorbox}
 
-Even though the somewhat-parallel kernel is very similar to the single task kernel, it should run better on a CPU and much better on a GPU. As shown in Figure 15-6, the parallel\_for enables work-items representing rows of the result matrix to be processed on multiple processor resources in parallel, so all execution resources stay busy.\par
+尽管并行内核与单任务内核非常相似，但应该在CPU上运行得更好，在GPU上运行得更好。如图15-6所示，paralle\_for使表示结果矩阵行的工作项能够在多个处理器资源上并行处理，因此所有执行资源都保持忙碌。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-6. Somewhat-parallel kernel keeps more processor resources busy
+图15-6 某种程度上的并行内核使更多的处理器资源处于繁忙状态
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/5}
 \end{center}
 
-Note that the exact way that the rows are partitioned and assigned to different processor resources is not specified, giving an implementation flexibility to choose how best to execute the kernel on a device. For example, instead of executing individual rows on a processor, an implementation may choose to execute consecutive rows on the same processor to gain locality benefits.\par
+注意，没有指定将行分区并分配给不同处理器资源的确切方式，这为选择在设备上执行内核提供了灵活性。例如，一个实现可以选择在同一个处理器上执行连续的行，而不是在处理器上执行单个行，以利用局域性。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Expressing More Parallelism}
+\textbf{表达更多的并行性}
 
-We can parallelize the matrix multiplication kernel even more by choosing to process both outer loops in parallel. Because parallel\_for can express parallel loops over up to three dimensions, this is straightforward, as shown in Figure 15-7. In Figure 15-7, note that both the range passed to parallel\_for and the item representing the index in the parallel execution space are now two-dimensional.\par
+通过选择并行处理两个外部循环，可以将矩阵乘法内核更加并行化。因为paralle\_for可以表示最多三个维度上的并行循环，所以这很简单，如图15-7所示。图15-7中，注意传递给paralle\_for的范围和表示并行执行空间中索引的项都是二维的。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-7. Even more parallel matrix multiplication
+图15-7 更多的并行矩阵乘法
 \begin{lstlisting}[caption={}]
 h.parallel_for(range{M, N}, [=](id<2> idx) {
 	int m = idx[0];
@@ -121,57 +116,58 @@ h.parallel_for(range{M, N}, [=](id<2> idx) {
 });
 \end{lstlisting}
 
-Exposing additional parallelism will likely improve the performance of the matrix multiplication kernel when run on a GPU. This is likely to be true even when the number of matrix rows exceeds the number of GPU processors. The next few sections describe possible reasons why this may be the case.\par
+当在GPU上运行时，并行性可能会提高矩阵乘法内核的性能。即使当矩阵的行数超过GPU处理器的数量时，这也可能是正确的。接下来的几节将描述这种情况的原因。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Simplified Control Logic (SIMD Instructions)}
+\textbf{简化控制逻辑(SIMD指令)}
 
-Many GPU processors optimize control logic by leveraging the fact that most data elements tend to take the same control flow path through a kernel. For example, in the matrix multiplication kernel, each data element executes the innermost loop the same number of times since the loop bounds are invariant.\par
+许多GPU处理器通过大多数数据元素在内核中采用相同的控制流路径来优化控制逻辑。例如，在矩阵乘法内核中，每个数据元素执行最内层循环的次数相同，因为循环边界不变。\par
 
-When data elements take the same control flow path through a kernel, a processor may reduce the costs of managing an instruction stream by sharing control logic among multiple data elements and executing them as a group. One way to do this is to implement a Single Instruction, Multiple Data or SIMD instruction set, where multiple data elements are processed simultaneously by a single instruction.\par
+当数据元素以相同的控制流路径通过内核时，处理器可以通过在多个数据元素之间共享控制逻辑，并将它们作为一个组来执行来降低管理指令流的成本。一种方法是实现单指令、多数据或SIMD指令集，其中多条数据元素由一条指令同时处理。\par
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=THREADS VS. INSTRUCTION STREAMS]
-In many parallel programming contexts and GPU literature, the term “thread” is used to mean an “instruction stream.” In these contexts, a “thread” is different than a traditional operating system thread and is typically much more lightweight. This isn’t always the case, though, and in some cases, a “thread” is used to describe something completely different.\\
-Since the term “thread” is overloaded and easily misunderstood, this chapter uses the term “instruction stream” instead.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=线程与指令流]
+在许多并行编程上下文中和GPU文献中，术语“线程”用来表示“指令流”。在上下文中，“线程”与传统的操作系统线程不同，通常更轻量级。但情况并非总是如此，在某些情况下，“线程”用来描述完全不同的东西。\\
+
+由于术语“线程”是重载的，很容易误解，本章使用术语“指令流”代替。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-Figure 15-8. Four-wide SIMD processor: The four ALUs share fetch/decode logic
+图15-8 4个宽SIMD处理器:4个ALU共享取/解码逻辑
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/6}
 \end{center}
 
-The number of data elements that are processed simultaneously by a single instruction is sometimes referred to as the SIMD width of the instruction or the processor executing the instruction. In Figure 15-8, four ALUs share the same control logic, so this may be described as a four-wide SIMD processor.\par
+单个指令同时处理的数据元素的数量，有时称为指令的SIMD宽度或执行指令的处理器。图15-8中，4个ALU共享相同的控制逻辑，因此可以将其描述为一个宽度为4的SIMD处理器。\par
 
-GPU processors are not the only processors that implement SIMD instruction sets. Other processor types also implement SIMD instruction sets to improve efficiency when processing large sets of data. The main difference between GPU processors and other processor types is that GPU processors rely on executing multiple data elements in parallel to achieve good performance and that GPU processors may support wider SIMD widths than other processor types. For example, it is not uncommon for GPU processors to support SIMD widths of 16, 32, or more data elements.\par
+GPU处理器并不是唯一实现SIMD指令集的处理器。其他处理器类型也实现了SIMD指令集，以提高处理大型数据集时的效率。GPU处理器和其他处理器类型之间的主要区别是，GPU处理器依赖于并行执行多个数据元素来获得良好的性能，而且GPU处理器可能比其他处理器类型支持更宽的SIMD宽度。例如，GPU处理器支持16、32或更多数据元素的SIMD宽度并不少见。\par
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=PROGRAMMING MODELS: SPMD AND SIMD]
-Although GPU processors implement SIMD instruction sets with varying widths, this is usually an implementation detail and is transparent to the application executing data-parallel kernels on the GPU processor. This is because many GPU compilers and runtime APIs implement a Single Program, Multiple Data or SPMD programming model, where the GPU compiler and runtime API determine the most efficient group of data elements to process with a SIMD instruction stream, rather than expressing the SIMD instructions explicitly. The “Sub-Groups” section of Chapter 9 explores cases where the grouping of data elements is visible to applications.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=编程模型:SPMD和SIMD]
+虽然GPU处理器实现不同宽度的SIMD指令集，但这通常是实现的细节，并且对在GPU处理器上执行数据并行内核的应用程序是透明的。这是因为许多GPU编译器和运行时API实现了单程序、多数据或SPMD编程模型，其中GPU编译器和运行时API决定用SIMD指令流处理最有效的一组数据元素，而不是显式地表达SIMD指令。第9章的“子工作组”一节探讨了数据元素分组对应用程序可见的情况。
 \end{tcolorbox}
 
-In Figure 15-9, we have widened each of our execution resources to support four-wide SIMD, allowing us to process four times as many matrix rows in parallel.\par
+图15-9中，我们扩展了执行资源，以支持宽度为4的SIMD，允许并行处理四倍的矩阵行。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-9. Executing a somewhat-parallel kernel on SIMD processors
+图15-9 在SIMD处理器上执行并行的内核
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/7}
 \end{center}
 
-The use of SIMD instructions that process multiple data elements in parallel is one of the ways that the performance of the parallel matrix multiplication kernels in Figures 15-5 and 15-7 is able to scale beyond the number of processors alone. The use of SIMD instructions also provides natural locality benefits in many cases, including matrix multiplication, by executing consecutive data elements on the same processor.\par
+通过使用并行处理多个数据元素的SIMD指令，图15-5和15-7中的并行矩阵乘法内核的性能可以超越单个处理器的数量。通过在同一个处理器上执行连续的数据元素，SIMD指令的使用还在许多情况下提供了局域性优势，包括矩阵乘法。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Kernels benefit from parallelism across processors and parallelism within processors!
+内核受益于处理器之间的并行性和处理器内部的并行性!
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Predication and Masking}
+\textbf{预测和屏蔽}
 
-Sharing an instruction stream among multiple data elements works well so long as all data elements take the same path through conditional code in a kernel. When data elements take different paths through conditional code, control flow is said to diverge. When control flow diverges in a SIMD instruction stream, usually both control flow paths are executed, with some channels masked off or predicated. This ensures correct behavior, but the correctness comes at a performance cost since channels that are masked do not perform useful work.\par
+只要在内核中所有数据元素通过相同的路径通过条件代码，那么在多个数据元素之间共享指令流就可以很好地工作。当数据元素在条件代码中采取不同的路径时，控制流称为分叉。当控制流在SIMD指令流中分叉时，通常执行两个控制流路径，并屏蔽或预测一些通道。这确保了正确的行为，但是这种正确性以性能为代价，因为屏蔽的通道不会执行有用的操作。\par
 
-To show how predication and masking works, consider the kernel in Figure 15-10, which multiplies each data element with an “odd” index by two and increments each data element with an “even” index by one.\par
+为了展示预测和屏蔽是如何工作的，请考虑图15-10中的内核，它将具有“奇数”索引的每个数据元素乘以2，并将具有“偶数”索引的每个数据元素加1。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-10. Kernel with divergent control flow
+图15-10 具有发散控制流的内核
 \begin{lstlisting}[caption={}]
 h.parallel_for(array_size, [=](id<1> i) {
 	auto condition = i[0] & 1;
@@ -182,32 +178,32 @@ h.parallel_for(array_size, [=](id<1> i) {
 });
 \end{lstlisting}
 
-Let’s say that we execute this kernel on the four-wide SIMD processor shown in Figure 15-8 and that we execute the first four data elements in one SIMD instruction stream and the next four data elements in a different SIMD instruction stream and so on. Figure 15-11 shows one of the ways channels may be masked and execution may be predicated to correctly execute this kernel with divergent control flow.\par
+假设在图15-8所示的宽度为4的SIMD处理器上执行这个内核，并且在一个SIMD指令流中执行前4个数据元素，在不同的SIMD指令流中执行接下来的4个数据元素，以此类推。图15-11显示了屏蔽通道和预测执行的一种方式，正确地使用不同的控制流执行了这个内核。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-11. Possible channel masks for a divergent kernel
+图15-11 发散型内核的可能通道掩码
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/8}
 \end{center}
 
 \hspace*{\fill} \par %插入空行
-\textbf{SIMD Efficiency}
+\textbf{SIMD效率}
 
-SIMD efficiency measures how well a SIMD instruction stream performs compared to equivalent scalar instruction streams. In Figure 15-11, since control flow partitioned the channels into two equal groups, each instruction in the divergent control flow executes with half efficiency. In a worst-case scenario, for highly divergent kernels, efficiency may be reduced by a factor of the processor’s SIMD width.\par
+SIMD效率度量的是与等效标量指令流相比SIMD指令流执行得有多好。在图15-11中，由于控制流将通道划分为两个相等的组，所以发散控制流中的每条指令执行效率只有一半。最坏的情况下，对于高度分散的内核，效率可能会降低。\par
 
-All processors that implement a SIMD instruction set will suffer from divergence penalties that affect SIMD efficiency, but because GPU processors typically support wider SIMD widths than other processor types, restructuring an algorithm to minimize divergent control flow and maximize converged execution may be especially beneficial when optimizing a kernel for a GPU. This is not always possible, but as an example, choosing to parallelize along a dimension with more converged execution may perform better than parallelizing along a different dimension with highly divergent execution.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{SIMD Efficiency and Groups of Items}
-
-All kernels in this chapter so far have been basic data-parallel kernels that do not specify any grouping of items in the execution range, which gives an implementation freedom to choose the best grouping for a device. For example, a device with a wider SIMD width may prefer a larger grouping, but a device with a narrower SIMD width may be fine with smaller groupings.\par
-
-When a kernel is an ND-range kernel with explicit groupings of workitems, care should be taken to choose an ND-range work-group size that maximizes SIMD efficiency. When a work-group size is not evenly divisible by a processor’s SIMD width, part of the work-group may execute with channels disabled for the entire duration of the kernel. The kernel preferred\_work\_group\_size\_multiple query can be used to choose an efficient work-group size. Please refer to Chapter 12 for more information on how to query properties of a device.\par
-
-Choosing a work-group size consisting of a single work-item will likely perform very poorly since many GPUs will implement a single-work-item work-group by masking off all SIMD channels except for one. For example, the kernel in Figure 15-12 will likely perform much worse than the very similar kernel in Figure 15-5, even though the only significant difference between the two is a change from a basic data-parallel kernel to an inefficient single-work-item ND-range kernel (nd\_range<1>\{M, 1\}).\par
+所有实现SIMD指令集的处理器都会受到影响SIMD效率的差异惩罚，但因为GPU处理器通常比其他处理器类型支持更宽的SIMD，当优化GPU的内核时，重新构造算法来最小化不同的控制流和最大化融合执行可能特别有用。但也并不总是可以这样做，选择以更收敛的执行并行化维度，可能比以高度发散的执行并行化另一个维度执行要好。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-12. Inefficient single-item, somewhat-parallel matrix multiplication
+\textbf{SIMD效率和组中工作项}
+
+到目前为止，本章中的所有内核都是基本的数据并行内核，它们没有在执行范围内指定任何项目分组，这给了实现为设备选择最佳分组。例如，具有较宽SIMD的设备可能更喜欢较大的分组，具有较窄SIMD的设备可能适合较小的分组。\par
+
+当内核具有明确工作项分组的ND-Range内核时，应该注意选择能够最大化SIMD效率的ND-Range工作组大小。当工作组的大小不能被处理器的SIMD宽度均匀整除时，部分工作组可能会在内核的整个过程中禁用通道。可以使用preferred\_work\_group\_size\_multiple查询来选择有效的工作组大小。关于如何查询设备属性的更多信息，请参阅第12章。\par
+
+选择包含单个工作项的工作组大小可能会表现得非常糟糕，因为许多GPU将通过屏蔽除其他所有SIMD通道来实现单个工作项工作组。例如，图15-12中的内核可能比图15-5中非常相似的内核性能要差得多，两者之间唯一显著的区别是从一个基本的数据并行内核更改为一个低效的单工作项ND-Range内核(nd\_range<1>\{M, 1\})。\par
+
+\hspace*{\fill} \par %插入空行
+图15-12 低效的单项矩阵乘法
 \begin{lstlisting}[caption={}]
 // A work-group consisting of a single work-item is inefficient!
 h.parallel_for(nd_range<1>{M, 1}, [=](nd_item<1> idx) {
@@ -223,26 +219,25 @@ h.parallel_for(nd_range<1>{M, 1}, [=](nd_item<1> idx) {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Switching Work to Hide Latency}
+\textbf{切换工作以隐藏延迟}
 
-Many GPUs implement one more technique to simplify control logic, maximize execution resources, and improve performance: instead of executing a single instruction stream on a processor, many GPUs allow multiple instruction streams to be resident on a processor simultaneously.\par
+许多GPU实现了另一种技术来简化控制逻辑，最大化执行资源，并提高性能:许多GPU允许多个指令流同时驻留在一个处理器上，而不是在处理器上执行单个指令流。\par
 
-Having multiple instruction streams resident on a processor is beneficial because it gives each processor a choice of work to execute. If one instruction stream is performing a long-latency operation, such as a read from memory, the processor can switch to a different instruction stream that is ready to run instead of waiting for the operation to complete. With enough instruction streams, by the time that the processor switches back to the original instruction stream, the long-latency operation may have completed without requiring the processor to wait at all.\par
+在处理器上驻留多个指令流是利于性能的，因为它给每个处理器一个要执行的工作的选择。如果指令流执行了一个长延迟的操作，比如：从内存读取，处理器可以切换并运行的不同指令流，而不是等待操作完成。有了足够的指令流，当处理器切换回原始指令流时，长延迟的操作可能已经完成，而不需要处理器阻塞等待。\par
 
-Figure 15-13 shows how a processor uses multiple simultaneous instruction streams to hide latency and improve performance. Even though the first instruction stream took a little longer to execute with multiple streams, by switching to other instruction streams, the processor was able to find work that was ready to execute and never needed to idly wait for the long operation to complete.\par
+图15-13展示了处理器如何使用多个并发指令流，来隐藏延迟并提高性能。尽管第一个指令流在多个指令流中执行的时间要长一些，但通过切换到其他指令流，处理器能够找到准备执行的工作，而不需要等待长操作完成。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-13. Switching instruction streams to hide latency
+图15-13 切换指令流以隐藏延迟
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/9}
 \end{center}
 
-GPU profiling tools may describe the number of instruction streams that a GPU processor is currently executing vs. the theoretical total number of instruction streams using a term such as occupancy.\par
+GPU分析工具可以使用占用率等术语，来描述GPU处理器当前执行的指令流数量与理论指令流总数的对比。\par
 
-Low occupancy does not necessarily imply low performance, since it is possible that a small number of instruction streams will keep a processor busy. Likewise, high occupancy does not necessarily imply high performance, since a GPU processor may still need to wait if all instruction streams perform inefficient, long-latency operations. All else being equal though, increasing occupancy maximizes a GPU processor’s ability to hide latency and will usually improve performance. Increasing occupancy is another reason why performance may improve with the even more parallel 
-kernel in Figure 15-7.\par
+低占用率并不一定意味着低性能，因为少量指令流可能会使处理器繁忙。同样，高占用率并不一定意味着高性能，因为如果所有指令流执行低效的、长延迟的操作，GPU处理器可能仍然需要等待。其他条件相同的情况下，增加占用率可以最大化GPU处理器隐藏延迟的能力，通常也会提高性能。增加占用率是图15-7中并行的内核提高性能的另一个原因。\par
 
-This technique of switching between multiple instruction streams to hide latency is especially well-suited for GPUs and data-parallel processing. Recall from Figure 15-2 that GPU processors are frequently simpler than other processor types and hence lack complex latency-hiding features. This makes GPU processors more susceptible to latency issues, but because data-parallel programming involves processing a lot of data, GPU processors usually have plenty of instruction streams to execute!\par
+这种在多个指令流之间切换，以隐藏延迟的技术特别适合于GPU和数据并行处理。从图15-2中可以看出，GPU处理器通常比其他处理器类型更简单，因此缺乏复杂的延迟隐藏特性。这使得GPU处理器更容易受到延迟问题的影响，但是由于数据并行编程涉及到处理大量的数据，GPU处理器通常有大量指令流要执行!\par
 
 
 
