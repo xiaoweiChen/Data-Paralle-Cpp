@@ -1,26 +1,26 @@
-While a well-written DPC++ kernel without cross-work-item dependences can run in parallel effectively on a CPU, we can also apply vectorization to DPC++ kernels to leverage SIMD hardware, similarly to the GPU support described in Chapter 15. Essentially, CPU processors may optimize memory loads, stores, and operations using SIMD instructions by leveraging the fact that most data elements are often in contiguous memory and take the same control flow paths through a data-parallel kernel. For example, in a kernel with a statement a[i] = a[i] + b[i], each data element executes with same instruction stream load, load, add, and store by sharing hardware logic among multiple data elements and executing them as a group, which may be mapped naturally onto a hardware’s SIMD instruction set. Specifically, multiple data elements can be processed simultaneously by a single instruction.\par
+编写良好的DPC++内核没有交叉工作项依赖关系，可以在CPU上高效地并行，还可以对DPC++内核应用向量化，以利用SIMD硬件，类似于第15章中描述的GPU支持。实际上，CPU处理器可以使用SIMD指令优化内存负载、存储和操作，因为大多数数据元素通常位于连续内存中，并且通过数据并行内核采用相同的控制流路径。例如，有a[i] = a[i] + b[i]语句的内核中，通过在多个数据元素之间共享硬件逻辑并将它们作为一个组执行，每个数据元素都以相同的指令流load、load、add和store，可以自然地映射到硬件的SIMD指令集。因此，一个指令可以同时处理多个数据元素。\par
 
-The number of data elements that are processed simultaneously by a single instruction is sometimes referred to as the vector length (or SIMD width) of the instruction or processor executing it. In Figure 16-11, our instruction stream runs with four-way SIMD execution.\par
+由一条指令同时处理的数据元素的数量，有时称为指令或执行指令的处理器的向量长度(或SIMD宽度)。在图16-11中，指令流以四路SIMD执行运行。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-11. Instruction stream for SIMD execution
+图16-11 SIMD的指令流
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-16/images/10}
 \end{center}
 
-CPU processors are not the only processors that implement SIMD instruction sets. Other processors such as GPUs implement SIMD instructions to improve efficiency when processing large sets of data. A key difference with Intel Xeon CPU processors, compared with other processor types, is having three fixed-size SIMD register widths 128-bit XMM, 256-bit YMM, and 512-bit ZMM instead of a variable length of SIMD width. When we write DPC++ code with SIMD parallelism using sub-group or vector types, we need to be mindful of SIMD width and the number of SIMD vector registers in the hardware.\par
+CPU处理器并不是唯一实现SIMD指令集的处理器。其他处理器(如GPU)实现SIMD指令以提高处理大型数据集的效率。与其他处理器类型相比，Intel Xeon CPU处理器的区别是有三个固定大小的SIMD寄存器宽度(128位XMM、256位YMM和512位ZMM)，而不是一个可变长度的SIMD。当使用子工作组或向量类型编写具有SIMD并行性的dDPC++代码时，需要注意硬件中的SIMD宽度和SIMD向量寄存器的数量。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Ensure SIMD Execution Legality}
+\textbf{确保SIMD执行的合法性}
 
-Semantically, the DPC++ execution model ensures that SIMD execution can be applied to any kernel, and a set of work-items in each work-group (i.e., a sub-group) may be executed concurrently using SIMD instructions. Some implementations may instead choose to execute loops within a kernel using SIMD instructions, but this is possible if and only if all original data dependences are preserved, or data dependences are resolved by the compiler based on privatization and reduction semantics.\par
+从理论上讲，DPC++执行模型确保SIMD执行可以应用于任何内核，以及每个工作组中的一组工作项(即一个子组)可以使用SIMD指令并发执行。有些实现可以选择使用SIMD指令在内核中执行循环，但是只有在保留所有原始数据依赖关系，或者由编译器基于私有化和缩减语义解析数据依赖关系的情况下才有可能。\par
 
-A single DPC++ kernel execution can be transformed from processing of a single work-item to a set of work-items using SIMD instructions within the work-group. Under the ND-range model, the fastest-growing (unit-stride) dimension is selected by the compiler vectorizer on which to generate SIMD code. Essentially, to enable vectorization given an NDrange, there should be no cross-work-item dependences between any two work-items in the same sub-group, or the compiler needs to preserve cross-work-item forward dependences in the same sub-group.\par
+使用工作组内的SIMD指令，可以将单个DPC++内核执行从单个工作项的处理转换为一组工作项。在ND-Range模型下，生成SIMD代码的编译器向量器选择了增长最快的(单位步幅)维度。实际上，要启用给定ND-Range的向量化，在同一子工作组中的任何两个工作项之间，不应该存在依赖关系，或者编译器需要在同一子工作组中保留工作项向前依赖关系。\par
 
-When the kernel execution of work-items is mapped to threads on CPUs, fine-grained synchronization is known to be costly, and the thread context switch overhead is high as well. It is therefore an important performance optimization to eliminate dependences between work-items within a work-group when writing a DPC++ kernel for CPUs. Another effective approach is to restrict such dependences to the work-items within a sub-group, as shown for the read-before-write dependence in Figure 16-12. If the sub-group is executed under a SIMD execution model, the sub-group barrier in the kernel can be treated by the compiler as a no-op, and no real synchronization cost is incurred at runtime.\par
+当工作项的内核执行映射到CPU上的线程时，细粒度同步的代价很高，线程上下文切换的开销也很高。因此，为CPU编写DPC++内核时，消除工作组内工作项之间的依赖对性能优化很重要。另一种有效的方法是将这种依赖限制到子工作组中的工作项，如图16-12中“先读后写”的依赖。如果子工作组是在SIMD执行模型下执行的，那么编译器可以将内核中的子工作组栅栏无视，在运行时不会产生同步成本。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-12. Using a sub-group to vectorize a loop with a forward dependence
+图16-12 使用子工作组向量化具有前向依赖性的循环
 \begin{lstlisting}[caption={}]
 using namespace sycl::intel;
 
@@ -53,58 +53,57 @@ Q.parallel_for(nd_range<2>{G, L}, [=](nd_item<2> it)
 }).wait();
 \end{lstlisting}
 
-The kernel is vectorized (with a vector length of 8), and its SIMD execution is shown in Figure 16-13. A work-group is formed with a group size of (1, 8), and the loop iterations inside the kernel are distributed over these sub-group work-items and executed with eight-way SIMD parallelism.\par
+内核向量化(向量长度为8)，其SIMD执行如图16-13所示。工作组的规模为(1,8)，内核内部的循环迭代分布在这些子工作组工作项上，并以八路SIMD并行方式执行。\par
 
-In this example, if the loop in the kernel dominates the performance, allowing SIMD vectorization across the sub-group will result in a significant performance improvement.\par
+本例中，如果内核中的循环控制性能，那么允许跨子工作组的SIMD向量化将有显著的性能改进。\par
 
-The use of SIMD instructions that process data elements in parallel is one way to let the performance of the kernel scale beyond the number of CPU cores and hyper-threads.\par
+使用并行处理数据元素的SIMD指令，是让内核的性能超出CPU内核和超线程数量的一种方法。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-13. SIMD vectorization for a loop with a forward dependence
+图16-13 具有前向依赖关系的循环的SIMD向量化
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-16/images/7}
 \end{center}
 
 \hspace*{\fill} \par %插入空行
-\textbf{SIMD Masking and Cost}
+\textbf{SIMD掩码和成本}
 
-In real applications, we can expect conditional statements such as an if statement, conditional expressions such as a = b > a? a: b, loops with a variable number of iterations, switch statements, and so on. Anything that is conditional may lead to scalar control flows not executing the same code paths and, just like on a GPU (Chapter 15), can lead to decreased performance. A SIMD mask is a set of bits with the value 1 or 0, which is generated from conditional statements in a kernel. Consider an example with A={1, 2, 3, 4}, B={3, 7, 8, 1}, and the comparison expression a < b. The comparison returns a mask with four values {1, 1, 1, 0} that can be stored in a hardware mask register, to dictate which lanes of later SIMD instructions should execute the code that was guarded (enabled) by the comparison.\par
+在实际应用中，我们可以期待条件语句，如if语句，条件表达式，如a = b > a?A: b，迭代次数可变的循环，switch语句等等。任何条件可能导致标量控制流不执行相同的代码路径，就像在GPU(第15章)，可能会导致性能下降。SIMD掩码是一组值为1或0的位，由内核中的条件语句生成。考虑一个例子，A={1,2,3,4}， B={3,7,8,1}，以及比较表达式A < B。比较返回一个掩码，包含四个值{1,1,1,0}，可以存储在硬件掩码寄存器中，以指示以后哪些通道的SIMD指令应该执行比较所保护(使能)的代码。\par
 
-If a kernel contains conditional code, it is vectorized with masked instructions that are executed based on the mask bits associated with each data element (lane in the SIMD instruction). The mask bit for each data element is the corresponding bit in a mask register.\par
+内核包含条件代码，它与基于与每个数据元素相关联的掩码位(SIMD指令中的通道)执行的掩码指令向量化。每个数据元素的掩码位是掩码寄存器中相应的位。\par
 
-Using masking may result in lower performance than corresponding 
-non-masked code. This may be caused by\par
+使用掩码可能会导致性能低于相应的非屏蔽代码。这可能是由于以下原因：\par
 
 \begin{itemize}
-	\item An additional mask blend operation on each load
-	\item Dependence on the destination
+	\item 负载上附加了掩码操作
+	\item 对目标的依赖
 \end{itemize}
 
-Masking has a cost, so use it only when necessary. When a kernel is an ND-range kernel with explicit groupings of work-items in the execution range, care should be taken when choosing an ND-range work-group size to maximize SIMD efficiency by minimizing masking cost. When a workgroup  size is not evenly divisible by a processor’s SIMD width, part of the work-group may execute with masking for the kernel.\par
+掩码是有成本的，所以只在必要时使用。当内核是具有执行范围内工作项显式分组的ND-Range内核时，在选择ND-Range工作组大小，通过最小化掩码成本来最大限度地提高SIMD效率时应格外小心。当工作组的大小不能被处理器的SIMD宽度均匀整除时，工作组的一部分可能会对内核进行屏蔽。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-14. Three masking code generations for masking in kernel
+图16-14 内核中使用的三种掩码
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-16/images/11}
 \end{center}
 
-Figure 16-14 shows how using merge masking creates a dependence on the destination register:\par
+图16-14显示了如何使用合并掩码创建一个依赖于目标寄存器:\par
 
 \begin{itemize}
-	\item With no masking, the processor executes two multiplies (vmulps) per cycle.
-	\item With merge masking, the processor executes two multiplies every four cycles as the multiply instruction (vmulps) preserves results in the destination register as shown in Figure 16-17.
-	\item Zero masking doesn’t have a dependence on the destination register and therefore can execute two multiplies (vmulps) per cycle.
+	\item 如果没有掩码，处理器每个周期执行两个乘法(vmulps)。
+	\item 合并掩码时，处理器每四个周期执行两次乘法，因为乘法指令(vmulps)保存在目的寄存器中，如图16-17所示。
+	\item 零屏蔽不依赖于目标寄存器，因此在每个周期执行两个乘法(vmulps)。
 \end{itemize}
 
-Accessing cache-aligned data gives better performance than accessing non-aligned data. In many cases, the address is not known at compile time or is known and not aligned. In these cases, a peeling on memory accesses may be implemented, to process the first few elements using masked accesses, up to the first aligned address, and then to process unmasked accesses followed by a masked remainder, through multiversioning techniques in the parallel kernel. This method increases code size, but improves data processing overall.\par
+访问缓存对齐的数据比访问非对齐的数据具有更好的性能。许多情况下，地址在编译时未知，或者是未对齐的。在这些情况下，可以剥离对内存的访问，使用屏蔽访问处理前几个元素，直到第一个对齐的地址，然后通过并行内核中的多版本控制技术处理未屏蔽的访问，随后是屏蔽剩余数。这种方法增加了代码大小，但从整体上改善了数据处理性能。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Avoid Array-of-Struct for SIMD Efficiency}
+\textbf{避免使用结构数组来提高SIMD效率}
 
-AOS (Array-of-Struct) structures lead to gathers and scatters, which can both impact SIMD efficiency and introduce extra bandwidth and latency for memory accesses. The presence of a hardware gather-scatter mechanism does not eliminate the need for this transformation—gatherscatter accesses commonly need significantly higher bandwidth and latency than contiguous loads. Given an AOS data layout of struct {float x; float y; float z; float w;} a[4], consider a kernel operating on it as shown in Figure 16-15.\par
+AOS(结构数组)结构会导致聚集和散射，这既会影响SIMD的效率，也会为内存访问带来额外的带宽和延迟。硬件聚集-分散机制的存在并不能消除这种转换的需求——聚集-分散访问通常需要比连续负载更高的带宽和延迟。给定一个AOS数据布局struct \{float x; float y; float z; float w;\} a[4]，考虑一个内核在它上面操作，如图16-15所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-15. SIMD gather in a kernel
+图16-15 SIMD在内核中聚集
 \begin{lstlisting}[caption={}]
 cgh.parallel_for<class aos<T>>(numOfItems,[=](id<1> wi) {
 	x[wi] = a[wi].x; // lead to gather x0, x1, x2, x3
@@ -114,22 +113,22 @@ cgh.parallel_for<class aos<T>>(numOfItems,[=](id<1> wi) {
 });
 \end{lstlisting}
 
-When the compiler vectorizes the kernel along a set of work-items, it leads to SIMD gather instruction generation due to the need for non-unitstride memory accesses. For example, the stride of a[0].x, a[1].x, a[2].x and a[3].x is 4, not a more efficient unit-stride of 1.\par
+当编译器沿着一组工作项向量化内核时，由于是非单位步长的内存访问，会导致SIMD收集指令的生成。例如，a[0].x, a[1].x, a[2].x和a[3].x的跨距是4,，不是更有效的步幅1。\par
 
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-16/images/8}
 \end{center}
 
-In a kernel, we can often achieve a higher SIMD efficiency by eliminating the use of memory gather-scatter operations. Some code benefits from a data layout change that converts data structures written in an Array-of-Struct (AOS) representation to a Structure of Arrays (SOA) representation, that is, having separate arrays for each structure field to keep memory accesses contiguous when SIMD vectorization is performed. For example, consider a SOA data layout of struct {float x[4]; float 	y[4]; float z[4]; float w[4];} a; as shown here:\par
+内核中，通常可以通过消除对内存收集-分散操作的使用来实现更高效的SIMD。一些代码可以从数据布局中获益，这些将以结构数组(Array-of-Struct, AOS)表示形式编写的数据结构转换为阵列结构(Structure of- Arrays, SOA)，在执行SIMD向量化时，为每个结构字段使用单独的数组以保持内存访问的连续性。例如，考虑这样一个SOA数据布局:struct {float x[4]; float 	y[4]; float z[4]; float w[4];} a; 如下所示:\par
 
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-16/images/9}
 \end{center}
 
-A kernel can operate on the data with unit-stride (contiguous) vector loads and stores as shown in Figure 16-16, even when vectorized!
+内核可以使用如图16-16所示的单位步长(连续)向量加载和存储数据，即使是在向量化的情况下!
 
 \hspace*{\fill} \par %插入空行
-Figure 16-16. SIMD unit-stride vector load in a kernel
+图16-16 SIMD操作单位跨距的内核
 \begin{lstlisting}[caption={}]
 cgh.parallel_for<class aos<T>>(numOfItems,[=](id<1> wi) {
 	x[wi] = a.x[wi]; // lead to unit-stride vector load x[0:4]
@@ -139,45 +138,45 @@ cgh.parallel_for<class aos<T>>(numOfItems,[=](id<1> wi) {
 });
 \end{lstlisting}
 
-The SOA data layout helps prevent gathers when accessing one field of the structure across the array elements and helps the compiler to vectorize kernels over the contiguous array elements associated with work-items. Note that such AOS-to-SOA or AOSOA data layout transformations are expected to be done at the program level (by us) considering all the places where those data structures are used. Doing it at just a loop level will involve costly transformations between the formats before and after the loop. However, we may also rely on the compiler to perform vector-load-and-shuffle optimizations for AOS data layouts with some cost. When a member of SOA (or AOS) data layout has a vector type, the compiler vectorization will perform either horizontal expansion or vertical expansion as described in Chapter 11 based on underlying hardware to generate optimal code.\par
+SOA数据布局有助于在跨数组元素访问结构的一个字段时防止聚集，并帮助编译器对与工作项相关的连续数组元素上的内核进行向量化。考虑到使用这些数据结构的地方，希望在程序级别完成这些AOS-to-SOA或AOSOA的数据布局转换。仅在循环级别上执行此操作将涉及循环前后格式之间的转换。我们还可以依赖编译器对AOS数据布局进行矢量加载和混洗优化，但要付出一定的代价。如果SOA(或AOS)数据布局的成员具有向量类型，那么编译器向量化将执行第11章中描述的基于底层硬件的水平扩展或垂直扩展，以生成最佳代码。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Data Type Impact on SIMD Efficiency}
+\textbf{数据类型对SIMD效率的影响}
 
-C++ programmers often use integer data types whenever they know that the data fits into a 32-bit signed type, often leading to code such as\par
+只要c++开发者知道数据适合32位带符号的类型，他们就经常使用整数数据类型，经常出现这样的代码\par
 
 \begin{tcolorbox}[colback=white,colframe=black]
 int id = get\_global\_id(0); a[id] = b[id] + c[id];
 \end{tcolorbox}
 
-However, given that the return type of the get\_global\_id(0) is size\_t(unsigned integer, often 64-bit), in some cases, the conversion reduces the optimization that a compiler can legally perform. This can then lead to SIMD gather/scatter instructions when the compiler vectorizes the code in the kernel, for example
+假设get\_global\_id(0)的返回类型是size\_t(无符号整数，通常是64位)，在某些情况下，这种转换减少了编译器可以合法执行的优化。例如，当编译器向量化内核中的代码时，这会导致SIMD收集/散布指令
 
 \begin{itemize}
-	\item Read of a[get\_global\_id(0)] leads to a SIMD unitstride vector load.
-	\item Read of a[(int)get\_global\_id(0)] leads to a nonunit-stride gather instruction.
+	\item 读取[get\_global\_id(0)]会导致SIMD单位跨距的向量负载。
+	\item 读取[(int)get\_global\_id(0)]会导致形成非单元跨距的收集指令。
 \end{itemize}
 
-This nuanced situation is introduced by the wraparound behavior (unspecified behavior and/or well-defined wraparound behavior in C++ standards) of data type conversion from size\_t to int (or uint), which is mostly a historical artifact from the evolution of C-based languages. Specifically, overflow across some conversions is undefined behavior, which actually allows the compiler to assume that such conditions never happen and to optimize more aggressively. Figure 16-17 shows some examples for those wanting to understand the details.\par
+这种微妙的情况是由从size\_t到int(或uint)的数据类型转换的环绕行为(未指定的行为和/或C++标准中定义良好的环绕行为)引起的，这主要是基于C语言进化的历史产物。具体来说，某些转换中的溢出是未定义的行为，这实际上允许编译器假定这种情况永远不会发生，并更积极地进行优化。图16-17显示了一些希望了解细节的示例。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-17. Examples of integer type value wraparound
+图16-17 整型值范围
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-16/images/12}
 \end{center}
 
-SIMD gather/scatter instructions are slower than SIMD unit-stride vector load/store operations. In order to achieve an optimal SIMD efficiency, avoiding gathers/scatters can be critical for an application regardless of which programming language is used.\par
+SIMD收集/分散指令比SIMD单元跨矢量加载/存储操作慢。为了最佳的SIMD效率，避免聚集/分散对于应用程序来说是至关重要的，无论使用哪种编程语言。\par
 
-Most SYCL get\_*\_id() family functions have the same detail, although many cases fit within MAX\_INT because the possible return values are bounded (e.g., the maximum id within a work-group). Thus, whenever legal, the DPC++ compiler will assume unit-stride memory addresses across the chunk of neighboring work-items to avoid gather/scatters. For cases that the compiler can’t safely generate linear unit-stride vector memory loads/stores because of possible overflow from the value of global IDs and/or derivative value from global IDs, the compiler will generate gathers/scatters.\par
+大多数SYCL get\_*\_id()函数有相同的问题，尽管许多情况下适用于MAX\_INT，因为可能的返回值是有界的(例如，一个工作组中的最大id)。只要是合法的，DPC++编译器就会假定跨相邻工作项的单元跨内存地址，以避免聚集/分散。由于全局id和/或全局id的值可能溢出，编译器无法安全地生成单位跨距向量内存加载/存储操作，编译器将生成聚集/散点操作。\par
 
-Under the philosophy of delivering optimal performance for users, the DPC++ compiler assumes no overflow, and captures the realty almost all of the time in practice, so the compiler can generate optimal SIMD code to achieve good performance. However, an overriding compiler macro—D\_\_SYCL\_DISABLE\_ID\_TO\_INT\_CONV\_\_—is provided by the DPC++ compiler for us to tell the compiler that there will be an overflow and that vectorized accesses derived from the id queries may not be safe. This can have large performance impact and should be used whenever unsafe to assume no overflow.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{SIMD Execution Using single\_task}
-
-Under a single task execution model, optimizations related to the vector types and functions depend on the compiler. The compiler and runtime are given a freedom either to enable explicit SIMD execution or to choose scalar execution within the single\_task kernel, and the result will depend on the compiler implementation. For instance, the DPC++ CPU compiler honors vector types and generates SIMD instructions for CPU SIMD execution. The vec load, store, and swizzle function will perform operations directly on vector variables, informing the compiler that data elements are accessing contiguous data starting from the same (uniform) location in memory and enabling us to request optimized loads/stores of contiguous data.\par
+为用户提供最佳性能的理念下，DPC++编译器假定没有溢出，并且在实践中几乎总是捕获真实的状态，因此编译器可以生成最佳的SIMD代码以获得良好的性能。重写编译器宏D\_\_SYCL\_DISABLE\_ID\_TO\_INT\_CONV\_\_是DPC++编译器都提供了一个宏来告诉编译器会发生溢出，从id查询派生的向量访问可能不安全。这可能会对性能产生很大影响，应该在不安全的情况下使用，以假定没有溢出发生。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-18. Using vector types and swizzle operations in the single\_task kernel
+\textbf{使用single\_task执行SIMD}
+
+单个任务执行模型下，向量类型和函数相关的优化依赖于编译器。编译器和运行时可以自由地支持显式SIMD执行或在single\_task内核中选择标量执行，结果将取决于编译器实现。例如，DPC++ CPU编译器授予向量类型并为CPU SIMD执行生成SIMD指令。vec加载、存储和swizzle函数将直接对矢量变量执行操作，通知编译器数据元素正从内存中的相同(统一)位置开始访问连续数据，并能够请求优化的连续数据加载/存储。\par
+
+\hspace*{\fill} \par %插入空行
+图16-18 在single\_task内核中使用向量类型和混合操作
 \begin{lstlisting}[caption={}]
 queue Q;
 bool *resArray = malloc_shared<bool>(1, Q);
@@ -197,12 +196,12 @@ Q.single_task([=](){
 }).wait();
 \end{lstlisting}
 
-In the example as shown in Figure 16-18, under single task execution, a vector with three data elements is declared. A swizzle operation is performed with old\_v.abgr(). If a CPU provides SIMD hardware instructions for some swizzle operations, we may achieve some performance benefits of using swizzle operations in applications.\par
+如图16-18所示，在单个任务执行时，声明了一个包含三个数据元素的vector。使用old\_v.abgr()执行混合操作。如果CPU为一些混合操作提供SIMD硬件指令，那么可以通过在应用程序中使用混合操作获得一些性能收益。\par
 
 \begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=SIMD VECTORIZATION GUIDELINES]
-CPU processors implement SIMD instruction sets with different SIMD widths. In many cases, this is an implementation detail and is transparent to the application executing kernels on the CPU, as the compiler can determine an efficient group of data elements to process with a specific SIMD size rather than requiring us to use the SIMD instructions explicitly. Sub-groups may be used to more directly express cases where the grouping of data elements should be subject to SIMD execution in kernels.\\
+CPU处理器用不同的SIMD宽度实现SIMD指令集。在许多情况下，这是一个实现细节，并且对在CPU上执行内核的应用程序是透明的，因为编译器可以确定要用特定的SIMD大小处理的一组有效的数据元素，而不是要求我们显式地使用SIMD指令。子工作组可以更直接地表示数据元素的分组，应受内核中SIMD执行的影响。\\
 
-Given computational complexity, selecting the code and data layouts that are most amenable to vectorization may ultimately result in higher performance. While selecting data structures, try to choose a data layout, alignment, and data width such that the most frequently executed calculation can access memory in a SIMD-friendly manner with maximum parallelism, as described in this chapter
+考虑到计算复杂度，选择最适合向量化的代码和数据布局最终可能会带来更高的性能收益。选择数据结构时，尽量选择数据布局、对齐方式和数据宽度，使最频繁执行的计算能够以对SIMD友好的方式访问内存，并具有最大的并行性。
 \end{tcolorbox}
 
 
