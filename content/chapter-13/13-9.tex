@@ -1,14 +1,14 @@
-Migrating CUDA code to SYCL or DPC++ is not covered in detail in this book. There are tools and resources available that explore doing this. Migrating CUDA code is relatively straightforward since it is a kernel-based approach to parallelism. Once written in SYCL or DPC++, the new program is enhanced by its ability to target more devices than supported by CUDA alone. The newly enhanced program can still be targeted to NVIDIA GPUs using SYCL compilers with NVIDIA GPU support.\par
+迁移CUDA代码到SYCL或DPC++在本书中没有详细介绍。有一些可用的工具和资源可以做到这一点。迁移CUDA代码相对简单，因为它是一种基于内核的并行化方法。一旦用SYCL或DPC++编写，目标设备比单独支持CUDA增强了很多。针对NVIDIA GPU，新增强的程序仍然可以使用支持NVIDIA GPU的SYCL编译器。\par
 
-Migrating to SYCL opens the door to the diversity of devices supported by SYCL, which extends far beyond just GPUs.\par
+迁移到SYCL为SYCL支持的设备的多样性打开了大门，这就不仅限于 GPU的范畴了。\par
 
-When using the DPC++ Compatibility Tool, the --report-type=value option provides very useful statistics about the migrated code. One of the reviewers of this book called it a “beautiful flag provided by Intel dpct.” The --in-root option can prove very useful when migrating CUDA code depending on source code organization of a project.\par
+当使用DPC++兼容性工具时，--report-type=value选项提供了关于迁移代码的非常有用的统计信息。本书的一位评论家称它为“Intel dpct提供的优美标识”。--in-root选项在迁移CUDA代码时非常有用。\par
 
-To learn more about CUDA migration, two resources are a good place to start:\par
+要了解更多关于CUDA迁移的信息，可以从以下两方面开始:\par
 
 \begin{itemize}
-	\item Intel’s DPC++ Compatibility Tool transforms CUDA applications into DPC++ code (tinyurl.com/CUDAtoDPCpp).
-	\item Codeplay tutorial “Migrating from CUDA to SYCL” 	(tinyurl.com/codeplayCUDAtoSYCL).
+	\item 英特尔的DPC++兼容工具将CUDA应用程序转换为DPC++代码(tinyurl.com/CUDAtoDPCpp)。
+	\item Codeplay教程“从CUDA迁移到SYCL”(tinyurl.com/codeplayCUDAtoSYCL)。
 \end{itemize}
 
 
