@@ -1,30 +1,30 @@
-The previous sections described how the dispatch parameters passed to a parallel\_for affect how kernels are assigned to GPU processor resources and the software layers and overheads involved in executing a kernel on a GPU. This section describes best practices when a kernel is executing on a GPU.\par
+前几节描述了传递给parallel\_for的参数，如何影响内核分配给GPU处理器资源，以及在GPU上执行内核所涉及的软件层和开销。本节描述内核在GPU上执行的最佳实践。\par
 
-Broadly speaking, kernels are either memory bound, meaning that their performance is limited by data read and write operations into or out of the execution resources on the GPU, or are compute bound, meaning that their performance is limited by the execution resources on the GPU. A good first step when optimizing a kernel for a GPU—and many other processors!—is to determine whether our kernel is memory bound or compute bound, since the techniques to improve a memory-bound kernel frequently will not benefit a compute-bound kernel and vice versa. GPU vendors often provide profiling tools to help make this determination.\par
+广义地说，内核要么是内存绑定的，其性能受到数据读写操作在GPU上执行资源的限制，要么是计算绑定的，其的性能受到GPU上执行资源的限制。这是为GPU和许多其他处理器优化内核的良好第一步!——用来确定内核是内存绑定，还是计算绑定的，因为改进内存绑定内核的技术通常不会有益于计算绑定内核，反之亦然。所以供应商通常提供分析工具来帮助确定。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Different optimization techniques are needed depending whether our kernel is memory bound or compute bound!
+需要不同的优化技术，这取决于内核是内存绑定还是计算绑定!
 \end{tcolorbox}
 
-Because GPUs tend to have many processors and wide SIMD widths, kernels tend to be memory bound more often than they are compute bound. If we are unsure where to start, examining how our kernel accesses memory is a good first step.\par
+因为GPU倾向于拥有许多处理器和较宽的SIMD，内核倾向于内存绑定，而不是计算绑定。如果不确定从哪里开始，检查内核如何访问内存是很好的一步。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Accessing Global Memory}
+\textbf{访问全局内存}
 
-Efficiently accessing global memory is critical for optimal application performance, because almost all data that a work-item or work-group operates on originates in global memory. If a kernel operates on global memory inefficiently, it will almost always perform poorly. Even though GPUs often include dedicated hardware gather and scatter units for reading and writing arbitrary locations in memory, the performance of accesses to global memory is usually driven by the locality of data accesses. If one work-item in a work-group is accessing an element in memory that is adjacent to an element accessed by another work-item in the work-group, the global memory access performance is likely to be good. If work-items in a work-group instead access memory that is strided or random, the global memory access performance will likely be worse. Some GPU documentation describes operating on nearby memory accesses as coalesced memory accesses.\par
+高效地访问全局内存对于优化应用程序性能至关重要，因为工作项或工作组操作的几乎所有数据都源自全局内存。如果内核在全局内存上的操作效率很低，那么它的性能几乎总是很差。尽管GPU通常包含专门的硬件集合和计算单元，用于读写内存中的任意位置，但访问全局内存的性能通常是由数据访问的局域性驱动。如果工作组中的工作项正在访问内存中的一个元素，该元素与工作组中另一个工作项访问的元素相邻，则全局内存访问性能可能会很好。如果工作组中的工作项访问的内存是跨步的或随机的，则全局内存访问性能会差。一些GPU文档将附近内存访问操作描述为\textbf{合并访问}。\par
 
-Recall that for our somewhat-parallel matrix multiplication kernel in Figure 15-15, we had a choice whether to process a row or a column of the result matrix in parallel, and we chose to operate on rows of the result matrix in parallel. This turns out to be a poor choice: if one work-item with id equal to m is grouped with a neighboring work-item with id equal to m-1 or m+1, the indices used to access matrixB are the same for each work-item, but the indices used to access matrixA differ by K, meaning the accesses are highly strided. The access pattern for matrixA is shown in Figure 15-17.\par
+回想一下，对于图15-15中某种程度上并行的矩阵乘法内核，可以选择是并行处理一行还是一列，这里选择并行处理结果矩阵的行。这是一个糟糕的选择:如果一个id等于m的工作项与一个id等于m-1或m+1的相邻工作项分组，用于访问matrixB的索引对于每个工作项都是相同的，但是用于访问matrixA的索引不同于K，这意味着访问是高度跨步的。matrixA的访问模式如图15-17所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-17. Accesses to matrixA are highly strided and inefficient
+图15-17 对matrixA的访问是高度跨越和低效的
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/13}
 \end{center}
 
-If, instead, we choose to process columns of the result matrix in parallel, the access patterns have much better locality. The kernel in Figure 15-18 is structurally very similar to that in Figure 15-5 with the only difference being that each work-item in Figure 15-18 operates on a column of the result matrix, rather than a row of the result matrix.\par
+如果我们选择并行处理结果矩阵的列，则访问模式具有更好的局部性。图15-18中的内核在结构上与图15-5中的非常相似，唯一的区别是图15-18中的每个工作项操作的是结果矩阵的一列，而不是结果矩阵的一行。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-18. Computing columns of the result matrix in parallel, not rows
+图15-18 并行计算结果矩阵的列，而不是行
 \begin{lstlisting}[caption={}]
 // This kernel processes columns of the result matrix in parallel.
 h.parallel_for(N, [=](item<1> idx) {
@@ -39,74 +39,82 @@ h.parallel_for(N, [=](item<1> idx) {
 });
 \end{lstlisting}
 
-Even though the two kernels are structurally very similar, the kernel that operates on columns of data will significantly outperform the kernel that operates on rows of data on many GPUs, purely due to the more efficient memory accesses: if one work-item with id equal to n is grouped with a neighboring work-item with id equal to n-1 or n+1, the indices used to access matrixA are now the same for each work-item, and the indices used to access matrixB are consecutive. The access pattern for matrixB is shown in Figure 15-19.\par
+尽管这两个内核在结构上非常相似，但在许多GPU上操作数据列的内核将显著优于操作数据行的内核，纯粹是因为更高效的内存访问:如果一个id等于n的工作项与一个id等于n-1或n+1的相邻工作项分组，用于访问matrixA的索引现在对于每个工作项都是相同的，并且用于访问matrixB的索引是连续的。matrixB的访问模式如图15-19所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-19. Accesses to matrixB are consecutive and efficient
+图15-19 对matrixB的访问是连续的和有效的
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/14}
 \end{center}
 
-Accesses to consecutive data are usually very efficient. A good rule of thumb is that the performance of accesses to global memory for a group of work-items is a function of the number of GPU cache lines accessed. If all accesses are within a single cache line, the access will execute with peak performance. If an access requires two cache lines, say by accessing every other element or by starting from a cache-misaligned address, the access may operate at half performance. When each work-item in the group accesses a unique cache line, say for a very strided or random accesses, the access is likely to operate at lowest performance.\par
+对连续数据的访问通常非常有效。根据经验，访问一组工作项的全局内存的性能取决于访问的GPU缓存行的数量有访问都在一个缓存行内，访问将以最高性能执行。一个访问需要两条缓存线，比如通过访问每个其他元素或者从缓存不对齐的地址开始，访问可能会以一半的性能运行。组中的每个工作项访问唯一的高速缓存行，例如：对于非常频繁的或随机的访问，访问可能以最低的性能运行。\par
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=PROFILING KERNEL VARIANTS]
-For matrix multiplication, choosing to parallelize along one dimension clearly results in more efficient memory accesses, but for other kernels, the choice may not be as obvious. For kernels where it is important to achieve the best performance, if it is not obvious which dimension to parallelize, it is sometimes worth developing and profiling different kernel variants that parallelize along each dimension to see what works better for a device and data set.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=设置内核变体]
+对于矩阵乘法，选择沿着一个维度并行化，显然可以提高内存访问效率，但对于其他内核，选择可能不那么明显。在实现最佳性能非常重要的内核中，如果不清楚并行化的维度，那么有时值得开发和分析沿每个维度并行化的不同内核变体，以了解哪种方法更适合设备和数据集。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Accessing Work-Group Local Memory}
+\textbf{访问工作组本地内存}
 
-In the previous section, we described how accesses to global memory benefit from locality, to maximize cache performance. As we saw, in some cases we can design our algorithm to efficiently access memory, such as by choosing to parallelize in one dimension instead of another. This technique isn’t possible in all cases, however. This section describes how we can use workgroup local memory to efficiently support more memory access patterns.\par
+前一节中，我们描述了对全局内存的访问如何从局部性中获益，从而最大化缓存性能。某些情况下，可以设计算法来有效地访问内存，比如选择在一个维度上并行化。然而，并非所有情况下都能使用这种技术。本节描述如何使用工作组本地内存来有效地支持更多的内存访问模式。\par
 
-Recall from Chapter 9 that work-items in a work-group can cooperate to solve a problem by communicating through work-group local memory and synchronizing using work-group barriers. This technique is especially beneficial for GPUs, since typical GPUs have specialized hardware to implement both barriers and work-group local memory. Different GPU vendors and different products may implement work-group local memory differently, but work-group local memory frequently has two benefits compared to global memory: local memory may support higher bandwidth and lower latency than accesses to global memory, even when the global memory access hits a cache, and local memory is often divided into different memory regions, called banks. So long as each work-item in a group accesses a different bank, the local memory access executes with full performance. Banked accesses allow local memory to support far more access patterns with peak performance than global memory.\par
+从第9章开始，工作组中的工作项可以通过工作组本地内存通信和使用工作组屏障同步来协作解决问题。这种技术对GPU有利，因为典型的GPU有专门的硬件来实现栅栏和工作组本地内存。不同的GPU厂商和不同的产品可能会以不同的方式实现工作组本地内存，但是工作组本地内存与全局内存相比通常有两个好处:本地存储器可以支持比对全局存储器的访问更高的带宽和更低的等待时间，即使当全局存储器访问命中高速缓存时，并且本地存储器通常被划分为不同的存储器区域，称为存储库。只要组中的每个工作项访问不同的存储库，本地内存访问就会以完全的性能执行。存储库访问允许本地存储器支持比全局存储器更多的具有峰值性能的访问模式。\par
 
-Many GPU vendors will assign consecutive local memory addresses to different banks. This ensures that consecutive memory accesses always operate at full performance, regardless of the starting address. When memory accesses are strided, though, some work-items in a group may access memory addresses assigned to the same bank. When this occurs, it is considered a bank conflict and results in serialized access and lower performance.\par
+许多GPU供应商会将连续的本地内存地址分配给不同的存储地址。这确保了连续的内存访问总是完全的性能操作，而不管起始地址是什么。但当内存访问是有跨距访问时，组中的一些工作项可能访问分配给同一存储地址。当发生这种情况时，认为是存储地址冲突，从而导致序列化访问和较低的性能。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-For maximum global memory performance, minimize the number of cache lines accessed.\\
-For maximum local memory performance, minimize the number of bank conflicts!
+为了获得最大的全局内存性能，应尽量减少访问的高速缓存行的数量。\\
+
+为了获得最大的本地内存性能，尽量减少内存地址冲突!
 \end{tcolorbox}
 
-A summary of access patterns and expected performance for global memory and local memory is shown in Figure 15-20. Assume that when ptr points to global memory, the pointer is aligned to the size of a GPU cache line. The best performance when accessing global memory can be achieved by accessing memory consecutively starting from a cache-aligned address. Accessing an unaligned address will likely lower global memory performance because the access may require accessing additional cache lines. Because accessing an unaligned local address will not result in additional bank conflicts, the local memory performance is unchanged.\par
+图15-20概述了全局内存和本地内存的访问模式和预期性能。假设当ptr指向全局内存时，指针与GPU缓存行的大小对齐。访问全局内存时，可以通过从缓存对齐的地址连续访问内存来获得最佳性能。访问未对齐的地址可能会降低全局内存性能，因为访问可能需要访问额外的缓存行。因为访问未对齐的本地地址不会导致存储地址冲突，所以本地内存性能没有改变。\par
 
-The strided case is worth describing in more detail. Accessing every other element in global memory requires accessing more cache lines and will likely result in lower performance. Accessing every other element in local memory may result in bank conflicts and lower performance, but only if the number of banks is divisible by two. If the number of banks is odd, this case will operate at full performance also.\par
+有跨距的案例值得更详细地描述。访问全局内存中的每一个元素都需要访问更多的缓存行，这可能会导致较低的性能。访问本地内存中的每一个元素可能会导致存储地址冲突和性能下降，但只有当存储地址的块数量能被2整除时。如果存储地址块的数量是奇数，这种情况也将全速运行。\par
 
-When the stride between accesses is very large, each work-item accesses a unique cache line, resulting in the worst performance. For local memory though, the performance depends on the stride and the number of banks. When the stride N is equal to the number of banks, each access results in a bank conflict, and all accesses are serialized, resulting in the worst performance. If the stride M and the number of banks share no common factors, however, the accesses will run at full performance. For this reason, many optimized GPU kernels will pad data structures in local memory to choose a stride that reduces or eliminates bank conflicts.\par
+当访问之间的跨越非常大时，每个工作项访问唯一的缓存行，从而导致最差的性能。但是对于本地内存，性能取决于步幅和存储地址块的数量。当步长N等于存储地址块数量时，每次访问都会导致内存块冲突，所有访问都会序列化，导致性能最差。但是，如果步数M和内存块数量没有关系，则访问将以全速运行。因此，许多优化的GPU内核会在本地内存中填充数据结构，以选择减少或消除内存块冲突的方法。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 15-20. Possible performance for different access patterns, for global and local memory
+图15-20 对于不同的访问模式，全局和本地内存可能的性能情况
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/15}
 \end{center}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Avoiding Local Memory Entirely with Sub-Groups}
+\textbf{子工作组完全避免使用本地内存}
 
-As discussed in Chapter 9, sub-group collective functions are an alternative way to exchange data between work-items in a group. For many GPUs, a sub-group represents a collection of work-items processed by a single instruction stream. In these cases, the work-items in the sub-group can inexpensively exchange data and synchronize without using workgroup local memory. Many of the best-performing GPU kernels use subgroups, so for expensive kernels, it is well worth examining if our algorithm can be reformulated to use sub-group collective functions.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Optimizing Computation Using Small Data Types}
-
-This section describes techniques to optimize kernels after eliminating or reducing memory access bottlenecks. One very important perspective to keep in mind is that GPUs have traditionally been designed to draw pictures on a screen. Although pure computational capabilities of GPUs have evolved and improved over time, in some areas their graphics heritage is still apparent.\par
-
-Consider support for kernel data types, for example. Many GPUs are highly optimized for 32-bit floating-point operations, since these operations tend to be common in graphics and games. For algorithms that can cope with lower precision, many GPUs also support a lower-precision 16-bit floating-point type that trades precision for faster processing. Conversely, although many GPUs do support 64-bit double-precision floating-point operations, the extra precision will come at a cost, and 32-bit operations usually perform much better than their 64-bit equivalents.\par
-
-The same is true for integer data types, where 32-bit integer data types typically perform better than 64-bit integer data types and 16-bit integers may perform even better still. If we can structure our computation to use smaller integers, our kernel may perform faster. One area to pay careful attention to are addressing operations, which typically operate on 64-bit size\_t data types, but can sometimes be rearranged to perform most of the calculation using 32-bit data types. In some local memory cases, 16 bits of indexing is sufficient, since most local memory allocations are small.\par
+正如第9章所讨论的，子工作组集合功能是在组中的工作项之间交换数据的一种替代方法。对于许多GPU，子工作组代表由单个指令流处理的工作项集合。在这些情况下，子工作组中的工作项可以在不使用工作组本地内存的情况下，低成本地交换数据和同步。许多性能好的GPU内核都使用子工作组，所以对于内核，我们的算法是否可以重新定义，为使用子工作组集合函数是非常值得研究的课题。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Optimizing Math Functions}
+\textbf{使用小数据类型优化计算}
 
-Another area where a kernel may trade off accuracy for performance involves SYCL built-in functions. SYCL includes a rich set of math functions with well-defined accuracy across a range of inputs. Most GPUs do not support these functions natively and implement them using a long sequence of other instructions. Although the math function implementations are typically well-optimized for a GPU, if our application can tolerate lower accuracy, we should consider a different implementation with lower accuracy and higher performance instead. Please refer to Chapter 18 for more information about SYCL built-in functions.\par
+本节描述消除或减少内存访问瓶颈后优化内核的技术。要记住，GPU以前是用来在屏幕上绘制图片的。尽管GPU的纯计算能力随着时间的推移不断发展和改进，但在某些领域，图形学传统仍然很明显。\par
 
-For commonly used math functions, the SYCL library includes fast or native function variants with reduced or implementation-defined accuracy requirements. For some GPUs, these functions can be an order of magnitude faster than their precise equivalents, so they are well worth considering if they have enough precision for an algorithm. For example, many image postprocessing algorithms have well-defined inputs and can tolerate lower accuracy and hence are good candidates for using fast or native math functions.\par
+例如，考虑对内核数据类型的支持。许多GPU都为32位浮点操作进行了高度优化，因为这些操作在图像和游戏中很常见。对于处理较低精度的算法，许多GPU还支持较低精度的16位浮点型，以精度换取更快的处理速度。相反，尽管许多GPU支持64位双精度浮点操作，但高精度是有代价的，32位操作通常比64位操作执行得更快。\par
+
+整数类型也是如此，32位整数数据类型通常比64位整数数据类型执行得更好，而16位整数可能执行得更好。如果可以用更小的整数来组织计算，那么内核可能会执行得更快。特别需要注意的是寻址操作，这些操作通常在64位的size\_t数据类型上进行，但有时可以重新安排以使用32位的数据类型执行大部分计算。某些本地内存情况下，16位就足够了。\par
+
+\hspace*{\fill} \par %插入空行
+\textbf{优化数学函数}
+
+内核可能为了性能而牺牲精确性的另一个领域涉及了SYCL内置函数。SYCL包含一组丰富的数学函数，在一系列输入中具有定义良好的精度。大多数GPU本身并不支持这些函数，而是使用一长串其他指令来实现它们。虽然数学函数实现通常为GPU进行了很好的优化，但如果应用程序可以容忍较低的精度，应该考虑较低精度和更高性能的不同实现。关于SYCL内置函数的更多信息，请参阅第18章。\par
+
+对于常用的数学函数，SYCL库包括快速或本机函数变体，这些变体具有较少的或精度要求。对于某些GPU来说，这些函数比它们的等价的函数快一个数量级，所以对于算法来说是否有足够的精度值得考虑。例如，许多图像后处理算法具有定义良好的输入，可以容忍较低的精度，因此是使用快速或原生数学函数的好选择。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-If an algorithm can tolerate lower precision, we can use smaller data types or lower-precision math functions to increase performance!
+如果算法可以容忍较低的精度，可以使用较小的数据类型或较低的精度数学函数来提高性能!
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Specialized Functions and Extensions}
+\textbf{专用的功能和扩展}
 
-One final consideration when optimizing a kernel for a GPU are specialized instructions that are common in many GPUs. As one example, nearly all GPUs support a mad or fma multiply-and-add instruction that performs two operations in a single clock. GPU compilers are generally very good at identifying and optimizing individual multiplies and adds to use a single instruction instead, but SYCL also includes mad and fma functions that can be called explicitly. Of course, if we expect our GPU compiler to optimize multiplies and adds for us, we should be sure that we do not prevent optimizations by disabling floating-point contractions!\par
+为GPU优化内核时的最后一个考虑是在许多GPU中常见的专门指令。例如，几乎所有的GPU都支持mad或fma乘法加指令，它在一个时钟中执行两个操作。GPU编译器通常非常擅长识别和优化单独的乘法和加法，而不是使用一条指令，但SYCL也包括mad和fma函数，可以显式调用。当然，如果希望GPU编译器优化乘法和加法，应该确保不会通过禁用浮点截断来阻止优化!\par
 
-Other specialized GPU instructions may only be available via compiler optimizations or extensions to the SYCL language. For example, some GPUs support a specialized dot-product-and-accumulate instruction that compilers will try to identify and optimize for or that can be called directly. Refer to Chapter 12 for more information on how to query the extensions that are supported by a GPU implementation.\par
+其他特定的GPU指令可能只能通过编译器优化或对SYCL语言的扩展来使用。例如，一些GPU支持一种特殊的“点积加”指令，编译器将试图识别并优化它，或者可以直接调用它。关于如何查询GPU实现支持的扩展的更多信息，请参阅第12章。\par
+
+
+
+
+
+
+
