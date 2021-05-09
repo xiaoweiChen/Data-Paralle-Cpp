@@ -1,27 +1,25 @@
 
-In this chapter, we started by describing how typical GPUs work and how GPUs are different than traditional CPUs. We described how GPUs are optimized for large amounts of data, by trading processor features that accelerate a single instruction stream for additional processors.\par
+本章中，首先描述了以前的GPU是如何工作的，以及GPU与传统CPU的不同之处。描述了GPU是如何针对大量数据进行优化的，通过交换处理器特性，为其他处理器加速单个指令流。\par
 
-We described how GPUs process multiple data elements in parallel using wide SIMD instructions and how GPUs use predication and masking to execute kernels with complex flow control using SIMD instructions. We discussed how predication and masking can reduce SIMD efficiency and decrease performance for kernels that are highly divergent and how choosing to parallelize along one dimension vs. another may reduce SIMD divergence.\par
+描述了GPU如何使用宽SIMD指令并行处理多个数据元素，以及GPU如何使用预测和隐藏延迟来使用SIMD指令执行具有复杂流控制的内核。我们讨论了预测和隐藏延迟如何提高SIMD的效率和内核的性能，以及如何选择在一个维度上并行处理，以减少SIMD的发散。\par
 
-Because GPUs have so many processing resources, we discussed how it is important to give GPUs enough work to keep occupancy high. We also described how GPUs use instruction streams to hide latency, making it even more crucial to give GPUs lots of work to execute.\par
+因为GPU有如此多的处理资源，我们讨论了如何给GPU足够的工作来保持高占用率。还描述了GPU如何使用指令流来隐藏延迟，这使得让GPU执行大量工作变得更加重要。\par
 
-Next, we discussed the software and hardware layers involved in offloading a kernel to a GPU and the costs of offloading. We discussed how it may be more efficient to execute an algorithm on a single device than it is to transfer execution from one device to another.\par
+接下来，讨论了将内核加载到GPU所涉及的软件和硬件层，以及加载的成本。我们讨论了如何在单个设备上执行算法比在一个设备到另一个设备上执行更有效。\par
 
-Finally, we described best practices for kernels once they are executing on a GPU. We described how many kernels start off memory bound and how to access global memory and local memory efficiently or how to avoid local memory entirely by using sub-group operations. When kernels are compute bound instead, we described how to optimize computation by trading lower precision for higher performance or using custom GPU extensions to access specialized instructions.\par
+最后，描述了在GPU上执行内核时的最佳实践。描述了有多少内核从内存绑定开始，如何有效地访问全局内存和本地内存，如何通过使用子工作组操作来避免使用本地内存。当内核计算绑定时，描述了如何通过用较低的精度换取更高的性能，或使用自定义的GPU扩展来访问专门的指令来优化计算。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{For More Information}
+\textbf{更多信息}
 
-There is much more to learn about GPU programming, and this chapter just scratched the surface!\par
+关于GPU编程还有很多需要学习的内容，而这一章只是些皮毛而已!\par
 
-GPU specifications and white papers are a great way to learn more about specific GPUs and GPU architectures. Many GPU vendors provide very detailed information about their GPUs and how to program them.\par
+GPU规格和白皮书是学习更多关于特定GPU和GPU架构的好方法。许多GPU供应商提供了关于他们的GPU和如何编程的非常详细的信息。\par
 
-At the time of this writing, relevant reading about major GPUs can be found on software.intel.com, devblogs.nvidia.com, and amd.com.\par
+撰写本文时，有关主要图形处理器的相关阅读可以在software.intel.com、devblogs.nvidia.com和amd.com上找到。\par
 
-Some GPU vendors have open source drivers or driver components. When available, it can be instructive to inspect or step through driver code, to get a sense for which operations are expensive or where overheads may exist in an application.\par
+一些GPU供应商有开源驱动程序或驱动程序组件。在可用的情况下，检查或遍历驱动程序代码，以了解哪些操作是昂贵的，或者应用程序中可能存在哪些开销，可能是有益的。。\par
 
-This chapter focused entirely on traditional accesses to global memory via buffer accessors or Unified Shared Memory, but most GPUs also include a fixed-function texture sampler that can accelerate operations on images. For more information about images and samplers, please refer to the SYCL specification.\par
-
-
+本章主要讨论通过缓存访问器或统一共享内存对全局内存的传统访问，但大多数GPU也包括一个固定功能的纹理采样器，可以加速对图像的操作。有关图像和采样器的更多信息，请参阅SYCL规范。\par
 
 \newpage
