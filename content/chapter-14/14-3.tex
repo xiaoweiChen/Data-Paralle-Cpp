@@ -121,7 +121,7 @@ Q.parallel_for(nd_range<1>{N, B}, [=](nd_item<1> it) {
 
 还有许多其他方法可以编写归约内核，由于对原子操作的硬件支持、工作组本地内存大小、全局内存大小、快速设备范围屏障的可用性、甚至专用归约指令的可用性也不同，不同的设备可能更喜欢不同的实现。某些体系结构上，使用log2(N)单独的内核调用来执行树形归约可能会更快(或更必要)。\par
 
-强烈建议只有在DPC++ reduce库不支持的情况下，或者在为特定设备的功能对内核进行微调时，才需要考虑手动实现归约——即使这样，也要在100\%确定归约库的性能不佳之后才考虑这样做!\par
+强烈建议只有在DPC++归约库不支持的情况下，或者在为特定设备的功能对内核进行微调时，才需要考虑手动实现归约——即使这样，也要在100\%确定归约库的性能不佳之后才考虑这样做!\par
 
 \hspace*{\fill} \par %插入空行
 \textbf{Scan——扫描模式}
@@ -131,7 +131,7 @@ Q.parallel_for(nd_range<1>{N, B}, [=](nd_item<1> it) {
 图14-18、14-19和14-20所示的代码演示了使用多个内核实现的包含第一个元素扫描。第一个内核将输入值分布到多个工作组，在工作组本地内存中，计算工作组本地扫描(注意，可以使用工作组inclusive\_scan函数来代替)结果。第二个内核使用单个工作组计算本地扫描，对每个块的最终值进行计算。第三个内核结合这些中间结果来最后确定前缀和。这三个内核对应图14-5中的三个层。\par
 
 \hspace*{\fill} \par %插入空行
-图14-18 ND-range内核中实现全局包含扫描的第1阶段:跨工作组计算
+图14-18 ND-Range内核中实现全局包含扫描的第1阶段:跨工作组计算
 \begin{lstlisting}[caption={}]
 // Phase 1: Compute local scans over input blocks
 q.submit([&](handler& h) {
@@ -163,7 +163,7 @@ q.submit([&](handler& h) {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-图14-19 在ND-range内核中实现全局包含扫描的第2阶段:扫描每个工作组的结果
+图14-19 在ND-Range内核中实现全局包含扫描的第2阶段:扫描每个工作组的结果
 \begin{lstlisting}[caption={}]
 // Phase 2: Compute scan over partial results
 q.submit([&](handler& h) {
@@ -192,7 +192,7 @@ q.submit([&](handler& h) {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-图14-20 在ND-range内核中实现全局包含扫描的第三阶段(最终阶段)
+图14-20 在ND-Range内核中实现全局包含扫描的第三阶段(最终阶段)
 \begin{lstlisting}[caption={}]
 // Phase 3: Update local scans using partial results
 q.parallel_for(nd_range<1>(N, L), [=](nd_item<1> it) {
