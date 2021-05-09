@@ -1,14 +1,13 @@
-To get the most out of thread-level parallelism and SIMD vector-level parallelism on CPUs, we need to keep the following goals in mind:\par
+为了充分利用CPU上的线程级并行性和SIMD向量级并行性，需要牢记以下目标:\par
 
 \begin{itemize}
-	\item Be familiar with all types of DPC++ parallelism and the 	underlying CPU architectures we wish to target
-	\item Exploit the right amount of parallelism, not more and not less, at a thread level that best matches hardware resources. Use vendor tooling, such as analyzers and profilers, to help guide our tuning work to achieve this.
-	\item Be mindful of thread affinity and memory first touch impact on program performance.
-	\item Design data structures with a data layout, alignment, and data width such that the most frequently executed calculations can access memory in a SIMD-friendly manner with maximum SIMD parallelism.
-	\item Be mindful of balancing the cost of masking vs. code branches.
-	\item Use a clear programming style that minimizes potential memory aliasing and side effects.
-	\item Be aware of the scalability limitations of using vector types and interfaces. If a compiler implementation maps them to hardware SIMD instructions, a fixed vector size may not match the SIMD width of SIMD registers well across multiple generations of CPUs and 
-	CPUs from different vendors.
+	\item 熟悉所有类型的DPC++并行性和我们希望针对的底层CPU架构
+	\item 在最匹配硬件资源的线程级别上，不要增加或减少正确的并行度。使用供应商工具，如分析器和分析器，来帮助指导我们的调优工作，以实现这一点。
+	\item 首先要注意线程关联性和内存对程序性能的影响。
+	\item 使用数据布局、对齐和数据宽度设计数据结构，以便最频繁执行的计算能以SIMD友好的方式访问内存，并具有最大的SIMD并行性。
+	\item 要注意平衡屏蔽和代码分支的成本。
+	\item 使用清晰的编程风格，最大限度地减少潜在的内存混叠和副作用。
+	\item 注意使用向量类型和接口的可扩展性限制。如果编译器将它们映射到SIMD指令，那么跨多代CPU和来自不同供应商的CPU的固定向量大小，可能无法很好地与SIMD寄存器宽度适配。
 \end{itemize}
 
 
