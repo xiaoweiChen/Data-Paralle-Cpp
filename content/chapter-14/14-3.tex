@@ -1,18 +1,18 @@
-Although we recommend leveraging libraries wherever possible, we can learn a lot by looking at how each pattern could be implemented using “native” DPC++ kernels.\par
+尽管我们建议尽可能利用库，但是通过观察如何使用“原生”DPC++内核实现每个模式，我们可以学到更多东西。\par
 
-The kernels in the remainder of this chapter should not be expected to reach the same level of performance as highly tuned libraries but are useful in developing a greater understanding of the capabilities of DPC++—and may even serve as a starting point for prototyping new library functionality.\par
+本章剩余部分的内核不会达到与高度调优库相同的性能水平，但是对于更好地理解DPC++的功能很有用——甚至可以作为新库的功能原型。\par
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=USE VENDOR-PROVIDED LIBRARIES!]
-When a vendor provides a library implementation of a function, it is almost always beneficial to use it rather than re-implementing the function as a kernel!
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=使用供应商提供的库!]
+当供应商提供函数库实现时，使用它而不是将函数重新实现为内核总是有益的!
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Map}
+\textbf{Map——映射模式}
 
-Owing to its simplicity, the map pattern can be implemented directly as a basic parallel kernel. The code shown in Figure 14-13 shows such an implementation, using the map pattern to compute the square root of each input element in a range.\par
+由于其简单性，映射模式可以作为基本的并行内核直接实现。图14-13所示的代码显示了这样一个实现，使用映射模式计算范围内每个输入元素的平方根。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-13. Implementing the map pattern in a data-parallel kernel
+图14-13 数据并行内核中实现映射模式
 \begin{lstlisting}[caption={}]
 Q.parallel_for(N, [=](id<1> i) {
 	output[i] = sqrt(input[i]);
@@ -20,12 +20,12 @@ Q.parallel_for(N, [=](id<1> i) {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Stencil}
+\textbf{Stencil——模具模式}
 
-Implementing a stencil directly as a multidimensional basic data-parallel kernel with multidimensional buffers, as shown in Figure 14-14, is straightforward and easy to understand.\par
+如图14-14所示，将模板直接实现为多维缓冲区的数据并行内核，很简单，也很容易理解。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-14. Implementing the stencil pattern in a data-parallel kernel
+图14-14 数据并行内核中实现模具模式
 \begin{lstlisting}[caption={}]
 id<2> offset(1, 1);
 h.parallel_for(stencil_range, offset, [=](id<2> idx) {
@@ -41,10 +41,10 @@ h.parallel_for(stencil_range, offset, [=](id<2> idx) {
 });
 \end{lstlisting}
 
-However, this expression of the stencil pattern is very naïve and should not be expected to perform very well. As mentioned earlier in the chapter, it is well-known that leveraging locality (via spatial or temporal blocking) is required to avoid repeated reads of the same data from memory. A simple example of spatial blocking, using work-group local memory, is shown in Figure 14-15.\par
+不过，这个模式的表达式非常简单，不能期望它能执行得很好。正如本章前面提到的，需要使用局部性(通过空间或时间阻塞)来避免从内存中重复读取相同的数据。一个使用工作组本地内存的空间阻塞如图14-15所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-15. Implementing the stencil pattern in an ND-range kernel, using work-group local memory
+图14-15 使用工作组本地内存在ND-Range内核中实现模具模式
 \begin{lstlisting}[caption={}]
 range<2> local_range(B, B);
 // Includes boundary cells
@@ -84,15 +84,15 @@ nd_range<2>(stencil_range, local_range, offset), [=](nd_item<2> it) {
 });
 \end{lstlisting}
 
-Selecting the best optimizations for a given stencil requires compiletime introspection of block size, the neighborhood, and the stencil function itself, requiring a much more sophisticated approach than discussed here.\par
+要对给定的模板进行最佳优化，需要对块大小、邻域和模板函数本身进行压缩时检查，这其实很复杂，需要有更多讨论才能理解。。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Reduction}
+\textbf{Reduction——归约模式}
 
-It is possible to implement reduction kernels in DPC++ by leveraging language features that provide synchronization and communication capabilities between work-items (e.g., atomic operations, work-group and sub-group functions, sub-group shuffles). The kernels in Figures 14-16 and 14-17 show two possible reduction implementations: a naïve reduction using a basic parallel\_for and an atomic operation for every work-item; and a slightly smarter reduction that exploits locality using an ND-range parallel\_for and a work-group reduce function, respectively. We will revisit these atomic operations in more detail in Chapter 19.\par
+通过利用提供工作项之间同步和通信功能(例如，原子操作、工作组和子工作组功能、子工作组混合)的特性，在DPC++中实现归约内核。图14-16和图14-17中的内核显示了两种可能的归约实现:使用基本的parallel\_for和每个工作项的原子操作的简单归约，以及稍微一些简化，可以使用ND-Range paralle\_for和工作组reduce函数对局部性进行利用。我们将在第19章更详细地讨论这些原子操作。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-16. Implementing a naïve reduction expressed as a data-parallel kernel
+图14-16 实现一个表示为数据并行内核的简单归约
 \begin{lstlisting}[caption={}]
 Q.parallel_for(N, [=](id<1> i) {
 	atomic_ref<
@@ -104,7 +104,7 @@ Q.parallel_for(N, [=](id<1> i) {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure 14-17. Implementing a naïve reduction expressed as an ND-range kernel
+图14-17。实现一个表示为ND-Range内核的简单归约
 \begin{lstlisting}[caption={}]
 Q.parallel_for(nd_range<1>{N, B}, [=](nd_item<1> it) {
 	int i = it.get_global_id(0);
@@ -119,19 +119,19 @@ Q.parallel_for(nd_range<1>{N, B}, [=](nd_item<1> it) {
 }).wait();
 \end{lstlisting}
 
-There are numerous other ways to write reduction kernels, and different devices will likely prefer different implementations, owing to differences in hardware support for atomic operations, work-group local memory size, global memory size, the availability of fast device-wide barriers, or even the availability of dedicated reduction instructions. On some architectures, it may even be faster (or necessary!) to perform a tree reduction using log2(N) separate kernel calls.\par
+还有许多其他方法可以编写归约内核，由于对原子操作的硬件支持、工作组本地内存大小、全局内存大小、快速设备范围屏障的可用性、甚至专用归约指令的可用性也不同，不同的设备可能更喜欢不同的实现。某些体系结构上，使用log2(N)单独的内核调用来执行树形归约可能会更快(或更必要)。\par
 
-We strongly recommend that manual implementations of reductions be considered only for cases that are not supported by the DPC++ reduction library or when fine-tuning a kernel for the capabilities of a specific device—and even then, only after being 100\% sure that the reduction library is underperforming!\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Scan}
-
-As we saw earlier in this chapter, implementing a parallel scan requires multiple sweeps over the data, with synchronization occurring between each sweep. Since DPC++ does not provide a mechanism for synchronizing all work-items in an ND-range, a direct implementation of a device-wide scan must be implemented using multiple kernels that communicate partial results through global memory.\par
-
-The code, shown in Figures 14-18, 14-19, and 14-20, demonstrates an inclusive scan implemented using several kernels. The first kernel distributes the input values across work-groups, computing work-group local scans in work-group local memory (note that we could have used the work-group inclusive\_scan function instead). The second kernel computes a local scan using a single work-group, this time over the final value from each block. The third kernel combines these intermediate results to finalize the prefix sum. These three kernels correspond to the three layers of the diagram in Figure 14-5.\par
+强烈建议只有在DPC++ reduce库不支持的情况下，或者在为特定设备的功能对内核进行微调时，才需要考虑手动实现归约——即使这样，也要在100\%确定归约库的性能不佳之后才考虑这样做!\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-18. Phase 1 for implementing a global inclusive scan in an ND-range kernel: Computing across each work-group
+\textbf{Scan——扫描模式}
+
+正如我们在前面看到的，实现并行扫描需要对数据进行多次扫描，每次扫描之间都要进行同步。由于DPC++没有提供同步ND-Range内所有工作项的机制，所以必须使用多个内核来实现设备范围内扫描的实现，这些内核通过全局内存传递结果。\par
+
+图14-18、14-19和14-20所示的代码演示了使用多个内核实现的包含第一个元素扫描。第一个内核将输入值分布到多个工作组，在工作组本地内存中，计算工作组本地扫描(注意，可以使用工作组inclusive\_scan函数来代替)结果。第二个内核使用单个工作组计算本地扫描，对每个块的最终值进行计算。第三个内核结合这些中间结果来最后确定前缀和。这三个内核对应图14-5中的三个层。\par
+
+\hspace*{\fill} \par %插入空行
+图14-18 ND-range内核中实现全局包含扫描的第1阶段:跨工作组计算
 \begin{lstlisting}[caption={}]
 // Phase 1: Compute local scans over input blocks
 q.submit([&](handler& h) {
@@ -163,7 +163,7 @@ q.submit([&](handler& h) {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure 14-19. Phase 2 for implementing a global inclusive scan in an ND-range kernel: Scanning across the results of each work-group
+图14-19 在ND-range内核中实现全局包含扫描的第2阶段:扫描每个工作组的结果
 \begin{lstlisting}[caption={}]
 // Phase 2: Compute scan over partial results
 q.submit([&](handler& h) {
@@ -192,7 +192,7 @@ q.submit([&](handler& h) {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure 14-20. Phase 3 (final) for implementing a global inclusive scan in an ND-range kernel
+图14-20 在ND-range内核中实现全局包含扫描的第三阶段(最终阶段)
 \begin{lstlisting}[caption={}]
 // Phase 3: Update local scans using partial results
 q.parallel_for(nd_range<1>(N, L), [=](nd_item<1> it) {
@@ -204,32 +204,32 @@ q.parallel_for(nd_range<1>(N, L), [=](nd_item<1> it) {
 }).wait();
 \end{lstlisting}
 
-Figures 14-18 and 14-19 are very similar; the only differences are the size of the range and how the input and output values are handled. A real-life implementation of this pattern could use a single function taking different arguments to implement these two phases, and they are only presented as distinct code here for pedagogical reasons.\par
+图14-18和14-19非常相似，唯一的区别是范围的大小，以及如何处理输入和输出值。该模式的实际实现可以使用带有不同参数的函数来实现这两个阶段，这里将它们作为不同的代码呈现。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Pack and Unpack}
+\textbf{打包和解包}
 
-Pack and unpack are also known as gather and scatter operations. These operations handle differences in how data is arranged in memory and how we wish to present it to the compute resources.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Pack}
-
-Since pack depends on an exclusive scan, implementing a pack that applies to all elements of an ND-range must also take place via global memory and over the course of several kernel enqueues. However, there is a common use case for pack that does not require the operation to be applied over all elements of an ND-range—namely, applying a pack only across items in a specific work-group or sub-group.\par
-
-The snippet in Figure 14-21 shows how to implement a group pack operation on top of an exclusive scan.\par
+打包和解包也称为收集和分散操作。这些操作处理数据在内存中的排列方式，以及呈现给计算资源的方式上。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-21. Implementing a group pack operation on top of an exclusive scan
+\textbf{打包}
+
+由于打包依赖于排除第一个元素扫描，实现一个适用于ND-Range的所有元素的打包，必须通过全局内存和在几个内核排队的过程中进行。但是，对于包有一个通用的用例，不需要在ND-Range的所有元素上应用操作——仅在特定工作组或子工作组中的项上应用打包。\par
+
+图14-21中的代码片段展示了如何在排除第一个元素的扫描中，实现组打包操作。\par
+
+\hspace*{\fill} \par %插入空行
+图14-21 排除第一个元素的扫描中实现组打包操作
 \begin{lstlisting}[caption={}]
 uint32_t index = exclusive_scan(g, (uint32_t) predicate, plus<>());
 if (predicate)
 	dst[index] = value;
 \end{lstlisting}
 
-The code in Figure 14-22 demonstrates how such a pack operation could be used in a kernel to build a list of elements which require some additional postprocessing (in a future kernel). The example shown is based on a real kernel from molecular dynamics simulations: the work-items in the sub-group assigned to particle i cooperate to identify all other particles within a fixed distance of i, and only the particles in this “neighbor list” will be used to calculate the force acting on each particle.\par
+图14-22中的代码演示了如何在内核中使用这样的包操作，来构建一个元素列表，这些元素需要一些额外的后处理(在将来的内核中)。所示的示例基于分子动力学模拟中的一个真实内核:分配给粒子i的子工作组中的工作项协作识别与i固定距离内的所有其他粒子，只有这个“邻居列表”中的粒子将被用于计算作用于每个粒子上的力。。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-22. Using a sub-group pack operation to build a list of elements needing additional postprocessing
+图14-22 使用组工作组打包操作构建需要额外后处理的元素列表
 \begin{lstlisting}[caption={}]
 range<2> global(N, 8);
 range<2> local(1, 8);
@@ -260,24 +260,24 @@ nd_range<2>(global, local),
 }).wait();
 \end{lstlisting}
 
-Note that the pack pattern never re-orders elements—the elements that are packed into the output array appear in the same order as they did in the input. This property of pack is important and enables us to use pack functionality to implement other more abstract parallel algorithms (such as std::copy\_if and std::stable\_partition). However, there are other parallel algorithms that can be implemented on top of pack functionality where maintaining order is not required (such as std::partition).\par
+注意，打包模式从不重新排序元素——打包到输出数组中的元素的顺序与它们在输入数组中的顺序相同。打包的这个属性很重要，使我们能够使用打包功能来实现其他更抽象的并行算法(比如std::copy\_if和std::stable\_partition)。然而，在打包功能上还可以实现其他并行算法，这些算法不需要维护顺序(比如：std::partition)。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Unpack}
+\textbf{解包}
 
-As with pack, we can implement unpack using scan. Figure 14-23 shows how to implement a sub-group unpack operation on top of an exclusive scan.\par
+和打包一样，我们可以使用scan实现解包。在排除第一个元素扫描的基础上实现子工作组解包操作，如图14-23所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-23. Implementing a sub-group unpack operation on top of an exclusive scan
+图14-23 在排除第一个元素扫描的基础上实现子工作组解包操作
 \begin{lstlisting}[caption={}]
 uint32_t index = exclusive_scan(sg, (uint32_t) predicate, plus<>());
 return (predicate) ? new_value[index] : original_value;
 \end{lstlisting}
 
-The code in Figure 14-24 demonstrates how such a sub-group unpack operation could be used to improve load balancing in a kernel with divergent control flow (in this case, computing the Mandelbrot set). Each work-item is assigned a separate pixel to compute and iterates until convergence or a maximum number of iterations is reached. An unpack operation is then used to replace completed pixels with new pixels.\par
+图14-24中的代码展示了如何使用这样的子工作组解包，来改平衡有不同控制流的内核负载(本例中，是计算Mandelbrot集)。每个工作项分配了一个单独的像素来计算和迭代，直到收敛或达到最大迭代次数。然后使用解包操作将已完成的像素替换为新像素。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 14-24. Using a sub-group unpack operation to improve load balancing for kernels with divergent control flow
+图14-24 使用子工作组解包操作来平衡不同控制流的内核的负载
 \begin{lstlisting}[caption={}]
 // Keep iterating as long as one work-item has work to do
 while (any_of(sg, i < Nx)) {
@@ -298,7 +298,7 @@ while (any_of(sg, i < Nx)) {
 }
 \end{lstlisting}
 
-The degree to which an approach like this improves efficiency (and decreases execution time) is highly application- and input-dependent, since checking for completion and executing the unpack operation both introduce some overhead! Successfully using this pattern in realistic applications will therefore require some fine-tuning based on the amount of divergence present and the computation being performed (e.g., introducing a heuristic to execute the unpack operation only if the number of active work-items falls below some threshold).\par
+这种方法提高效率(并减少执行时间)的程度高度依赖于应用程序和输入，因为检查完成和执行解包操作都会带来开销!因此，在实际应用程序中成功地使用此模式，需要一些基于发散量和正在执行的计算的微调(例如，引入启发式方法，仅在活动工作项的数量低于某个阈值时执行解包操作)。\par
 
 
 
