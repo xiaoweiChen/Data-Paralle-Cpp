@@ -1,9 +1,9 @@
-To improve the performance of the STREAM Triad kernel for both CPUs and GPUs, we can compute on a range of data elements that can be processed in parallel, by converting the loop to a parallel\_for kernel.\par
+为了提高STREAM Triad内核在CPU和GPU上的性能，我们可以通过将循环转换为paralle\_for内核来计算一系列可以并行处理的数据元素。\par
 
-A STREAM Triad kernel may be trivially executed on a CPU by submitting it into a queue for a parallel execution. The body of this STREAM Triad DPC++ parallel kernel looks exactly like the body of the STREAM Triad loop that executes in serial C++ on the CPU, as shown in Figure 16-6.\par
+STREAM Triad内核可以通过将其提交到一个队列进行并行执行而在CPU上执行。这个STREAM Triad DPC++并行内核的主体看起来就像在CPU上串行C++中执行的STREAM Triad循环的主体，如图16-6所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-6. DPC++ STREAM Triad parallel\_for kernel code
+图16-6 DPC++ STREAM Triad的paralle\_for内核代码
 \begin{lstlisting}[caption={}]
 constexpr int num_runs = 10;
 constexpr size_t scalar = 3;
@@ -49,41 +49,39 @@ double triad(
 }
 \end{lstlisting}
 
-Even though the parallel kernel is very similar to the STREAM Triad function written as serial C++ with a loop, it runs much faster on a CPU because the parallel\_for enables different elements of the array to be processed on multiple cores in parallel. As shown in Figure 16-7, assume that we have a system with one socket, four cores, and two hyper-threads per core; there are 1024 double-precision data elements to be processed; and in the implementation, data is processed in work-groups containing 32 data elements each. This means that we have 8 threads and 32 workgroups. The work-group scheduling can be done in a round-robin order, that is, thread-id = work-group-id mod 8. Essentially, each thread will execute four work-groups. Eight work-groups can be executed in parallel for each round. Note that, in this case, the work-group is a set of workitems that is implicitly formed by the DPC++ compiler and runtime.\par
+尽管并行内核非常类似于用带有循环的串行C++编写的STREAM Triad函数，但它在CPU上运行速度要快得多，因为paralle\_for允许在多个内核上并行处理数组的不同元素。如图16-7所示，假设有一个系统，其中有一个插槽、四个内核和每个内核有两个超线程，有1024个双精度数据元素要处理。现实中，数据在包含32个数据元素的工作组中处理，这意味着有8个线程和32个工作组。工作组调度可以按循环顺序进行，即thread-id = work-group-id mod 8。每个线程将执行四个工作组，每一轮可以并行执行8个工作组。注意，在本例中，工作组是DPC++编译器和运行时会隐式形成的一组工作项。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-7. A mapping of a STREAM Triad parallel kernel
+图16-7 STREAM Triad内核并行的映射
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-16/images/5}
 \end{center}
 
-Note that in the DPC++ program, the exact way that data elements are partitioned and assigned to different processor cores (or hyper-threads) is not required to be specified. This gives a DPC++ implementation flexibility to choose how best to execute a parallel kernel on a specific CPU. With that said, an implementation can provide some level of control to programmers to enable performance tuning.\par
+注意，在DPC++程序中不需要指定，数据元素分区和分配到不同处理器内核(或超线程)。这使得DPC++实现可以灵活地选择，如何在特定的CPU上最好地执行并行内核。话虽如此，实现可以为程序员提供某种程度的控制，以便性能调优。\par
 
-While a CPU may impose a relatively high thread context switch and synchronization overhead, having somewhat more software threads resident on a processor core is beneficial because it gives each processor core a choice of work to execute. If one software thread is waiting for another thread to produce data, the processor core can switch to a different software thread that is ready to run without leaving the processor core idle.\par
+虽然CPU可能会带来相对较高的线程上下文切换和同步开销，但在处理器核心上驻留更多的线程是有益的，因为每个处理器核心提供了要执行的工作的选择。如果软件线程正在等待另一个线程产生数据，那么处理器核心可以切换到另一个准备运行的软件线程，而不会让处理器核芯空闲。\par
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=CHOOSING HOW TO BIND AND SCHEDULE THREADS]
-Choosing an effective scheme to partition and schedule the work among threads is important to tune an application on CPUs and other device types. Subsequent sections will describe some of the techniques.
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=选择如何绑定和调度线程]
+选择一种有效的方案来划分和调度线程之间的工作，对于在CPU和其他设备类型上调优非常重要。接下来的部分将描述一些技术。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Thread Affinity Insight}
+\textbf{线程的亲和力}
 
-Thread affinity designates the CPU cores on which specific threads execute. Performance can suffer if a thread moves around among cores, for instance, if threads do not execute on the same core, cache locality can become an inefficiency if data ping-pongs between different cores.\par
+线程亲和力指定特定线程可以在特定的CPU上执行。如果线程在多个核之间移动，性能可能会受到影响，例如：如果线程不在同一个核上执行，如果数据在核之间打乒乓球，则缓存的性能会变得很低。\par
 
-The DPC++ runtime library supports several schemes for binding threads to core(s) through environment variables DPCPP\_CPU\_CU\_AFFINITY, DPCPP\_CPU\_PLACES, DPCPP\_CPU\_NUM\_CUS, and DPCPP\_CPU\_SCHEDULE, which are not defined by SYCL.\par
+DPC++运行时库支持通过环境变量DPCPP\_CPU\_CU\_AFFINITY、DPCPP\_CPU\_PLACES、DPCPP\_CPU\_NUM\_CUS和DPCPP\_CPU\_SCHEDULE等将线程绑定到内核，但这都不是由SYCL定义。\par
 
-The first of these is the environment variable DPCPP\_CPU\_CU\_AFFINITY. Tuning using these environment variable controls is simple and low cost and can have large impact for many applications. The description of this 
-environment variable is shown in Figure 16-8.\par
+首先是环境变量DPCPP\_CPU\_CU\_AFFINITY。使用这些环境变量控件进行调优简单且成本低，并且对许多应用程序有很大影响。这个环境变量的描述如图16-8所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-8. DPCPP\_CPU\_CU\_AFFINITY environment variable
-
+图16-8 DPCPP\_CPU\_CU\_AFFINITY环境变量
 \begin{table}[H]
 	\begin{tabular}{|l|l|}
 		\hline
-		\textbf{DPCPP\_CPU\_CU\_AFFINITY} & \textbf{Descriiption}                                                                                                                    \\ \hline
-		spread                            & \begin{tabular}[c]{@{}l@{}}Bind successive threads to distinct sockets starting with\\ socket 0 in a round-robin order\end{tabular}      \\ \hline
-		close                             & \begin{tabular}[c]{@{}l@{}}Bind successive threads to distinct hyper-thread starting\\ with thread 0 in a round-robin order\end{tabular} \\ \hline
+		\textbf{DPCPP\_CPU\_CU\_AFFINITY} & \textbf{描述}                                                                                                                    \\ \hline
+		spread                            & \begin{tabular}[c]{@{}l@{}}按照循环顺序将连续线程绑定到从插槽0开始\end{tabular}      \\ \hline
+		close                             & \begin{tabular}[c]{@{}l@{}}以循环顺序将连续线程绑定到不同的超线程(以线程0开始)\end{tabular} \\ \hline
 	\end{tabular}
 \end{table}
 
@@ -92,54 +90,52 @@ spread: boundHT = (tid mod numHT) + ( tid mod numSocket) x numHT \\
 close: boundHT = tid mod(numSocket x numHT)
 \end{tcolorbox}
 
-where\par
-
 \begin{itemize}
-	\item tid denotes a software thread identifier.
-	\item boundHT denotes a hyper-thread (logical core) that thread tid is bound to.
-	\item numHT denotes the number of hyper-threads per socket.
-	\item numSocket denotes the number of sockets in the system
+	\item tid示软件线程标识符。
+	\item boundHT表示线程tid绑定到的超线程(逻辑核心)。
+	\item numHT表示每个插槽的超线程数。
+	\item numSocket表示系统中的插槽数量
 \end{itemize}
 
-Assume that we run a program with eight threads on a dual-core dual-socket hyper-threading system—in other words, we have four cores for a total of eight hyper-threads to program. Figure 16-9 shows examples of how threads can map to the hyper-threads and cores for different DPCPP\_CPU\_CU\_AFFINITY settings.\par
+假设在一个双核双插槽的超线程系统上运行一个有8个线程的程序——换句话说，我们有4个核，总共有8个超线程要进行编程。图16-9展示了线程如何映射到不同DPCPP\_CPU\_CU\_AFFINITY设置的超线程和核芯。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-9. Mapping threads to cores with hyper-threads
+图16-9 用超线程将线程映射到内核
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-16/images/6}
 \end{center}
 
-In conjunction with the environment variable DPCPP\_CPU\_CU\_AFFINITY, there are other environment variables that support CPU performance tuning:\par
+除了环境变量DPCPP\_CPU\_CU\_AFFINITY，还有其他支持CPU性能调优的环境变量:\par
 
 \begin{itemize}
-	\item DPCPP\_CPU\_NUM\_CUS = [n], which sets the number of threads used for kernel execution. Its default value is the number of hardware threads in the system.
-	\item DPCPP\_CPU\_PLACES = [ sockets | numa\_domains | 	cores | threads ], which specifies the places that the 	affinity will be set similar to OMP\_PLACES in OpenMP 5.1. The default setting is cores.
-	\item DPCPP\_CPUSCHEDULE = [ dynamic | affinity | static ], which specifies the algorithm for scheduling work-groups. Its default setting is dynamic.
+	\item DPCPP\_CPU\_NUM\_CUS = [n],它设置用于内核执行的线程数。它的默认值是系统中的硬件线程数。
+	\item DPCPP\_CPU\_PLACES = [ sockets | numa\_domains | 	cores | threads ], 它指定亲和性将被设置的位置，类似于OpenMP 5.1中的OMP\_PLACES。默认设置为“cores”。
+	\item DPCPP\_CPUSCHEDULE = [ dynamic | affinity | static ], 它指定了调度工作组的算法。它的默认设置是dynamic。
 	\begin{itemize}
-		\item dynamic: Enable the TBB auto\_partitioner, which usually performs sufficient splitting to balance the load among worker threads.
-		\item affinity: Enable the TBB affinity\_partitioner, which improves cache affinity and uses proportional splitting when mapping subranges to worker threads.
-		\item static: Enable the TBB static\_partitioner, which distributes iterations among worker threads as uniformly as possible.
+		\item dynamic: 启用TBB auto\_partitioner，通常执行足够的拆分以平衡工作线程之间的负载。
+		\item affinity: 启用TBB affinity\_partitioner，可以改进缓存亲和性，并在将子范围映射到工作线程时使用比例分割。
+		\item static: 启用TBB static\_partitioner，尽可能均匀地分布了工作线程之间的迭代。
 	\end{itemize}
 \end{itemize}
 
-The TBB partitioner uses a grain size to control work splitting, with a default grain size of 1 which indicates that all work-groups can be executed independently. More information can be found at spec.oneapi.com/versions/latest/elements/oneTBB/source/algorithms.html\#partitioners.\par
+TBB分区器使用粒度大小来控制工作拆分，默认粒度大小为1，表示所有工作组都可以独立执行。更多信息可以在spec.oneapi.com/versions/latest/elements/oneTBB/source/algorithms.html\#partitioner找到。\par
 
-A lack of thread affinity tuning does not necessarily mean lower performance. Performance often depends more on how many total threads are executing in parallel than on how well the thread and data are related and bound. Testing the application using benchmarks is one way to be certain whether the thread affinity has a performance impact or not. The DPC++ STREAM Triad code, as shown in Figure 16-1, started with a lower performance without thread affinity settings. By controlling the affinity setting and using static scheduling of software threads through the environment variables (exports shown in the following for Linux), performance improved:\par
+缺乏线程关联性调优并不一定意味着性能较低。性能通常更多地取决于并行执行的线程总数，而不是线程和数据的关联和绑定程度。使用基准测试应用程序，是确定线程关联是否对性能有影响的一种方法。如图16-1所示，DPC++ STREAM Triad代码在没有线程关联设置的情况下以较低的性能启动。通过控制亲和性设置和通过环境变量(输出如下所示)对软件线程进行静态调度，性能得到了改善:\par
 
 \begin{tcolorbox}[colback=white,colframe=black]
 export DPCPP\_CPU\_PLACES=numa\_domains\\
 export DPCPP\_CPU\_CU\_AFFINITY=close
 \end{tcolorbox}
 
-By using numa\_domains as the places setting for affinity, the TBB task arenas are bound to NUMA nodes or sockets, and the work is uniformly distributed across task arenas. In general, the environment variable DPCPP\_CPU\_PLACES is recommended to be used together with DPCPP\_CPU\_CU\_AFFINITY. These environment variable settings help us to achieve a ~30\% performance gain on a Skylake server system with 2 sockets and 28 two-way hyper-threading cores per socket, running at 2.5 GHz. However, we can still do better to further improve the performance on this CPU.\par
+通过使用numa\_domains作为亲和性的位置设置，TBB任务领域绑定到numa节点和插槽，并且任务均匀地分布在各个领域。一般情况下，环境变量DPCPP\_CPU\_PLACES建议与DPCPP\_CPU\_CU\_AFFINITY一起使用。这些环境变量设置可以在一个拥有2个插槽和28个双向超线程内核的Skylake服务器系统上实现了30\%的性能提升，每个插槽中的核芯以2.5 GHz运行。但是，我们仍然可以做得更好，可以进一步提高这个CPU上的性能。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Be Mindful of First Touch to Memory}
+\textbf{注意第一次与内存的接触}
 
-Memory is stored where it is first touched (used). Since the initialization loop in our example is not parallelized, it is executed by the host thread in serial, resulting in all the memory being associated with the socket that the host thread is running on. Subsequent access by other sockets will then access data from memory attached to the initial socket (used for the initialization), which is clearly undesirable for performance. We can achieve a higher performance on the STREAM Triad kernel by parallelizing the initialization loop to control the first touch effect across sockets, as shown in Figure 16-10.\par
+内存存储在第一次接触(使用)的地方。在示例中，初始化循环不是并行的，由宿主线程串行执行，导致所有内存都与宿主线程所运行的任务相关联。其他任务随后的访问将访问连接到初始任务(用于初始化)的内存中的数据，这显然不符合性能要求。通过并行化初始化循环来控制跨任务与内存的第一次接触，我们可以在STREAM Triad内核上实现更高的性能，如图16-10所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 16-10. STREAM Triad parallel initialization kernel to control first touch effects
+图16-10 STREAM Triad并行初始化内核控制与内存的第一次接触
 \begin{lstlisting}[caption={}]
 template <typename T>
 void init(queue &deviceQueue, T* VA, T* VB, T* VC, size_t array_size) {
@@ -163,12 +159,12 @@ void init(queue &deviceQueue, T* VA, T* VB, T* VC, size_t array_size) {
 }
 \end{lstlisting}
 
-Exploiting parallelism in the initialization code improves performance of the kernel when run on a CPU. In this instance, we achieve a ~2x performance gain on an Intel Xeon processor system.\par
+初始化代码中利用并行性可以提高内核在CPU上运行时的性能。这种情况下，在Intel Xeon处理器系统上获得了2倍的性能增益。\par
 
-The recent sections of this chapter have shown that by exploiting thread-level parallelism, we can utilize CPU cores and hyper-threads effectively. However, we need to exploit the SIMD vector-level parallelism in the CPU core hardware as well, to achieve peak performance.\par
+本章最近的几节展示了通过利用线程级并行性，可以有效地利用CPU内核和超线程。然而，还需要利用CPU核心硬件中的SIMD向量级并行性，以实现最佳性能。\par
 
 \begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black]
-DPC++ parallel kernels benefit from thread-level parallelism across cores and hyper-threads!
+DPC++并行内核得益于跨核和超线程的线程级并行!
 \end{tcolorbox}
 
 
