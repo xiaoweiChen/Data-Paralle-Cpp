@@ -2,13 +2,13 @@
 	\includegraphics[width=0.5\textwidth]{content/chapter-17/images/1}
 \end{center}
 
-Kernel-based programming originally became popular as a way to access GPUs. Since it has now been generalized across many types of accelerators, it is important to understand how our style of programming affects the mapping of code to an FPGA as well.\par
+基于内核的编程最初是作为一种访问GPU的方式而流行起来的。由于现在已经在许多加速器中得到了推广，理解编程风格如何影响代码到FPGA的映射非常重要。\par
 
-Field Programmable Gate Arrays (FPGAs) are unfamiliar to the majority of software developers, in part because most desktop computers don’t include an FPGA alongside the typical CPU and GPU. But FPGAs are worth knowing about because they offer advantages in many applications. The same questions need to be asked as we would of other accelerators, such as “When should I use an FPGA?”, “What parts of my applications should be offloaded to FPGA?”, and “How do I write code that performs well on an FPGA?”\par
+对大多数软件开发人员来说，现场可编程门阵列(FPGA)并不熟悉，部分原因是大多数桌面计算机在典型的CPU和GPU之外没有FPGA。FPGA的确很值得了开发人员来了解，因为它在很多应用中都有优势。和其他加速器一样，也需要问同样的问题，比如“什么时候使用FPGA?”，“应用程序的哪些部分应该加载到FPGA?”，以及“如何编写在FPGA上表现良好的代码?”\par
 
-This chapter gives us the knowledge to start answering those questions, at least to the point where we can decide whether an FPGA is interesting for our applications, and to know which constructs are commonly used to achieve performance. This chapter is the launching point from which we can then read vendor documentation to fill in details for specific products and toolchains. We begin with an overview of how programs can map to spatial architectures such as FPGAs, followed by discussion of some properties that make FPGAs a good choice as an accelerator, and we finish by introducing the programming constructs used to achieve performance.
+本章为我们提供了开始回答这些问题的知识，至少可以确定我们对FPGA是否感兴趣，并知道哪些构造可用于实现性能。我们可以阅读供应商文档来了解特定产品和工具链的详细信息。首先概述程序如何映射到FPGA等空间架构，然后讨论FPGA作为加速器的一些特性，最后介绍实现性能的编程结构。\par
 
-The “How to Think About FPGAs” section in this chapter is applicable to thinking about any FPGA. SYCL allows vendors to specify devices beyond CPUs and GPUs, but does not specifically say how to support an FPGA. The specific vendor support for FPGAs is currently unique to DPC++, namely, FPGA selectors and pipes. FPGA selectors and pipes are the only DPC++ extensions used in this chapter. It is hoped that vendors will converge on similar or compatible means of supporting FPGAs, and this is encouraged by DPC++ as an open source project.\par
+本章的“如何使用FPGA”一节适用于任何FPGA。SYCL允许供应商指定CPU和GPU之外的设备，但没有具体说明如何支持FPGA。目前，对于特定的FPGA支持是DPC++的优势，即可以使用FPGA选择器和管道。FPGA选择器和管道是本章中使用的DPC++扩展。我们希望厂商能够使用类似或兼容的方式来支持FPGA，而DPC++作为一个开源项目非常鼓励这种做法。\par
 
 
 
