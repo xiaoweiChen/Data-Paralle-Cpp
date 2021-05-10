@@ -146,7 +146,7 @@ SOA数据布局有助于在跨数组元素访问结构的一个字段时防止�
 只要c++开发者知道数据适合32位带符号的类型，他们就经常使用整数数据类型，经常出现这样的代码\par
 
 \begin{tcolorbox}[colback=white,colframe=black]
-int id = get\_global\_id(0); a[id] = b[id] + c[id];
+int id = get\_global\_id(0); \\a[id] = b[id] + c[id];
 \end{tcolorbox}
 
 假设get\_global\_id(0)的返回类型是size\_t(无符号整数，通常是64位)，在某些情况下，这种转换减少了编译器可以合法执行的优化。例如，当编译器向量化内核中的代码时，这会导致SIMD收集/散布指令
