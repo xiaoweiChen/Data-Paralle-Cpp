@@ -1,55 +1,55 @@
-Like any accelerator architecture, predicting when an FPGA is the right choice of accelerator vs. an alternative often comes down to knowledge of the architecture, the application characteristics, and the system bottlenecks. This section describes some of the characteristics of an application to consider.\par
+与任何加速器架构一样，预测FPGA何时是加速器的正确选择，何时需要替代方案，通常取决于对架构、应用程序特征和系统瓶颈的了解。本节描述要考虑的一些特征。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Lots and Lots of Work}
+\textbf{海量任务}
 
-Like most modern compute accelerators, achieving good performance requires a large amount of work to be performed. If computing a single result from a single element of data, then it may not be useful to leverage an accelerator at all (of any kind). This is no different with FPGAs. Knowing that FPGA compilers leverage pipeline parallelism makes this more apparent. A pipelined implementation of an algorithm has many stages, often thousands or more, each of which should have different work within it in any clock cycle. If there isn’t enough work to occupy most of the pipeline stages most of the time, then efficiency will be low. We’ll call the average utilization of pipeline stages over time occupancy of the pipeline. This is different from the definition of occupancy used when optimizing other architectures such as GPUs!\par
+大多数现代的计算机加速器，想要获得良好的性能需要大量的工作。单个数据元素计算单个结果，对于加速器是没有加速效果的。这与FPGA一样，了解了FPGA编译器利用了流水线并行性，这一点就更加明显了。算法的流水化实现有很多阶段，通常是上千个甚至更多，每个阶段在任何时钟周期内都应该有不同的工作。如果没有足够的工作在占用流水线的大部分阶段，那么执行效率就会很低。\par
 
-There are multiple ways to generate work on an FPGA to fill the pipeline stages, which we’ll cover in coming sections.\par
-
-\hspace*{\fill} \par %插入空行
-\textbf{Custom Operations or Operation Widths}
-
-FPGAs were originally designed to perform efficient integer and bitwise operations and to act as glue logic that could adapt interfaces of other chips to work with each other. Although FPGAs have evolved into computational powerhouses instead of just glue logic solutions, they are still very efficient at bitwise operations, integer math operations on custom data widths or types, and operations on arbitrary bit fields in packet headers.\par
-
-The fine-grained architecture of an FPGA, described at the end of this chapter, means that novel and arbitrary data types can be efficiently implemented. For example, if we need a 33-bit integer multiplier or a 129-bit adder, FPGAs can provide these custom operations with great efficiency. Because of this flexibility, FPGAs are commonly employed in rapidly evolving domains, such as recently in machine learning, where the data widths and operations have been changing faster than can be built into ASICs.\par
+有多种方法可以在FPGA上生成工作来填充流水线阶段，我们将在接下来的章节中介绍这些方法。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Scalar Data Flow}
+\textbf{自定义操作或操作宽度}
 
-An important aspect of FPGA spatial pipelines, apparent from Figure 17-4, is that the intermediate data between operations not only stays on-chip (is not stored to external memory), but that intermediate data between each pipeline stage has dedicated storage registers. FPGA parallelism comes from pipelining of computation such that many operations are being executed concurrently, each at a different stage of the pipeline. This is different from vector architectures where multiple computations are executed as lanes of a shared vector instruction.\par
+FPGA最初用来执行整数和位操作，并作为逻辑粘合剂，可以使其他芯片的接口工作。虽然FPGA已经发展成为计算功能强大的设备，已不仅仅是粘合逻辑解决方案，但在位操作、自定义数据宽度或类型上的整数数学操作，以及对包头信息中的任意位字段的操作方面仍然非常高效。\par
 
-The scalar nature of the parallelism in a spatial pipeline is important for many applications, because it still applies even with tight data dependences across the units of work. These data dependences can be handled without loss of performance, as we will discuss later in this chapter when talking about loop-carried dependences. The result is that spatial pipelines, and therefore FPGAs, are compelling for algorithms where data dependences across units of work (such as work-items) can’t be broken and fine-grained communication must occur. Many optimization techniques for other accelerators focus on breaking these dependences though various techniques or managing communication at controlled scales through features such as sub-groups. FPGAs can instead perform well with communication from tight dependences and should be considered for classes of algorithms where such patterns exist.\par
+本章末尾描述的FPGA的细粒度架构意味着可以有效地实现新的任意数据类型。例如，如果我们需要33位整数乘法器或129位加法器，FPGA可以以很高的效率提供这些操作。由于这种灵活性，FPGA通常用于快速发展的领域，例如：机器学习，其中数据宽度和操作的变化速度比内置在专用集成电路中要快。\par
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=LOOPS ARE FINE!]
-A common misconception on data flow architectures is that loops with either fixed or dynamic iteration counts lead to poor data flow performance, because they aren’t simple feed-forward pipelines. At least with the Intel DPC++ and FPGA toolchains, this is not true. Loop iterations can instead be a good way to produce high occupancy within the pipeline, and the compilers are built around the concept of allowing multiple loop iterations to execute in an overlapped way. Loops provide an easy mechanism to keep the pipeline busy with work!
+\hspace*{\fill} \par %插入空行
+\textbf{标量数据流}
+
+从图17-4可以明显看出，FPGA空间流水线的一个重要方面是，操作之间的中间数据不仅停留在芯片上(没有存储到外部内存)，而且每个管道阶段之间的中间数据都有专用的存储寄存器。FPGA的并行性来自于流水线，同时执行许多操作，每个操作在流水线的不同阶段。这与向量体系结构不同，在向量体系结构中，多个计算作为共享向量指令的路径执行。\par
+
+空间流水线中并行性的标量性质，对于许多应用程序都很重要，因为即使在跨工作单元的紧密数据依赖情况下仍然适用。可以在不损失性能的情况下处理这些数据依赖关系，我们将在本章后面讨论循环具有依赖关系时对此进行讨论。空间流水线对于不能破坏跨工作单元(如工作项)的数据依赖，并且可以进行细粒度通信。其他加速器的许多优化技术都侧重于打破这些依赖关系，或者通过子工作组等特性在可控范围内管理通信。相反，FPGA可以很好地处理依赖与通信，应该考虑在存在这种模式的算法中使用FPGA。\par
+
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=循环不是罪!]
+对于数据流体系结构的一个常见误解是，具有固定或动态迭代计数的循环会导致糟糕的数据流性能，因为它们不是简单的前馈流水。至少对于Intel DPC++和FPGA工具链来说，这不正确。相反，循环迭代是在流水线中产生高占用率的一种好方法，而编译器是以重叠的方式执行多个循环迭代构建的。循环提供了一种简单的机制来保持流水线忙于工作!
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Low Latency and Rich Connectivity}
+\textbf{低延迟和富连接}
 
-More conventional uses of FPGAs which take advantage of the rich input and output transceivers on the devices apply equally well for developers using DPC++. For example, as shown in Figure 17-6, some FPGA accelerator cards have network interfaces that make it possible to stream data directly into the device, process it, and then stream the result directly back to the network. Such systems are often sought when processing latency needs to be minimized and where processing through operating system network stacks is too slow or needs to be offloaded.\par
+利用设备上丰富的输入和输出收发器的FPGA的更传统的使用同样适用于使用DPC++的开发人员。例如，如图17-6所示，一些FPGA加速卡具有网络接口，可以将数据直接流进设备，进行处理后将结果直接流回网络。当需要最小化处理延迟、通过操作系统网络栈进行的处理太慢或需要卸载时，通常会寻求这种系统。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 17-6. Low-latency I/O streaming: FPGA connects network data and computation tightly
+图17-6 低延迟I/O流:FPGA连接网络数据和计算
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/7}
 \end{center}
 
-The opportunities are almost limitless when considering direct input/output through FPGA transceivers, but the options do come down to what is available on the circuit board that forms an accelerator. Because of the dependence on a specific accelerator card and variety of such uses, aside from describing the pipe language constructs in a coming section, this chapter doesn’t dive into these applications. We should instead read the vendor documentation associated with a specific accelerator card or search for an accelerator card that matches our specific interface needs.\par
+当考虑通过FPGA收发器直接输入/输出时，机会有很多，但选择确实取决于加速器上可用的东西。由于依赖于特定的加速卡和各种场景，除了在下一节中描述管道语言构造外，本章不深入研究这些应用程序。相反，我们应该阅读与特定加速卡相关的供应商文档，或者搜索与特定接口需求相匹配的加速卡。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Customized Memory Systems}
+\textbf{定制的内存系统}
 
-Memory systems on an FPGA, such as function private memory or workgroup local memory, are built out of small blocks of on-chip memory. This is important because each memory system is custom built for the specific portion of an algorithm or kernel using it. FPGAs have significant on-chip memory bandwidth, and combined with the formation of custom memory systems, they can perform very well on applications that have atypical memory access patterns and structures. Figure 17-7 shows some of the optimizations that can be performed by the compiler when a memory system is implemented on an FPGA.\par
+FPGA上的存储系统，私有存储器或工作组本地存储器，是由片上存储器构建。每个内存系统都是为使用它的算法或内核的特定部分定制构建的。FPGA具有显著的片上存储器带宽，并且结合形成定制存储器，可以在具有非典型存储器访问模式和结构的应用程序上表现得很好。图17-7显示了在FPGA上实现内存系统时，编译器可以执行的一些优化。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 17-7. FPGA memory systems are customized by the compiler for our specific code
+图17-7 FPGA存储系统是由编译器为特定代码定制的
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/8}
 \end{center}
 
-Other architectures such as GPUs have fixed memory structures that are easy to reason about by experienced developers, but that can also be hard to optimize around in many cases. Many optimizations on other accelerators are focused around memory pattern modification to avoid bank conflicts, for example. If we have algorithms that would benefit from a custom memory structure, such as a different number of access ports per bank or an unusual number of banks, then FPGAs can offer immediate advantages. Conceptually, the difference is between writing code to use a fixed memory system efficiently (most other accelerators) and having the memory system custom designed by the compiler to be efficient with our specific code (FPGA).\par
+其他架构(如GPU)具有固定的内存结构，这很容易使有经验的开发人员理解，但在许多情况下很难进行优化。例如，其他加速器的许多优化都集中在内存模式修改，以避免内存块冲突。如果算法能够从自定义的内存结构中获益，比如每个内存块的访问端口数量不同，或者内存块数量异常，那么FPGA就有直接的优势。从概念上讲，两者的区别在于编写代码高效地使用固定的内存系统(大多数其他加速器)，而让编译器定制内存系统，来提升特定代码的性能(FPGA)。\par
 
 
 
