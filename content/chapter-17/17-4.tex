@@ -1,33 +1,34 @@
-There are two steps to run a kernel on an FPGA (as with any ahead-of-time compilation accelerator):\par
+在FPGA上运行内核有两个步骤(与提前编译一样):\par
 
 \begin{enumerate}
-	\item Compiling the source to a binary which can be run on our hardware of interest
-	\item Selecting the correct accelerator that we are interested in at runtime
+	\item 将源代码编译成二进制文件，可以在感兴趣的硬件上运行
+	\item 运行时选择感兴趣的加速器
 \end{enumerate}
 
-To compile kernels so that they can run on FPGA hardware, we can use the command line:\par
+为了编译内核在FPGA硬件上运行，可以使用命令行:\par
 
 \begin{tcolorbox}[colback=white,colframe=black]
 dpcpp -fintelfpga my\_source\_code.cpp -Xshardware
 \end{tcolorbox}
 
-This command tells the compiler to turn all kernels in my\_source\_code.cpp into binaries that can run on an Intel FPGA accelerator and then to package them within the host binary that is generated. When we execute the host binary (e.g., by running ./a.out on Linux), the runtime will automatically program any attached FPGA as required, before executing the submitted kernels, as shown in Figure 17-8.\par
+这个命令告诉编译器将my\_source\_code.cpp中的所有内核转换为可以在Intel FPGA加速机上运行的二进制文件，然后打包到主机二进制文件中。当执行主机二进制文件时(例如，在Linux上运行./a.out)，在执行提交的内核之前，运行时将根据需要为FPGA自动编程，如图17-8所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 17-8. FPGA programmed automatically at runtime
+图17-8 FPGA在运行时的自动编程
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/9}
 \end{center}
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-FPGA programming binaries are embedded within the compiled DPC++ executable that we run on the host. The FPGA is automatically configured behind the scenes for us.\\
-When we run a host program and submit the first kernel for execution on an FPGA, there might be a slight delay before the kernel begins executing, while the FPGA is programmed. Resubmitting kernels for additional executions won’t see the same delay because the kernel is already programmed to the device and ready to run.
+FPGA编程二进制文件嵌入在主机上运行和编译的DPC++可执行文件中。FPGA在后台进行自动配置。\\
+
+当运行主程序并在FPGA上提交内核执行时，当FPGA编程时，在内核开始执行之前可能会有一个延迟。重新提交内核执行不会出现相同的延迟，因为内核已经编程到设备中，并准备运行。
 \end{tcolorbox}
 
-Selection of an FPGA device at runtime was covered in Chapter 2. We need to tell the host program where we want kernels to run because there are typically multiple accelerator options available, such as a CPU and GPU, in addition to the FPGA. To quickly recap one method to select an FPGA during program execution, we can use code like that in Figure 17-9.\par
+运行时选择FPGA设备在第2章中讨论。需要告诉主程序希望内核在哪里运行，通常会有多个加速器选项可用，比如CPU和GPU，除了FPGA。为了快速回顾在程序执行期间选择FPGA的方法，可以使用如图17-9所示的代码。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 17-9. Choosing an FPGA device at runtime using the fpga\_selector
+图17-9 使用fpga\_selector在运行时选择FPGA
 \begin{lstlisting}[caption={}]
 #include <CL/sycl.hpp>
 #include <CL/sycl/intel/fpga_extensions.hpp> // For fpga_selector
@@ -54,35 +55,35 @@ int main() {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Compile Times}
+\textbf{编译时间}
 
-Rumors abound that compiling designs for an FPGA can take a long time, much longer than compiling for ISA-based accelerators. The rumors are true! The end of this chapter overviews the fine-grained architectural elements of an FPGA that lead to both the advantages of an FPGA and the computationally intensive compilation (place-and-route optimizations) that can take hours in some cases.\par
+有很多传言说，为FPGA编译设计可能需要很长时间，比基于ISA的加速器编译时间长得多。传言是真的!本章的最后概述了FPGA的细粒度架构元素，它们带来了FPGA的优点和计算密集型的编译(位置和路径优化)，在某些情况下需要花费数小时。\par
 
-The compile time from source code to FPGA hardware execution is long enough that we don’t want to develop and iterate on our code exclusively in hardware. FPGA development flows offer several stages that minimize the number of hardware compilations, to make us productive despite the hardware compile times. Figure 17-10 shows the typical stages, where most of our time is spent on the early steps that provide fast turnaround and rapid iteration.\par
+从源代码到FPGA硬件执行的编译时间足够长，以至于我们不希望只在硬件中开发和迭代代码。FPGA开发流程提供了几个阶段，这些阶段最小化了硬件编译的数量，使硬件编译的时间不受影响下，仍然具有生产力。图17-10显示了典型的阶段，我们的大部分时间都花在提供快速周转和快速迭代的早期步骤上。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 17-10. Most verification and optimization occurs prior to lengthy hardware compilation
+图17-10 大多数验证和优化发生在冗长的硬件编译之前
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/10}
 \end{center}
 
-Emulation and static reports from the compiler are the cornerstones of FPGA code development in DPC++. The emulator acts as if it was an FPGA, including supporting relevant extensions and emulating the execution model, but runs on the host processor. Compilation time is therefore the same as we would expect from compilation to a CPU device, although we won’t see the performance boost that we would from execution on actual FPGA hardware. The emulator is great for establishing and testing functional correctness in an application.\par
+编译器的渲染和静态报告是DPC++中FPGA代码开发的基石。模拟器就好像是一个FPGA，包括支持相关的扩展和模拟执行模型，但是在主机上运行。因此，编译时间与期望从编译到CPU设备的时间相同，尽管看不到在实际FPGA硬件上执行所带来的性能提升。模拟器对于在应用程序中建立和测试功能正确性非常有用。\par
 
-Static reports, like emulation, are generated quickly by the toolchain. They report on the FPGA structures created by the compiler and on bottlenecks identified by the compiler. Both of these can be used to predict whether our design will achieve good performance when run on FPGA hardware and are used to optimize our code. Please read the vendor’s documentation for information on the reports, which are often improved from release to release of a toolchain (see documentation for the latest and greatest features!). Extensive documentation is provided by vendors on how to interpret and optimize based on the reports. This information would be the topic of another book, so we can’t dive into details in this single chapter.\par
+工具链可以快速生成静态报告，比如仿真。报告由编译器创建的FPGA结构，并由编译器识别的瓶颈。这两者都可以用来预测设计在FPGA硬件上运行时是否会有良好的性能，并用于优化代码。请阅读供应商的文档以获取有关报告的信息，这些报告通常会随着工具链的发布而不断改进(请参阅文档以获得最新和最伟大的特性!)供应商提供了详细的文档，说明如何根据报告进行解释和优化。这些信息将是另一本书的主题，所以不在这一章中详细讨论。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{The FPGA Emulator}
+\textbf{FPGA仿真器}
 
-Emulation is primarily used to functionally debug our application, to make sure that it behaves as expected and produces correct results. There is no reason to do this level of development on actual FPGA hardware where compile times are longer. The emulation flow is activated by removing the -Xshardware flag from the dpcpp compilation command and at the same time using the INTEL::fpga\_emulator\_selector instead of the INTEL::fpga\_selector in our host code. We would compile using a command like\par
+模拟主要用于从功能上调试应用程序，以确保它的行为符合预期并产生正确的结果。没有理由在编译时间较长的实际FPGA硬件上进行这种级别的开发。仿真流通过从dpcpp编译命令中删除-Xshardware标志来激活，并且在我们的主机代码中使用INTEL::fpga\_emulator\_selector，而不是使用INTEL::fpga\_selector。然后，使用以下命令进行编译\par
 
 \begin{tcolorbox}[colback=white,colframe=black]
 dpcpp -fintelfpga my\_source\_code.cpp
 \end{tcolorbox}
 
-Simultaneously, we would choose the FPGA emulator at runtime using code such as in Figure 17-11. By using fpga\_emulator\_selector, which uses the host processor to emulate an FPGA, we maintain a rapid development and debugging process before we have to commit to the lengthier compile for actual FPGA hardware.\par
+同时，将在运行时使用如图17-11所示的FPGA仿真器。通过使用FPGA模拟器选择器(使用主机处理器来模拟FPGA)，需要对实际的FPGA硬件进行冗长的编译之前，维护了一个快速的开发和调试过程。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 17-11. Using fpga\_emulator\_selector for rapid development and debugging
+图17-11 利用FPGA仿真器进行快速开发和调试
 \begin{lstlisting}[caption={}]
 #include <CL/sycl.hpp>
 
@@ -108,22 +109,22 @@ int main() {
 }
 \end{lstlisting}
 
-If we are switching between hardware and the emulator frequently, it can make sense to use a macro within our program to flip between device selectors from the command line. Check the vendor’s documentation and online FPGA DPC++ code examples for examples of this, if needed.\par
+如果经常在硬件和模拟器之间切换，可以在程序中使用宏在对设备选择器进行切换。如果需要，请查看供应商的文档和在线FPGA DPC++代码示例。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{FPGA Hardware Compilation Occurs “Ahead-of-Time”}
+\textbf{FPGA的AOT(Ahead-of-Time)编译}
 
-The Full Compile and Hardware Profiling stage in Figure 17-10 is an aheadof-time compile in SYCL terminology. This means that the compilation of the kernel to a device binary occurs when we initially compile our program and not when the program is submitted to a device to be run. On an FPGA, this is particularly important because\par
+图17-10中的完全编译和硬件分析阶段在SYCL术语中是AOT编译。意味着将内核编译为设备二进制文件，是发生在最初编译程序时，而不是在将程序提交给要运行的设备时。在FPGA上，这一点特别重要，因为\par
 
 \begin{enumerate}
-	\item Compilation takes a length of time that we don’t normally want to incur when running an application.
-	\item DPC++ programs may be executed on systems that don’t have a capable host processor. The compilation process to an FPGA binary benefits from a fast processor with a good amount of attached memory. Ahead-of-time compilation lets us easily choose where the compile occurs, rather than having it run on systems where the program is deployed.
+	\item 编译需要一段时间，这是运行程序时不希望发生的。
+	\item DPC++程序可能会在没有主机处理器的系统上执行。FPGA二进制代码的编译过程得益于快速处理器和大量附加内存。AOT编译可以轻松地选择编译发生的位置，而不是让它在部署程序的系统上运行。
 \end{enumerate}
 
-\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=A LOT HAPPENS BEHIND THE SCENES WITH DPC++ ON AN FPGA!]
-Conventional FPGA design (not using a high-level language) can be very complicated. There are many steps beyond just writing our kernel, such as building and configuring the interfaces that communicate with off-chip memories and closing timing by inserting registers needed to make the compiled design run fast enough to communicate with certain peripherals. DPC++ solves all of this for us, so that we don’t need to know anything about the details of conventional FPGA design to achieve working applications! The tooling treats our kernels as code to optimize and make efficient on the device and then automatically handles all of the details of talking to off-chip peripherals, closing timing, and setting up drivers for us.\\
+\begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black, title=在FPGA上使用DPC++其实要经历很多!]
+传统的FPGA设计(不使用高级语言)可能非常复杂。除了编写内核之外，还有许多步骤，比如：构建和配置与芯片外存储器通信的接口，通过插入寄存器来关闭计时，这些寄存器需要使编译后的设计运行得足够快，以便与某些外设通信。DPC++解决了所有这一切，所以不需要知道任何关于传统FPGA设计的细节来实现工作应用程序!该工具将内核当作代码来优化和提高设备效率，然后自动处理与芯片外外设通信、关闭计时和为我们设置驱动程序的所有细节。\\
 
-Achieving peak performance on an FPGA still requires detailed knowledge of the architecture, just like any other accelerator, but the steps to move from code to a working design are much simpler and more productive with DPC++ than in traditional FPGA flows.
+与任何其他加速器一样，要在FPGA上实现峰值性能仍然需要详细的架构知识，但使用DPC++从代码转移到工作设计的步骤，比传统FPGA流程要简单得多，生产率也更高。
 \end{tcolorbox}
 
 
