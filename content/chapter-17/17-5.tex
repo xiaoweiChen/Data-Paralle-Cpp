@@ -165,7 +165,7 @@ h.single_task([=]() {
 \hspace*{\fill} \par %插入空行
 图17-23 从概念上讲，循环迭代一个接一个地执行
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/18}
+	\includegraphics[width=0.8\textwidth]{content/chapter-17/images/18}
 \end{center}
 
 进入空间编译器透视图，图17-24显示了一个循环流水线优化，其中循环迭代的执行在时间上是重叠的。不同的迭代将彼此执行流水线的不同阶段，而各个阶段的数据依赖可以由编译器管理，以确保程序执行的迭代好似是顺序的(除了循环将更快地完成执行)。\par
@@ -181,7 +181,7 @@ h.single_task([=]() {
 \hspace*{\fill} \par %插入空行
 图17-25 增量随机数生成器的流水线实现
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/20}
+	\includegraphics[width=0.9\textwidth]{content/chapter-17/images/20}
 \end{center}
 
 使用循环流水线，可以使循环的多次迭代执行重叠，即使使用循环携带的数据依赖项，循环迭代仍然可以用于用工作填充管道，从而实现高效利用。图17-26显示了循环迭代是如何在图17-25所示的同一个简单管道中重叠执行的。\par
@@ -221,7 +221,7 @@ II大于1会导致流水线的效率低下，因为每个阶段的平均占用�
 \hspace*{\fill} \par %插入空行
 图17-28 一个FIFO的示例操作
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/23}
+	\includegraphics[width=0.8\textwidth]{content/chapter-17/images/23}
 \end{center}
 
 FIFO在DPC++中通过管道的特性对外使用。编写FPGA程序时，应该关心管道的原因是，管道允许我们将问题分解，以更模块化的方式关注开发和优化。还允许利用FPGA丰富的通信特性。如图17-29所示。\par
@@ -229,7 +229,7 @@ FIFO在DPC++中通过管道的特性对外使用。编写FPGA程序时，应该�
 \hspace*{\fill} \par %插入空行
 图17-29 管道简化了模块化设计和对硬件外设的访问
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/24}
+	\includegraphics[width=0.8\textwidth]{content/chapter-17/images/24}
 \end{center}
 
 记住FPGA内核可以同时存在于设备上(在芯片的不同区域)，在高效的设计中，内核的所有部分在每个时钟周期中都是活跃的。这意味着优化FPGA应用程序需要考虑内核或内核的各个部分如何相互交互，而管道提供了一个抽象来简化这一过程。\par
@@ -245,7 +245,7 @@ FIFO在DPC++中通过管道的特性对外使用。编写FPGA程序时，应该�
 \hspace*{\fill} \par %插入空行
 图17-30 DPC++中管道连接的类型
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/25}
+	\includegraphics[width=0.8\textwidth]{content/chapter-17/images/25}
 \end{center}
 
 如图17-31所示。在这种情况下，有两个内核通过管道进行通信，每个读或写操作都以int为单位。\par
@@ -346,7 +346,7 @@ FPGA上的内存访问值得优化有两个主要原因:\par
 \hspace*{\fill} \par %插入空行
 图17-34 内存停滞也会导致流水线阶段停滞
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/26}
+	\includegraphics[width=0.8\textwidth]{content/chapter-17/images/26}
 \end{center}
 
 可以在几个方面执行内存系统优化。编译器报告是了解编译器为实现了什么，以及哪些可能值得调整或改进的重要指南。在这里列出了一些优化主题，以突出显示可供使用的自由度。优化通常可以通过显式控制和修改代码，让编译器推断想要的结构来实现。编译器静态报告和供应商文档，是内存系统优化的关键，有时在硬件执行期间与分析工具结合使用，以捕获实际的内存行为，用于验证或优化的最后阶段。\par
