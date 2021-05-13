@@ -1,25 +1,23 @@
-The potential usages of atomics are so broad and varied that it would be impossible for us to provide an example of each usage in this book. We have included two representative examples, with broad applicability across domains:\par
-\begin{center}
+原子的用法是如此广泛和多样，以至于不可能在本书中提供每种用法的示例。我们包含了两个具有代表性的例子，它们具有广泛的适用性:\par
 	
 \begin{enumerate}
-	\item Computing a histogram
-	\item Implementing device-wide synchronization
+	\item 计算直方图
+	\item 实现设备范围内的同步
 \end{enumerate}
 
-\end{center}
 \hspace*{\fill} \par %插入空行
-\textbf{Computing a Histogram}
+\textbf{计算直方图}
 
-The code in Figure 19-18 demonstrates how to use relaxed atomics in conjunction with work-group barriers to compute a histogram. The kernel is split by the barriers into three phases, each with their own atomicity requirements. Remember that the barrier acts both as a synchronization point and an acquire-release fence—this ensures that any reads and writes in one phase are visible to all work-items in the work-group in later phases.\par
+图19-18中的代码演示了如何结合使用自由原子操作和工作组栅栏来计算直方图。内核被栅栏分为三个阶段，每个阶段都有自己的原子性需求。这个栅栏既是一个同步点，又是一个获取-发布栅栏——这确保了一个阶段中的任何读和写，对后面阶段中工作组的所有工作项都是可见的。\par
 
-The first phase sets the contents of some work-group local memory to zero. The work-items in each work-group update independent locations in work-group local memory by design—race conditions cannot occur, and no atomicity is required.\par
+第一阶段将某个工作组本地内存的内容设置为零。每个工作组中的工作项不能按照设计争用条件更新工作组本地内存中的独立位置，并且不需要原子性。\par
 
-The second phase accumulates partial histogram results in local memory. Work-items in the same work-group may update the same locations in work-group local memory, but synchronization can be deferred until the end of the phase—we can satisfy the atomicity requirements using memory\_order::relaxed and memory\_scope::work\_group.\par
+第二阶段将部分直方图结果累加到本地内存中。同一个工作组中的工作项可以更新工作组本地内存中的相同位置，但是同步可以推迟到该阶段的结束——可以使用memory\_order::relaxed和memory\_scope::work\_group来满足原子性需求。\par
 
-The third phase contributes the partial histogram results to the total stored in global memory. Work-items in the same work-group are guaranteed to read from independent locations in work-group local memory, but may update the same locations in global memory—we no longer require atomicity for the work-group local memory and can satisfy the atomicity requirements for global memory using memory\_order::relaxed and memory\_scope::system as before.\par
+第三阶段将部分直方图结果存储在全局内存中。保证同一个工作组中的工作项从工作组本地内存中的位置读取，但是会更新全局内存中的相同位置——不再需要工作组本地内存的原子性，可以像以前一样使用memory\_order::relaxed和memory\_scope::system来满足全局内存的原子性要求。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 19-18. Computing a histogram using atomic references in different memory spaces
+图19-18 使用不同内存空间中的原子操作计算直方图
 \begin{lstlisting}[caption={}]
 // Define shorthand aliases for the types of atomic needed by this kernel 
 template <typename T>
@@ -70,32 +68,32 @@ Q.submit([&](handler& h) {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Implementing Device-Wide Synchronization}
+\textbf{实现设备范围内的同步}
 
-Back in Chapter 4, we warned against writing kernels that attempt to synchronize work-items across work-groups. However, we fully expect several readers of this chapter will be itching to implement their own device-wide synchronization routines atop of atomic operations and that our warnings will be ignored.\par
-
-\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Device-wide synchronization is currently not portable and is best left to expert programmers. Future versions of the language will address this.
-\end{tcolorbox}
-
-The code discussed in this section is dangerous and should not be expected to work on all devices, because of potential differences in scheduling and concurrency guarantees. The memory ordering guarantees provided by atomics are orthogonal to forward progress guarantees; and, at the time of writing, work-group scheduling in SYCL and DPC++ is completely implementation-defined. Formalizing the concepts and terminology required to discuss execution models and scheduling guarantees is currently an area of active academic research, and future versions of DPC++ are expected to build on this work to provide additional scheduling queries and controls. For now, these topics should be considered expert-only.\par
-
-Figure 19-19 shows a simple implementation of a device-wide latch (a single-use barrier), and Figure 19-20 shows a simple example of its usage. Each work-group elects a single work-item to signal arrival of the group at the latch and await the arrival of other groups using a naïve spin-loop, while the other work-items wait for the elected work-item using a workgroup barrier. It is this spin-loop that makes device-wide synchronization unsafe; if any work-groups have not yet begun executing or the currently executing work-groups are not scheduled fairly, the code may deadlock.\par
+第4章警告不要编写跨工作组同步工作项的内核。然而，我们完全期望本章的几个示例能在原子操作之上实现对设备范围的同步，并且之前的警告将被忽略。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Relying on memory order alone to implement synchronization primitives may lead to deadlocks in the absence of independent forward progress guarantees!
+设备范围内的同步目前是不可移植的，最好留给专业开发者使用。语言的未来版本将解决这个问题。
 \end{tcolorbox}
 
-For the code to work correctly, the following three conditions must hold:\par
+本节中讨论的代码是危险的，不应该期望在所有设备上工作，因为在调度和并发保证方面可能存在差异。原子提供的内存顺序保证与前进进度保证是正交的;在编写本文时，SYCL和DPC++中的工作组调度完全是由实现定义的。形式化讨论执行模型和调度保证所需的概念和术语是目前学术研究领域的热门，DPC++的未来版本预计将在此工作的基础上提供额外的调度查询和控制。\par
+
+图19-19展示了一个设备级锁存器(一次性栅栏)的简单实现，图19-20展示了一个简单的使用示例。每个工作组选择一个单独的工作项，以发出该组到达的信号，并使用自旋环等待其他组，而其他工作项使用工作组栅栏等待所选的工作项。正是这种自旋环使得设备范围的同步不安全，当工作组还没有开始执行，或者当前执行的工作组没有平衡地调度，代码可能会死锁。\par
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
+如果没有进度保证，单独依赖内存序来实现同步原语可能会导致死锁!
+\end{tcolorbox}
+
+要使代码正确工作，必须满足以下三个条件:\par
 
 \begin{enumerate}
-	\item The atomic operations must use memory orders at least as strict as those shown, in order to guarantee that the correct fences are generated.
-	\item Each work-group in the ND-range must be capable of making forward progress, in order to avoid a single work-group spinning in the loop from starving a work-group that has yet to increment the counter.
-	\item The device must be capable of executing all orkgroups in the ND-range concurrently, in order to ensure that all work-groups in the ND-range eventually reach the latch.
+	\item 为了保证生成正确的内存栅栏，原子操作必须使用至少像上面显示的那样严格的内存顺序。
+	\item ND-Range中的每个工作组必须能够执行，避免单个工作组在循环中自旋，从而使尚未增加计数器的工作组挨饿。
+	\item 设备必须能够同时执行ND-Range中的所有工作组，以确保ND-Range中的所有工作组最终达到门闩处。
 \end{enumerate}
 
 \hspace*{\fill} \par %插入空行
-Figure 19-19. Building a simple device-wide latch on top of atomic references
+图19-19 原子引用的顶部构建一个简单的设备级闩锁
 \begin{lstlisting}[caption={}]
 struct device_latch {
 	using memory_order = intel::memory_order;
@@ -135,7 +133,7 @@ struct device_latch {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure 19-20. Using the device-wide latch from Figure 19-19
+图19-20 使用图19-19中的设备级闩锁
 \begin{lstlisting}[caption={}]
 // Allocate a one-time-use device_latch in USM
 void* ptr = sycl::malloc_shared(sizeof(device_latch), Q);
@@ -159,7 +157,7 @@ Q.submit([&](handler& h) {
 free(ptr, Q);
 \end{lstlisting}
 
-Although this code is not guaranteed to be portable, we have included it here to highlight two key points: 1) DPC++ is expressive enough to enable device-specific tuning, sometimes at the expense of portability; and 2) DPC++ already contains the building blocks necessary to implement higher-level synchronization routines, which may be included in a future version of the language.\par
+虽然这段代码不能保证可移植性，但在这里强调两个关键点:1)DPC++具有足够的表达能力，可以实现特定于设备的调优，有时以牺牲可移植性为代价；2)DPC++包含了实现高级同步例程所需的构建块，这可能会包含在语言的未来版本中。\par
 
 
 
