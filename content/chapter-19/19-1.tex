@@ -1,46 +1,45 @@
-This section expands upon the motivation for programming languages to contain a memory model and introduces a few core concepts that parallel programmers should familiarize themselves with:\par
+本节详述了编程语言包含内存模型的动机，并介绍了并行开发者应该熟悉的几个核心概念:\par
 
 \begin{itemize}
-	\item Data races and synchronization
-	\item Barriers and fences
-	\item Atomic operations
-	\item Memory ordering
+	\item 数据竞争和同步
+	\item 计算和内存栅栏
+	\item 原子操作
+	\item 内存序
 \end{itemize}
 
-Understanding these concepts at a high level is necessary to appreciate their expression and usage in C++, SYCL, and DPC++. Readers with extensive experience in parallel programming, especially using C++, may wish to skip ahead.\par
+要理解这些概念在C++、SYCL和DPC++中的表达和用法，就必须从高层次来考虑这些概念。具有丰富的并行编程经验，特别是使用C++的读者，可以跳过前面的内容。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Data Races and Synchronization}
+\textbf{数据竞争和同步}
 
-The operations that we write in our programs typically do not map directly to a single hardware instruction or micro-operation. A simple addition operation such as data[i] += x may be broken down into a sequence of several instructions or micro-operations:\par
+在程序中编写的操作不会直接映射到单个硬件指令或微操作。简单的加法操作，例如data[i] += x，可以分解成一系列的指令或微操作:\par
 
 \begin{enumerate}
-	\item Load data[i] from memory into a temporary 	(register).
-	\item Compute the result of adding x to data[i].
-	\item Store the result back to data[i].
+	\item 将data[i]加载到一个临时内存中(寄存器)。
+	\item 计算将x添加到data[i]中。
+	\item 将结果存储回data[i]。
 \end{enumerate}
 
-This is not something that we need to worry about when developing sequential applications—the three stages of the addition will be executed in the order that we expect, as depicted in Figure 19-1.\par
+这不是我们在开发应用程序时需要担心的事情——添加的三个阶段将按照顺序执行，如图19-1所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 19-1. Sequential execution of data[i] += x broken into three separate operations
+图19-1 datai] += x的连续执行分为三个独立的操作
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-19/images/2}
 \end{center}
 
-Switching to parallel application development introduces an extra level of complexity: if we have multiple operations being applied to the same data concurrently, how can we be certain that their view of that data is consistent? Consider the situation shown in Figure 19-2, where two executions of data[i] += x have been interleaved. If the two executions use different values of i, the application will execute correctly. If they use the same value of i, both load the same value from memory, and one of the results is overwritten by the other! This is just one of many possible ways in which their operations could be scheduled, and the behavior of our application depends on which program instance gets to which data first—our application contains a data race.\par
+切换到并行应用程序开发带来了额外的复杂性:如果有多个操作同时应用于相同的数据，如何能确定对数据的一致性?考虑图19-2所示的情况，其中data[i] += x的两次执行交织在一起。如果两次执行，使用了不同的i值，则应用程序将正确执行。如果它们使用相同的i值，那会从内存中加载相同的值，并且其中一个结果会被另一个覆盖!这只是调度它们的操作的许多可能方式之一，应用程序的行为取决于哪个程序实例首先到达——这就是数据竞争。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 19-2. One possible interleaving of data[i] += x executed 
-concurrently
+图19-2 可能的data[i] += x交错并发执行
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-19/images/3}
 \end{center}
 
-The code in Figure 19-3 and its output in Figure 19-4 show how easily this can happen in practice. If M is greater than or equal to N, the value of j in each program instance is unique; if it isn’t, values of j will conflict, and updates may be lost. We say may be lost because a program containing a data race could still produce the correct answer some or all of the time (depending on how work is scheduled by the implementation and hardware). Neither the compiler nor the hardware can possibly know what this program is intended to do or what the values of N and M may be at runtime—it is our responsibility as programmers to understand whether our programs may contain data races and whether they are sensitive to execution order.\par
+图19-3中的代码和图19-4中的输出展示了并发极易发生。如果M大于或等于N，则每个程序实例中j的值是唯一的;如果不是，j的值将会冲突，更新可能会丢失。我们说可能丢失是因为包含数据竞争的程序仍然可能在某个时间点，产生正确的答案(取决于实现和硬件如何安排工作)。无论编译器还是硬件都不可能知道这个程序要做什么，也不可能知道在运行时N和M的值是多少——作为开发者，有责任了解的程序是否包含数据竞争，以及是否对执行顺序敏感。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 19-3. Kernel containing a data race
+图19-3 包含数据竞争的内核
 \begin{lstlisting}[caption={}]
 int* data = malloc_shared<int>(N, Q);
 std::fill(data, data + N, 0);
@@ -56,7 +55,7 @@ for (int i = 0; i < N; ++i) {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure 19-4. Sample output of the code in Figure 19-3 for small values of N and M
+图19-4 图19-3中的代码输出示例，用于小值N和M
 \begin{tcolorbox}[colback=white,colframe=black]
 N = 2, M = 2:\\
 data [0] = 1\\
@@ -67,25 +66,25 @@ data [0] = 1\\
 data [1] = 0
 \end{tcolorbox}
 
-In general, when developing massively parallel applications, we should not concern ourselves with the exact order in which individual workitems execute—there are hopefully hundreds (or thousands!) of workitems executing concurrently, and trying to impose a specific ordering upon them will negatively impact both scalability and performance. Rather, our focus should be on developing portable applications that execute correctly, which we can achieve by providing the compiler (and hardware) with information about when program instances share data, what guarantees are needed when sharing occurs, and which execution orderings are legal.\par
+通常，开发大规模并行应用程序时，不应该关注单个工作项执行的确切顺序——可能有数百(或数千!)个工作项同时执行，而特定的顺序将对可扩展性和性能产生负面影响。相反，我们的重点应该是开发可移植的正确执行的应用程序，可以通过向编译器(和硬件)提供关于程序实例何时共享数据、共享发生时，需要什么保证，以及哪些执行顺序是合法的信息来实现这一点。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Massively parallel applications should not be concerned with the exact order in which individual work-items execute!
+大规模并行应用程序不应该关注单个工作项执行的确切顺序!
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
-\textbf{Barriers and Fences}
+\textbf{计算和内存栅栏}
 
-One way to prevent data races between work-items in the same group is to introduce synchronization across different program instances using workgroup barriers and appropriate memory fences. We could use a work-group barrier to order our updates of data[i] as shown in Figure 19-5, and an updated version of our example kernel is given in Figure 19-6. Note that because a work-group barrier does not synchronize work-items in different groups, our simple example is only guaranteed to execute correctly if we limit ourselves to a single work-group!\par
+防止同一组中工作项之间的数据竞争的一种方法是，使用工作组栅栏和适当的内存栅栏在不同程序实例之间引入同步。可以使用工作组栅栏对数据[i]的更新进行排序，如图19-5所示，图19-6给出了示例内核的更新版本。请注意，因为工作组栅栏不会同步不同组中的工作项，所以只有当我们将自己限制在单个工作组中时，示例才能保证正确执行!\par
 
 \hspace*{\fill} \par %插入空行
-Figure 19-5. Two instances of data[i] += x separated by a barrier
+图19-5 data[i] += x的两个实例被栅栏隔开
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-19/images/4}
 \end{center}
 
 \hspace*{\fill} \par %插入空行
-Figure 19-6. Avoiding a data race using a barrier
+图19-6 使用障碍避免数据竞争
 \begin{lstlisting}[caption={}]
 int* data = malloc_shared<int>(N, Q);
 std::fill(data, data + N, 0);
@@ -112,23 +111,23 @@ for (int i = 0; i < N; ++i) {
 }
 \end{lstlisting}
 
-Although using a barrier to implement this pattern is possible, it is not typically encouraged—it forces the work-items in a group to execute sequentially and in a specific order, which may lead to long periods of inactivity in the presence of load imbalance. It may also introduce more synchronization than is strictly necessary—if the different program instances happen to use different values of i, they will still be forced to synchronize at the barrier.\par
+尽管使用障碍来实现此模式没什么问题，但通常不鼓励这样做——它强制组中的工作项按顺序和特定的顺序执行，这可能导致负载不平衡的情况下长时间的不活动。它还可能引入比严格要求更多的同步——如果不同的程序实例碰巧使用了不同的i值，它们仍将在计算栅栏上进行同步。\par
 
-Barrier synchronization is a useful tool for ensuring that all work-items in a work-group or sub-group complete some stage of a kernel before proceeding to the next stage, but is too heavy-handed for fine-grained (and potentially data-dependent) synchronization. For more general synchronization patterns, we must look to atomic operations.\par
+栅栏同步是一种有用的工具，确保工作组或子工作组中的所有工作项在进入下一个阶段之前完成内核的某部分，但是对于细粒度的(可能依赖于数据的)同步来说，栅栏同步过重了。对于更通用的同步模式，我们必须使用原子操作。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Atomic Operations}
+\textbf{原子操作}
 
-Atomic operations enable concurrent access to a memory location without introducing a data race. When multiple atomic operations access the same memory, they are guaranteed not to overlap. Note that this guarantee does not apply if only some of the accesses use atomics and that it is our responsibility as programmers to ensure that we do not concurrently access the same data using operations with different atomicity guarantees.\par
+原子操作允许在不引入数据竞争的情况下并发访问内存位置。当多个原子操作访问同一内存时，保证它们不会重叠。如果只有一些访问具有原子性，那么这个保证就没意义，开发者有责任确保不会使用具有不同原子性的操作，去并发访问相同的数据。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-Mixing atomic and non-atomic operations on the same memory location(s) at the same time results in undefined behavior!
+同一个内存位置同时混合原子和非原子操作会导致未定义的行为!
 \end{tcolorbox}
 
-If our simple addition is expressed using atomic operations, the result may look like Figure 19-8—each update is now an indivisible chunk of work, and our application will always produce the correct result. The corresponding code is shown in Figure 19-7—we will revisit the atomic\_ref class and the meaning of its template arguments later in the chapter.\par
+如果使用原子操作来表示简单的加法，结果可能如图19-8所示——每个更新都是不可分割的工作块，并且应用程序将总是产生正确的结果。对应的代码如图19-7所示——在本章后面重新讨论atomic\_ref类及其模板参数的含义。\par
 
 \hspace*{\fill} \par %插入空行
-Figure 19-7. Avoiding a data race using atomic operations
+图19-7 使用原子操作避免数据竞争
 \begin{lstlisting}[caption={}]
 int* data = malloc_shared<int>(N, Q);
 std::fill(data, data + N, 0);
@@ -146,35 +145,35 @@ for (int i = 0; i < N; ++i) {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure 19-8. An interleaving of data[i] += x executed concurrently with atomic operations
+图19-8 与原子操作交错执行的data[i] += x
 \begin{center}
 	\includegraphics[width=1.0\textwidth]{content/chapter-19/images/5}
 \end{center}
 
-However, it is important to note that this is still only one possible execution order. Using atomic operations guarantees that the two updates do not overlap (if both instances use the same value of i), but there is still no guarantee as to which of the two instances will execute first. Even more importantly, there are no guarantees about how these atomic operations are ordered with respect to any non-atomic operations in different program instances.\par
+需要注意的是，这仍然只是一个\textbf{可能}的执行顺序。使用原子操作可以保证两个更新不重叠(如果两个实例使用相同的i值)，但是不能保证两个实例中哪一个会先执行。更重要的是，不能保证这些原子操作相对于不同程序实例中的任何非原子操作的执行顺序。\par
 
 \hspace*{\fill} \par %插入空行
-\textbf{Memory Ordering}
+\textbf{内存序}
 
-Even within a sequential application, optimizing compilers and the hardware are free to re-order operations if they do not change the observable behavior of an application. In other words, the application must behave as if it ran exactly as it was written by the programmer.\par
+即使在顺序应用程序中，优化编译器和硬件可以自由地重新排序操作。换句话说，应用程序的行为必须与开发者编写的程序完全一样。\par
 
-Unfortunately, this as-if guarantee is not strong enough to help us reason about the execution of parallel programs. We now have two sources of re-ordering to worry about: the compiler and hardware may re-order the execution of statements within each sequential program instance, and the program instances themselves may be executed in any (possibly interleaved) order. In order to design and implement safe communication protocols between program instances, we need to be able to constrain this re-ordering. By providing the compiler with information about our desired memory order, we can prevent re-ordering optimizations that are incompatible with the intended behavior of our applications.\par
+然而，这种假设还不足以推断并行程序的执行。现在有两个需要担心的重排来源:编译器和硬件可能会在每个顺序的程序实例中重新排序语句的执行，而程序实例本身可能以任何(可能是交错的)顺序执行。为了设计和实现程序实例之间的安全通信协议，需要能够约束这种重新排序。为编译器提供我们想要的内存顺序的信息，可以防止与我们的应用程序的预期行为不兼容的重排优化。\par
 
-Three commonly available memory orderings are\par
+有三种常用的内存顺序\par
 
 \begin{enumerate}
-	\item A relaxed memory ordering
-	\item An acquire-release or release-acquire memory ordering
-	\item A sequentially consistent memory ordering
+	\item 自由的内存序
+	\item 获取-释放或释放-获取的内存序
+	\item 顺序一致的内存序
 \end{enumerate}
 
-Under a relaxed memory ordering, memory operations can be reordered without any restrictions. The most common usage of a relaxed memory model is incrementing shared variables (e.g., a single counter, an array of values during a histogram computation).\par
+在自由内存排序下，内存操作可以不受任何限制地重排。自由内存模型最常见的用法是增加共享变量(例如，一个计数器，直方图计算期间的一个值数组)。\par
 
-Under an acquire-release memory ordering, one program instance releasing an atomic variable and another program instance acquiring the same atomic variable acts as a synchronization point between those two program instances and guarantees that any prior writes to memory issued by the releasing instance are visible to the acquiring instance. Informally, we can think of atomic operations releasing side effects from other memory operations to other program instances or acquiring the side effects of memory operations on other program instances. Such a memory model is required if we want to communicate values between pairs of program instances via memory, which may be more common than we would think. When a program acquires a lock, it typically goes on to perform some additional calculations and modify some memory before eventually releasing the lock—only the lock variable is ever updated atomically, but we expect memory updates guarded by the lock to be protected from data races. This behavior relies on an acquire-release memory ordering for correctness, and attempting to use a relaxed memory ordering to implement a lock will not work.\par
+获取-释放内存顺序下，程序实例释放一个原子变量，而另一个程序实例获取同一个原子变量，这两个程序实例充当同步点，并保证释放实例之前对内存的任何写操作对获取实例可见。通常，可以考虑原子操作将其他内存操作释放到其他程序实例，或者获取其他程序实例的内存操作。如果想通过内存在程序实例对之间传递值，就需要一个内存模型，这可能比想象的更常见。当程序获得锁时，通常会执行一些额外的计算，并在最终释放锁之前修改内存——只有锁变量会自动更新，但是我们希望由锁保护的内存更新能够避免数据竞争。这种行为依赖于获取-释放内存排序来保证，尝试使用自由内存序来实现锁是不行的。\par
 
-Under a sequentially consistent memory ordering, the guarantees of acquire-release ordering still hold, but there additionally exists a single global order of all atomic operations. The behavior of this memory ordering is the most intuitive of the three and the closest that we can get to the original as-if guarantee we are used to relying upon when developing sequential applications. With sequential consistency, it becomes significantly easier to reason about communication between groups (rather than pairs) of program instances, since all program instances must agree on the global ordering of all atomic operations.\par
+顺序一致的内存顺序下，获取-释放顺序仍然有效，但所有原子操作的全局顺序一致。这种内存序行为是这三种方法中最直观的，也是最接近开发顺序应用程序时的习惯。有了顺序一致性，对程序实例组(而不是成对)之间的通信进行推理就会变得容易得多。\par
 
-Understanding which memory orders are supported by a combination of programming model and device is a necessary part of designing portable parallel applications. Being explicit in describing the memory order required by our applications ensures that they fail predictably (e.g., at compile time) when the behavior we require is unsupported and prevents us from making unsafe assumptions.\par
+设计可移植的并行应用程序时，必须了解编程模型和设备的组合支持哪些内存顺序。明确地描述应用程序所需的内存序，可以确保当需要的行为不受支持时，可以预见地失败(例如，在编译时)，并避免做出不安全的假设。\par
 
 
 
