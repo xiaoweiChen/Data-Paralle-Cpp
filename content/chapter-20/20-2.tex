@@ -1,11 +1,11 @@
-As we have seen in earlier chapters, there are some cases in which otherwise simple codes are complicated by the existence of memory spaces. We are free to use regular C++ pointers in most places, but at other times are required to use the multi\_ptr class and explicitly specify which address space(s) their code is expected to support.\par
+正如我们在前面的章节中所看到的，简单的代码会因为内存空间的存在而变得复杂。我们可以自由地使用常规C++指针，但有时候需要使用multi\_ptr类，并显式地指定期望支持的地址空间。\par
 
-Many modern architectures solve this problem by providing hardware support for a so-called generic address space; pointers may point to any allocation in any memory space, so that we (and compilers!) can leverage runtime queries to specialize code in situations where different memory spaces require different handling (e.g., accessing work-group local memory may use different instructions). Support for a generic address space is already available in other programming languages, such as OpenCL, and it is expected that a future version of SYCL will adopt generic-by-default in place of inference rules.\par
+许多现代体系结构通过为所谓的通用地址空间提供硬件支持来解决这个问题，指针可以指向任何内存空间中的任何分配，因此我们(和编译器!)可以利用运行时查询专门化不同内存空间需要不同处理的情况下的代码(例如，访问工作组本地内存可能使用不同的指令)。对泛型地址空间的支持在其他编程语言中已经可用，比如OpenCL，预计SYCL的未来版本将采用默认泛型代替推理规则。\par
 
-This change would greatly simplify many codes and make usage of the multi\_ptr class an optional performance-tuning feature instead of one that is required for correctness. Figure EP-2 shows a simple class written using the existing address spaces, and Figures EP-3 and EP-4 show two alternative designs that would be enabled by the introduction of a generic address space.\par
+这一更改将极大地简化许多代码，并使multi\_ptr类成为可选的性能调优特性，而不是正确性所必需的特性。图EP-2显示了一个使用现有地址空间编写的简单类，图EP-3和EP-4显示了通过引入通用地址空间可以实现的两种可选设计。\par
 
 \hspace*{\fill} \par %插入空行
-Figure EP-2. Storing pointers to a specific address space in a class
+图EP-2 类中存储指向特定地址空间的指针
 \begin{lstlisting}[caption={}]
 // Pointers in structs must be explicitly decorated with address space
 // Supporting both address spaces requires a template parameter
@@ -18,7 +18,7 @@ struct Particles {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure EP-3. Storing pointers to the generic address space in a class
+图EP-3 类中存储指向泛型地址空间的指针
 \begin{lstlisting}[caption={}]
 // Pointers in structs default to the generic address space
 struct Particles {
@@ -29,7 +29,7 @@ struct Particles {
 \end{lstlisting}
 
 \hspace*{\fill} \par %插入空行
-Figure EP-4. Storing pointers with an optional address space in a class
+图EP-4 类中存储带有可选地址空间的指针
 \begin{lstlisting}[caption={}]
 // Template parameter defaults to generic address space
 // User of class can override address space for performance tuning
