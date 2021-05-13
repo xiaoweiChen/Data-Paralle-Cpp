@@ -1,19 +1,19 @@
-Chapter 12 introduced an expressive set of queries enabling the host to extract information about a device at runtime. These queries enable runtime parameters such as work-group size to be tuned for a specific device and for different kernels implementing different algorithms to be dispatched to different types of device.\par
+第12章引入了一组富有表现力的查询，使主机能够在运行时提取有关设备的信息。这些查询允许针对特定设备调优工作组大小等运行时参数，并允许将实现不同算法的不同内核分派到不同类型的设备。\par
 
-Future versions are expected to augment these runtime queries with compile-time queries, allowing code to be specialized based on whether an implementation understands a vendor extension. Figure EP-5 shows how the preprocessor could be used to detect whether the compiler supports a specific vendor extension.\par
+未来的版本预计将使用编译时查询来扩充这些运行时查询，允许基于实现是否理解供应商扩展而对代码进行专一化。图EP-5显示了如何使用预处理器来检测编译器是否支持特定的供应商扩展\par
 
 \hspace*{\fill} \par %插入空行
-Figure EP-5. Checking for Intel sub-group extension compiler support with \#ifdef
+图EP-5 使用\#ifdef检查Intel子组扩展编译器支持
 \begin{lstlisting}[caption={}]
 #ifdef SYCL_EXT_INTEL_SUB_GROUPS
 sycl::ext::intel::sub_group sg = it.get_sub_group();
 #endif
 \end{lstlisting}
 
-There are also plans to introduce compile-time queries enabling kernels to be specialized based on properties (which we call aspects) of the targeted device (e.g., the device type, support for a specific extension, the size of work-group local memory, the sub-group size selected by the compiler). These aspects represent a special kind of constant expression not currently present in C++—they are not necessarily constexpr when the host code is compiled but become constexpr when the target device becomes known. The exact mechanism used to expose this device constexpr concept is still being designed. We expect it to build on the specialization constants feature introduced in the SYCL 2020 provisional and to look and behave similarly to the code shown in Figure EP-6.\par
+我们还计划引入编译时查询，使内核能够根据目标设备的属性(我们称之为方面)进行专门化(例如，设备类型、对特定扩展的支持、工作组本地内存的大小、编译器选择的子组大小)。这些方面代表了一种特殊的常量表达式，目前在C++中不存在——它们在编译宿主代码时不一定是constexpr，但在知道目标设备时就变成了constexpr。用于公开设备constexpr的机制仍在设计中。我们希望它以SYCL 2020临时引入的专用常量化特性为基础，并且形式和行为上类似于图EP-6中所示。\par
 
 \hspace*{\fill} \par %插入空行
-Figure EP-6. Specializing kernel code based on device aspects at kernel compile time
+图EP-6 内核编译时基于设备方面特化内核代码
 \begin{lstlisting}[caption={}]
 h.parallel_for(..., [=](item<1> it) {
 	if devconstexpr (this_device().has<aspect::cpu>()) {
