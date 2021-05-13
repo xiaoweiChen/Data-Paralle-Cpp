@@ -1,9 +1,9 @@
-As we noted back in Chapter 4, we consider the hierarchical parallelism in older versions of SYCL to be an experimental feature and expect it to be slower than basic data-parallel and ND-range kernels in its adoption of new language features.\par
+正如在第4章中提到的，我们认为旧版本SYCL中的分层并行是一种实验性特性，在使用新的语言特性时，预计会比基本的数据并行和ND-Range内核慢一些。\par
 
-There are a lot of new language features in DPC++ and SYCL 2020, and several of them are currently incompatible with hierarchical parallelism (e.g., sub-groups, group algorithms, reductions). Closing this gap would help to improve programmer productivity and would enable more compact syntax for some simple cases. The code in Figure EP-7 shows a possible route for extending reduction support to hierarchical parallelism, enabling a hierarchical reduction: each work-group computes a sum, and the kernel as a whole computes the maximum of all sums across all workgroups.\par
+DPC++和SYCL 2020中有很多新的语言特性，其中一些目前与分层并行不兼容(例如子工作组、组算法、归约减)。消除这种差异将有助于提高程序员的工作效率，并为一些简单的情况提供了更紧凑的语法。图EP-7中的代码显示了将归约支持扩展到层次并行的可能，从而实现层次归约:每个工作组计算一个总和，内核作为一个整体计算所有工作组中所有总和的最大值。\par
 
 \hspace*{\fill} \par %插入空行
-Figure EP-7. Using hierarchical parallelism for a hierarchical reduction
+图EP-7 使用层次并行进行层次归约
 \begin{lstlisting}[caption={}]
 h.parallel_for_work_group(N, reduction(max, maximum<>()),
 [=](group<1> g, auto& max) {
@@ -16,7 +16,7 @@ h.parallel_for_work_group(N, reduction(max, maximum<>()),
 });
 \end{lstlisting}
 
-The other aspect of hierarchical parallelism that was briefly touched on in Chapter 4 is its implementation complexity. Mapping nested parallelism to accelerators is a challenge that is not unique to SYCL or DPC++, and this topic is the subject of much interest and research. As implementers gain experience with the implementation of hierarchical parallelism and the capabilities of different devices, we expect syntax in SYCL and DPC++ to evolve in alignment with standard practice.\par
+第4章中简要提到的分层并行性的另一个方面是它的实现复杂性。将嵌套的并行性映射到加速器并不是SYCL或DPC++特有的挑战，这个主题是很多人感兴趣和研究的主题。随着在实现分层并行性和不同设备的能力方面的经验积累，我们期望SYCL和DPC++中的语法能够与标准实践保持一致。\par
 
 
 
