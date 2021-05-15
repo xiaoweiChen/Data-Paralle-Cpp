@@ -1,9 +1,9 @@
-现在来看看如何编写自定义选择器。除了本章的例子，第12章还有一些例子。内置的设备选择器旨在让我们快速启动代码并运行。真正的程序通常需要对设备进行专门的选择，例如:从系统中可用的一组GPU类型中选择所需的GPU。设备选择机制很容易扩展为复杂的逻辑，因此可以编写代码来选择我们偏好的设备。\par
+现在来看看如何编写自定义选择器。除了本章的例子，第12章还有一些例子。内置的设备选择器旨在快速启动代码并运行。真正的程序通常需要对设备进行选择，例如:从系统中可用的一组GPU类型中选择所需的GPU。设备选择机制很容易扩展为复杂的逻辑，因此可以编写代码来选择设备。\par
 
 \hspace*{\fill} \par %插入空行
 \textbf{device\_selector基类}
 
-所有的设备选择器都是从device\_selector基类派生出的，在派生类中定义函数操作符:\par
+所有的设备选择器都从device\_selector基类派生，在派生类中定义函数操作符:\par
 
 \begin{lstlisting}[caption={}]
 virtual int operator()(const device &dev) const {
@@ -11,10 +11,10 @@ virtual int operator()(const device &dev) const {
 }
 \end{lstlisting}
 
-从device\_selector派生的类中定义这个操作符，是定义复杂选择逻辑所必须的，我们需要了解以下三件事:\par
+从device\_selector派生的类中定义这个操作符，是定义复杂选择逻辑所必须的，需要了解以下三件事:\par
 
 \begin{enumerate}
-	\item 当运行时发现程序可访问的每个设备(包括主机设备)，函数调用操作符会自动调用。
+	\item 当运行时发现程序可访问的设备(包括主机设备)，函数调用操作符会自动调用。
 	\item 操作符每次调用时都返回一个分数，可用设备中得分最高的会是选择器所选择的设备。
 	\item 函数操作符返回负整数表示不能选择相应的设备。
 \end{enumerate}
@@ -22,7 +22,7 @@ virtual int operator()(const device &dev) const {
 \hspace*{\fill} \par %插入空行
 \textbf{设备评分机制}
 
-我们有很多机制为设备来给定一个分数，例如:\par
+有很多机制为设备来给定一个分数，例如:\par
 
 \begin{enumerate}
 	\item 返回特定设备类的正值。
