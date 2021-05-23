@@ -1,4 +1,4 @@
-vector类型的功能是通过vec类公开使用的。vec类表示一组在一起的数据元素。vec类模板的构造函数、成员函数和非成员函数的接口描述在图11-1、11-4和11-5中。\par
+vector类型的功能是通过vec类使用，vec类表示一组数据元素。vec类模板的构造函数、成员函数和非成员函数的接口描述在图11-1、11-4和11-5中。\par
 
 图11-2中的XYZW成员只有在numElements <= 4时才可用。RGBA成员只有在numElements == 4时可用。\par
 
@@ -131,21 +131,21 @@ load()成员函数模板从multi\_ptr地址的内存中读取dataT类型的值�
 
 store()成员函数模板将读取向量的通道，并将这些值写入multi\_ptr地址的内存中，dataT元素中的offset乘以numElements*offset。\par
 
-形参是一个multi\_ptr，而不是一个访问器，因此可以使用本地创建的指针以及从主机传递的指针。\par
+形参是multi\_ptr，而不是访问器，可以使用本地创建的指针，以及主机指针。\par
 
 multi\_ptr的数据类型是dataT，即vec类专门化组件的数据类型。这要求传递给load()或store()的指针必须与vec实例本身的类型匹配。\par
 
 \hspace*{\fill} \par %插入空行
 \textbf{混合(Swizzle)操作}
 
-在图形应用程序中，混合意味着重新安排矢量的数据元素。例如，如果a = \{1,2,3,4，\}，并且知道一个四元向量的分量可以称为\{x, y, z, w\}，可以写成b = a.wxyz()，变量b的结果是\{4,1,2,3 \}。这种形式的代码在GPU程序中很常见，GPU应用程序中有高效的硬件进行此类操作。混合可以通过两种方式进行:\par
+图形应用程序中，混合意味着重新安排矢量的数据元素。例如，如果a = \{1,2,3,4，\}，并且知道一个四元向量的分量可以称为\{x, y, z, w\}，可以写成b = a.wxyz()，变量b的结果是\{4,1,2,3 \}。这种形式的代码在GPU程序中很常见，GPU应用程序中有高效的硬件进行此类操作。混合可以通过两种方式进行:\par
 
 \begin{itemize}
 	\item 通过调用vec的swizzle成员函数，该函数接受从0到numElements-1之间的可变数目的整型模板参数，指定swizzle索引
 	\item 通过调用简单的swizzle成员函数，如XYZW\_SWIZZLE和RGBA\_SWIZZLE
 \end{itemize}
 
-请注意，简单的swizzles函数只对最多4个元素的向量可用，并且只有在包含SYCL.hpp之前定义了宏SYCL\_SIMPLE\_SWIZZLES时才可用。这两种情况下，返回类型是一个\_\_swizzled\_vec\_\_实例，实现定义的临时类表示原始vec实例的swizzle。swizle成员函数模板和简单的swizle成员函数都允许重复swizle索引。图11-7展示了\_\_swizled \_vec\_\_的简单用法。\par
+简单的swizzles函数只对最多4个元素的向量可用，并且只有在包含SYCL.hpp之前定义了宏SYCL\_SIMPLE\_SWIZZLES时才可用。这两种情况下，返回类型是一个\_\_swizzled\_vec\_\_实例，实现定义的临时类表示原始vec实例的swizzle。swizle成员函数模板和简单的swizle成员函数都允许重复swizle索引。图11-7展示了\_\_swizled \_vec\_\_的简单用法。\par
 
 \hspace*{\fill} \par %插入空行
 图11-7 使用\_\_swizled \_vec\_\_类的示例

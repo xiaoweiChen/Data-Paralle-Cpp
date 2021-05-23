@@ -1,10 +1,10 @@
-SYCL中的向量类型是跨平台的类模板，可以在设备和宿主C++代码中工作，并允许在宿主及其设备之间共享向量。向量类型包括允许从一组混合的组件元素构造新向量，这样新向量的元素可以按照任意顺序从旧向量的元素中挑选。Vec是一种向量类型，可编译为目标设备后端上的内置向量类型，并在主机上提供兼容支持。\par
+SYCL中的向量类型是跨平台的类模板，可以在设备和主机C++代码中工作，并允许在主机和设备之间共享向量。向量类型包括允许从混合组件元素构造新向量，这样新向量的元素可以按照任意顺序从旧向量的元素中挑选。vec是一种向量类型，可编译为目标设备后端上的内置向量类型，并在主机上提供兼容支持。\par
 
-vec类是根据元素数量和元素类型模板化。参数numElements的元素个数可以是1、2、3、4、8或16中的一个，任何其他值都将产生编译失败。元素类型参数dataT，必须是设备代码中支持的基本标量类型之一。\par
+vec类是根据元素数量和元素类型模板化。参数numElements的元素个数可以是1、2、3、4、8或16中的一个，任何其他值都将产生编译失败。元素类型参数dataT，必须是设备代码中支持的标量类型。\par
 
-SYCL vec类模板提供了与vector\_t定义的底层vector类型的互动性，该类型仅在为设备编译时可用。vec类可以从vector\_t的实例构造，并可以隐式地转换为vector\_t的实例，以支持与内核函数(例如，OpenCL后端)的本地SYCL后端互操作。当元素的数量为1时，还可以隐式地将vec类模板的实例转换为数据类型的实例，以允许单元素向量和标量易于互换。\par
+SYCL ec类模板提供了与vector\_t定义的底层vector类型的互动，该类型仅在为设备编译时可用。vec类可以从vector\_t的实例构造，并可以隐式地转换为vector\_t实例，以支持与内核函数(例如，OpenCL后端)的本地SYCL后端的互操作。当元素的数量为1时，还可以隐式地将vec类模板的实例转换为数据类型的实例，以便单元素在向量和标量间的互换。\par
 
-为便于编程，SYCL提供了许多使用的表单类型别名\textit{<type><elems> = vec< <storage-type>, <elems> >},，这里的\textit{<elems>}为2，3，4，8和16和\textit{<type>}配对，并且\textit{<storage-type>}为整型char$\Leftrightarrow$int8\_t, uchar $\Leftrightarrow$ uint8\_t, short$\Leftrightarrow$int16\_t, ushort$\Leftrightarrow$uint16\_t, int$\Leftrightarrow$int32\_t, uint$\Leftrightarrow$uint32\_t, long$\Leftrightarrow$int64\_t, 以及 ulong$\Leftrightarrow$uint64\_t 对于浮点类型，half, float和double。例如:uint4是vec<uint32\_t, 4>的别名，float16是vec<float, 16>的别名。\par
+为便于编程，SYCL提供了许多使用的单类型别名\textit{<type><elems> = vec< <storage-type>, <elems> >},，这里的\textit{<elems>}为2，3，4，8和16和\textit{<type>}配对，并且\textit{<storage-type>}为整型char$\Leftrightarrow$int8\_t, uchar $\Leftrightarrow$ uint8\_t, short$\Leftrightarrow$int16\_t, ushort$\Leftrightarrow$uint16\_t, int$\Leftrightarrow$int32\_t, uint$\Leftrightarrow$uint32\_t, long$\Leftrightarrow$int64\_t, 以及 ulong$\Leftrightarrow$uint64\_t 对于浮点类型，half, float和double。例如:uint4是vec<uint32\_t, 4>的别名，float16是vec<float, 16>的别名。\par
 
 
 
