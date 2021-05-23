@@ -1,6 +1,6 @@
 我们将把细节划分为关于必要条件(正确性)的信息，和对调优有用但对正确性不是必需的信息。\par
 
-第一个正确性类别中，将列举内核正确启动所应满足的条件，不遵守这些设备限制将导致程序失败。图12-7显示了我们如何获取这些参数中的一些，这些值可以在宿主代码和内核代码中使用(通过Lambda捕获)。可以修改代码来利用这些信息，例如：可以指导我们的代码调整缓冲区大小或工作组大小。\par
+第一个正确性类别中，将列举内核正确启动所应满足的条件，不遵守这些设备限制将导致程序失败。图12-7显示了如何获取这些参数中的部分，这些值可以在主机代码和内核代码中使用(通过Lambda捕获)。可以修改代码来利用这些信息，例如：可以调整缓冲区大小或工作组大小。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
 提交一个不满足这些条件的内核将生成一个错误。
@@ -38,25 +38,25 @@ std::cout << "Max WG size is " << maxWG
 
 \textit{extensions}: 特定于设备的信息在SYCL规范中没有特别详细，通常是特定于供应商的，如verycurious 程序所示(图12-6)。\par
 
-\textit{max\_compute\_units}: 说明一个设备实现定义的可用并行性的数量，请谨慎使用!\par
+\textit{max\_compute\_units}: 说明设备实现定义的可用并行性的数量，请谨慎使用!\par
 
 \textit{sub\_group\_sizes}: 返回设备支持的子工作组大小。\par
 
-\textit{usm\_device\_allocations}: 如果该设备支持显式USM中描述的设备分配，则返回true。\par
+\textit{usm\_device\_allocations}: 如果该设备支持显式USM中描述的设备内存，则返回true。\par
 
-\textit{usm\_host\_allocations}: 如果该设备可以访问主机分配，则返回true。\par
+\textit{usm\_host\_allocations}: 如果该设备可以访问主机内存，则返回true。\par
 
-\textit{usm\_shared\_allocations}: 如果此设备支持共享分配，则返回true。\par
+\textit{usm\_shared\_allocations}: 如果此设备支持共享内存，则返回true。\par
 
-\textit{usm\_restricted\_shared\_allocations}: 如果该设备支持受设备上“restricted USM”限制所控制的共享分配，则返回true。此属性要求usm\_shared\_allocations对此设备返回true。\par
+\textit{usm\_restricted\_shared\_allocations}: 如果该设备支持受设备上“restricted USM”限制所控制的共享内存，则返回true。此属性要求usm\_shared\_allocations对此设备返回true。\par
 
-\textit{usm\_system\_allocator}: 如果系统分配器可能用于此设备上的共享分配而不是USM分配机制，则返回true.\par
+\textit{usm\_system\_allocator}: 如果系统分配器可能用于此设备上的共享内存，而不是USM分配机制，则返回true.\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
 我们建议避免在程序逻辑中使用最大计算单元！
 \end{tcolorbox}
 
-部分原因是定义不够清晰，在代码调优中没有用处。大多数程序应该表达它们的并行性，并让运行时将其映射到可用的并行性，而不是使用max\_compute\_units。只有在使用特定于实现和设备的信息时，依靠最大计算单元来保证正确性才有意义。专家可能会这样做，但大多数开发人员不这样做，也不需要这样做!在这种情况下，让运行时完成它的工作!\par
+部分原因是定义不够清晰，在代码调优中没有用处。大多数程序应该表达并行性，并让运行时将其映射为可用的并行性，而不是使用max\_compute\_units。只有在使用特定于实现和设备的信息时，最大计算单元才有意义。专家可能会这样做，但大多数开发人员不这样做，也不需要这样做!在这种情况下，让运行时来完成这项工作!\par
 
 \hspace*{\fill} \par %插入空行
 \textbf{查询内核}
