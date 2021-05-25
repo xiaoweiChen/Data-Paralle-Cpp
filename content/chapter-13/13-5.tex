@@ -1,12 +1,12 @@
 本节提供一些调试建议，以减少调试并行程序(特别是针对异构机器的并行程序)的挑战。\par
 
-当应用程序在主机设备上运行时，可以选择调试。这个调试技巧在第2章中描述为方法2。因为设备通常很少包含调试方式，所以调试可以在主机上的完成。在主机上运行的另一个好处是，与同步相关的许多错误将消失，包括在主机和设备之间移动内存导致的问题。虽然最终需要调试所有错误，但这可以允许增量调试，这样就可以先解决一些错误了。\par
+当应用程序在主机设备上运行时，可以选择调试，这个调试技巧在第2章中描述为方法2。因为设备通常很少包含调试方式，所以调试可以在主机上的完成。主机上运行的另一个好处是，与同步相关的许多错误将消失，包括在主机和设备之间移动内存导致的问题。虽然最终需要调试所有错误，但这可以允许增量调试，可以先解决一些错误。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
 \textbf{调试技巧} 功能强大的调试工具可以运行在主机上。
 \end{tcolorbox}
 
-当在主机上运行所有代码时，工具通常更容易检测和消除并行编程错误，特别是数据竞争和死锁。我们懊恼的是，当在主机和设备的组合上运行时，经常会看到这种并行编程错误导致的程序运行失败。当出现这样的问题时，记住使用host-only的方式更有助于调试。值得庆幸的是，SYCL和DPC++的精心设计，可以让我们使用这个选项，并且易于访问。\par
+在主机上运行所有代码时，工具通常更容易检测和消除并行编程错误，特别是数据竞争和死锁。当在主机和设备的组合上运行时，经常会看到这种并行编程的错误导致程序运行失败。出现这样的问题时，记住使用host-only的方式更有助于调试。SYCL和DPC++可以让我们使用这个选项，访问相关的内存。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
 \textbf{调试技巧} 如果程序出现死锁，请检查主机访问器是否正确销毁。
@@ -22,14 +22,14 @@
 
 不需要仅仅为了使用DPC++而去修复迂腐的警告，所以可以选择不使用-Wpedantic。\par
 
-在运行时让代码及时编译时，我们可以检查代码。这高度依赖于编译器，因此查看编译器文档以获得建议是一个好主意。\par
+在运行时让代码及时编译时，我们可以检查代码。这高度依赖于编译器，因此查看编译器手册以获得建议是一个好主意。\par
 
 \hspace*{\fill} \par %插入空行
 \textbf{调试内核代码}
 
-调试内核代码时，首先要在主机设备上运行(如第2章所述)。第2章中的设备选择器，可以很容易地修改运行时选项或编译时选项，以便在调试时将工作重定向到主机设备。\par
+调试内核代码时，首先要在主机设备上运行(如第2章所述)。第2章中的设备选择器，可以很容易地修改运行时选项或编译时选项，以便在调试时将工作重定向到主机。\par
 
-在调试内核代码时，SYCL定义了一个C++风格的流，可以在内核中使用(图13-4)。DPC++还提供了一个C风格printf的实验性实现，功能有一些限制。更多的细节可以参考在在线oneAPI DPC++文档。\par
+调试内核代码时，SYCL定义了一个C++风格的输出流，可以在内核中使用(图13-4)。DPC++还提供了一个C风格printf的实验性实现，功能有一些限制。更多的细节可以参考在在线oneAPI DPC++手册。\par
 
 \hspace*{\fill} \par %插入空行
 图13-4 sycl::stream
@@ -42,12 +42,12 @@ Q.submit([&](handler &h){
 });
 \end{lstlisting}
 
-调试内核代码时，经验告诉我们可以在parallel\_for之前或在parallel\_for内部设置断点。即使是在执行下一个操作之后，放置在parallel\_for的断点也可以多次触发。C++调试方式适用于许多模板展开，其中模板调用上的断点将在编译器展开时，转换为一组复杂的断点。可能有一些方法可以缓解这种情况，但这里的关键点是，可以通过在parallel\_for上设置断点来避免在所有实现上出现混淆。\par
+调试内核代码时，可以在parallel\_for之前或在parallel\_for内部设置断点。即使是在执行下一个操作之后，放置在parallel\_for的断点也可以多次触发。C++调试方式适用于许多模板展开，其中模板调用上的断点将在编译器展开时，转换为一组复杂的断点。可能有方法可以缓解这种情况，但这里的关键是，可以通过在parallel\_for上设置断点来避免混淆。\par
 
 \hspace*{\fill} \par %插入空行
 \textbf{调试运行时的错误}
 
-发生运行时错误时，要么是在处理编译器/运行时错误，要么是无意中编写了废代码，直到它触发了难以理解的运行时错误消息。深入研究这些bug可能有点令人生畏，但可以让我们更好地了解导致特定问题的原因。它可能会产生一些额外的信息，指导我们避免这个问题，或者向编译器团队提交错误报告。不管怎样，知道一些能够提供帮助的工具很重要。\par
+发生运行时错误时，要么是在处理编译器/运行时错误，要么是无意中编写了废代码。深入研究这些bug可能有点令人生畏，但可以让更好地了解导致特定问题的原因。可能会产生一些额外的信息，指导我们避免这个问题，或者向编译器团队提交错误报告。不管怎样，了解一些能够提供帮助的工具很重要。\par
 
 运行时失败的程序输出如下所示:\par
 
@@ -56,20 +56,20 @@ origin>: error: Invalid record (Producer: 'LLVM9.0.0' Reader: 'LLVM 9.0.0')\\
 terminate called after throwing an instance of 'cl::sycl::compile\_program\_error'
 \end{tcolorbox}
 
-看到这里的throw，可以知道主程序可以捕捉这个错误。虽然这可能不能解决问题，但确实意味着运行时编译器失败不需要中止应用程序。第5章会深入探讨这个主题。\par
+看到这里的throw，可以知道主程序可以捕捉这个错误。虽然这不能解决问题，但确实意味着运行时编译器失败不需要中止应用程序。第5章会深入探讨这个主题。\par
 
-当看到运行时失败并难以快速调试时，不妨尝试使用提前编译进行重新构建。如果所使用的设备具有提前编译选项，这可能是一件很容易的事情，可能会产生更容易理解的诊断信息。如果错误是在编译时，而不是在JIT或运行时，那么通常会在编译器的错误消息中找到有用的信息，而不是在JIT或运行时看到的少量错误信息。对于特定选项，请查看在线oneAPI DPC++文档，了解提前编译。\par
+当看到运行时失败并难以快速调试时，不妨尝试使用提前编译进行重新构建。如果所使用的设备具有提前编译选项，这可能是很容易的事情，可能会产生更容易理解的诊断信息。如果错误是在编译时，而不是在JIT或运行时，通常会在编译器的错误消息中找到有用的信息，而不是在JIT或运行时看到的少量错误信息。对于特定选项，请查看在线oneAPI DPC++手册，了解提前编译。\par
 
-当SYCL程序运行在OpenCL运行时之上并使用OpenCL后端时，可以使用OpenCL拦截层:github.com/intel/opencl-intercept-layer运行程序。这是一个可以检查、记录和修改应用程序(或更高级别运行时)生成的OpenCL命令的工具。它支持很多控件，但是最好的初始设置是ErrorLogging、BuildLogging和CallLogging(会生成很多输出)。DumpProgramSPIRV可以提供有用的转储。OpenCL拦截层是一个独立的程序，不是OpenCL实现的一部分，所以可以与SYCL编译器一起工作。\par
+SYCL程序运行在OpenCL运行时上，并使用OpenCL后端时，可以使用OpenCL拦截:github.com/intel/opencl-intercept-layer运行程序。可以检查、记录和修改应用程序(或更高级别运行时)生成OpenCL命令的工具。它支持很多控件，但是最好的初始设置是ErrorLogging、BuildLogging和CallLogging(会生成很多输出)。DumpProgramSPIRV可以提供有用的转储。OpenCL拦截是一个独立的程序，不是OpenCL实现的一部分，所以可以与SYCL编译器一起工作。\par
 
-对于Intel GPU在Linux系统上的编译器问题，可以从Intel图形编译器转储中间编译器输出。通过将环境变量IGC\_ShaderDumpEnable设置为1(用于某些输出)或将环境变量IGC\_ShaderDumpEnableAll设置为1(用于大量输出)来做到这一点。转储的输出在/tmp/IntelIGC目录下。这种技术可能不适用于所有图形驱动程序的构建，但值得一试，确定是否适用于我们的系统。\par
+对于Intel GPU在Linux系统上的编译器问题，可以从Intel图形编译器转储中间编译器输出。通过将环境变量IGC\_ShaderDumpEnable设置为1(用于某些输出)或将环境变量IGC\_ShaderDumpEnableAll设置为1(用于大量输出)来做到这一点，转储的输出在/tmp/IntelIGC目录下。这种技术可能不适用于所有图形驱动程序的构建，但值得一试。\par
 
 图13-5列出了这些变量以及编译器或运行时支持的一些附加环境变量(在Windows和Linux上支持)，以帮助进行高级调试。这些是DPC++实现相关的高级调试选项，用于检查和控制编译模型。\par
 
-这些选项在本书中没有详细描述，但是这里提到是为了在需要时打开高级调试的通道。这些选项可以让我们深入了解如何解决问题或bug。使用这些选项是为了对编译器本身进行高级调试。因此，它们更多地与编译器开发人员联系在一起，而不是编译器用户。一些高级用户认为这些选项很有用，因此在这里提及。更多信息可以参考GitHub for dpc++在llvm/sycl/doc/EnvironmentVariables.md下关于所有环境变量的文档。\par
+这些选项在本书中没有详细描述，这里提到是为了在需要时打开高级调试的通道。这些选项可以让我们深入了解如何解决问题。使用这些选项是为了对编译器本身进行调试。因此，选项更多地与编译器开发人员联系在一起，而不是编译器用户。一些高级用户认为这些选项很有用，因此在这里提及。更多信息可以参考GitHub for DPC++在llvm/sycl/doc/EnvironmentVariables.md下关于所有环境变量的文档。\par
 
 \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black]
-\textbf{调试技巧} 当其他选项都用尽，且无法解决需要调试运行时问题时，可能寻找为我们提供有关原因的提示的工具。
+\textbf{调试技巧} 当其他选项都用尽，且无法解决需要调试运行时问题时，可能寻找为提供相关原因的工具。
 \end{tcolorbox}
 
 \hspace*{\fill} \par %插入空行
@@ -80,11 +80,11 @@ terminate called after throwing an instance of 'cl::sycl::compile\_program\_erro
 		环境变量         & 值                                                                                                                                                                                                                              & 描述                                                                                                                                                                                                                                  \\ \hline
 		SYCL\_PI\_TRACE               & \begin{tabular}[c]{@{}l@{}}1(basic),\\ 2(advanced),\\ -1(all)\end{tabular}                                                                                                                                                         & \begin{tabular}[c]{@{}l@{}}运行时:\\值为1启用运行时插件接口(PI)\\跟踪插件，并寻找设备;\\值为2表示跟踪所有PI呼叫;\\值为-1释放所有级别的跟踪。\end{tabular} \\ \hline
 		SYCL\_PRINT\_EXECUTION\_GRAPH & \begin{tabular}[c]{@{}l@{}}always(\\或者通过指定\\只转储选定文件;\\before\_addcg、\\after\_addgc、\\before\_addcopyback、\\after\_addcopyback、\\before\_addhostacc、\\或after\_addhostacc)\end{tabular} & \begin{tabular}[c]{@{}l@{}}运行时:\\创建跟踪执行图的文本文件\\(DOT扩展名)，这样浏览运行时\\发生的跟踪会更容易。\end{tabular}                                                \\ \hline
-		CL\_CONFIG\_USE\_VBECTORIZER  & true 或 false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}运行时:\\请求CPU间编译器启用\\或禁用向量器。\end{tabular}                                                                                                                                \\ \hline
+		CL\_CONFIG\_USE\_VBECTORIZER  & true 或 false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}运行时:\\请求CPU编译器启用\\或禁用向量。\end{tabular}                                                                                                                                \\ \hline
 		CL\_CONFIG\_CPU\_TARGET\_ARCH & skx, core-avx2                                                                                                                                                                                                                     & \begin{tabular}[c]{@{}l@{}}运行时:\\要求Intel CPU编译器支持\\Inter Advanced Vector Extensions\\(AVX512和AVX2)的代码。\end{tabular}                                                      \\ \hline
 		CL\_CONFIG\_DUMP\_ASM         & true 或 false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}运行时:\\通过英特尔CPU编译器转\\储出CPU汇编代码。\end{tabular}                                                                                                                                      \\ \hline
-		IGC\_ShaderDumpEnable         & 0 或 1                                                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}只限定于Linux。\\运行时:\\通过英特尔图形编译器(JIT)\\转储一些信息。\end{tabular}                                                                                                                  \\ \hline
-		IGC\_ShaderDumpEnableALL      & 0 或 1                                                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}只限定于Linux。\\运行时:\\通过英特尔图形编译器(JIT)\\转储大量信息。\end{tabular}                                                                                                               \\ \hline
+		IGC\_ShaderDumpEnable         & 0 或 1                                                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}只限定于Linux。\\运行时:\\通过Intel图形编译器(JIT)\\转储一些信息。\end{tabular}                                                                                                                  \\ \hline
+		IGC\_ShaderDumpEnableALL      & 0 或 1                                                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}只限定于Linux。\\运行时:\\通过Intel图形编译器(JIT)\\转储大量信息。\end{tabular}                                                                                                               \\ \hline
 		SYCL\_DUMP\_IMAGES            & true 或 false                                                                                                                                                                                                                      & \begin{tabular}[c]{@{}l@{}}编译时:\\通过SYCL\_DUMP\_IMAGES=1\\请求编译器转储出SPV文件，\\其中包含在执行期间传递给\\JIT编译器的中间码。\end{tabular}                             \\ \hline
 		SYCL\_USE\_KERNEL\_SPV        & \textless{}device binary\textgreater{}                                                                                                                                                                                             & \begin{tabular}[c]{@{}l@{}}运行时:\\从指定文件加载设备镜像。\\如果运行时无法读取该文件，则\\抛出cl::sycl::runtime\_error异常。\end{tabular}                                                         \\ \hline
 	\end{tabular}

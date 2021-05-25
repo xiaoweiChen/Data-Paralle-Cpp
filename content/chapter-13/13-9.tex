@@ -1,6 +1,6 @@
-迁移CUDA代码到SYCL或DPC++在本书中没有详细介绍。有一些可用的工具和资源可以做到这一点。迁移CUDA代码相对简单，因为它是一种基于内核的并行化方法。一旦用SYCL或DPC++编写，目标设备比单独支持CUDA增强了很多。针对NVIDIA GPU，新增强的程序仍然可以使用支持NVIDIA GPU的SYCL编译器。\par
+迁移CUDA代码到SYCL或DPC++在本书中没有详细介绍。有一些可用的工具和资源可以做到这一点。迁移CUDA代码相对简单，因为是一种基于内核的并行化方法。当用SYCL或DPC++编写时，目标设备比单独支持CUDA增强了很多。针对NVIDIA GPU，新程序仍然可以使用支持NVIDIA GPU的SYCL编译器。\par
 
-迁移到SYCL为SYCL支持的设备的多样性打开了大门，这就不仅限于 GPU的范畴了。\par
+迁移到SYCL为SYCL支持的设备的多样性打开了大门，这就不仅限于GPU的范畴了。\par
 
 当使用DPC++兼容性工具时，--report-type=value选项提供了关于迁移代码的非常有用的统计信息。本书的一位评论家称它为“Intel dpct提供的优美标识”。--in-root选项在迁移CUDA代码时非常有用。\par
 
