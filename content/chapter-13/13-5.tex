@@ -60,9 +60,9 @@ terminate called after throwing an instance of 'cl::sycl::compile\_program\_erro
 
 当看到运行时失败并难以快速调试时，不妨尝试使用提前编译进行重新构建。如果所使用的设备具有提前编译选项，这可能是很容易的事情，可能会产生更容易理解的诊断信息。如果错误是在编译时，而不是在JIT或运行时，通常会在编译器的错误消息中找到有用的信息，而不是在JIT或运行时看到的少量错误信息。对于特定选项，请查看在线oneAPI DPC++手册，了解提前编译。\par
 
-SYCL程序运行在OpenCL运行时上，并使用OpenCL后端时，可以使用OpenCL拦截:github.com/intel/opencl-intercept-layer运行程序。可以检查、记录和修改应用程序(或更高级别运行时)生成OpenCL命令的工具。它支持很多控件，但是最好的初始设置是ErrorLogging、BuildLogging和CallLogging(会生成很多输出)。DumpProgramSPIRV可以提供有用的转储。OpenCL拦截是一个独立的程序，不是OpenCL实现的一部分，所以可以与SYCL编译器一起工作。\par
+SYCL程序运行在OpenCL运行时上，并使用OpenCL后端时，可以使用OpenCL拦截:\\github.com/intel/opencl-intercept-layer运行程序。可以检查、记录和修改应用程序(或更高级别运行时)生成OpenCL命令的工具。它支持很多控件，但是最好的初始设置是ErrorLogging、BuildLogging和CallLogging(会生成很多输出)。DumpProgramSPIRV可以提供有用的转储。OpenCL拦截是一个独立的程序，不是OpenCL实现的一部分，所以可以与SYCL编译器一起工作。\par
 
-对于Intel GPU在Linux系统上的编译器问题，可以从Intel图形编译器转储中间编译器输出。通过将环境变量IGC\_ShaderDumpEnable设置为1(用于某些输出)或将环境变量IGC\_ShaderDumpEnableAll设置为1(用于大量输出)来做到这一点，转储的输出在/tmp/IntelIGC目录下。这种技术可能不适用于所有图形驱动程序的构建，但值得一试。\par
+对于Intel GPU在Linux系统上的编译器问题，可以从Intel图形编译器转储中间编译器输出。通过将环境变量\\IGC\_ShaderDumpEnable设置为1(用于某些输出)或将环境变量IGC\_ShaderDumpEnableAll设置为1(用于大量输出)来做到这一点，转储的输出在/tmp/IntelIGC目录下。这种技术可能不适用于所有图形驱动程序的构建，但值得一试。\par
 
 图13-5列出了这些变量以及编译器或运行时支持的一些附加环境变量(在Windows和Linux上支持)，以帮助进行高级调试。这些是DPC++实现相关的高级调试选项，用于检查和控制编译模型。\par
 

@@ -135,7 +135,7 @@ int main() {
 \hspace*{\fill} \par %插入空行
 图3-14 原始任务图
 \begin{center}
-	\includegraphics[width=0.8\textwidth]{content/chapter-3/images/8}
+	\includegraphics[width=0.6\textwidth]{content/chapter-3/images/8}
 \end{center}
 
 图3-13和图3-14中，我们执行三个内核——computeb、readA和computec——然后在主机上读取最终结果。内核computeB的命令组创建两个访问器，accA和accB。这些访问器使用访问标记read\_only和write\_only进行优化，以指定不使用默认的访问模式access::mode::read\_write。内核computeB读取缓冲区A并写入缓冲区B，缓冲区A必须在内核开始执行之前从主机复制到设备上。\par
@@ -202,7 +202,7 @@ int main() {
 \hspace*{\fill} \par %插入空行
 图3-16 写后读和写后写的任务图
 \begin{center}
-	\includegraphics[width=0.8\textwidth]{content/chapter-3/images/9}
+	\includegraphics[width=0.6\textwidth]{content/chapter-3/images/9}
 \end{center}
 
 图3-15和3-16中，再次执行三个内核:computeB、rewriteA和rewriteB。内核rewriteA写缓冲区A，内核rewriteB写缓冲区B。内核rewriteA理论上可以比内核rewriteB更早执行，在内核准备好之前需要传输的数据更少。但必须等到内核computeB完成后，因为有一个写后读依赖于缓冲区A。\par

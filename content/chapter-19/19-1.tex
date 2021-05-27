@@ -25,7 +25,7 @@
 \hspace*{\fill} \par %插入空行
 图19-1 data[i] += x的连续执行分为三个独立的操作
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-19/images/2}
+	\includegraphics[width=0.4\textwidth]{content/chapter-19/images/2}
 \end{center}
 
 切换到并行应用程序开发带来的复杂性:如果有多个操作同时应用于相同的数据，如何确定数据的一致性?考虑图19-2所示的情况，其中data[i] += x的两次执行交织在一起。如果两次执行，使用了不同的i值，则应用程序将正确执行。如果使用相同的i值，会从内存中加载相同的值，并且其中一个结果会被另一个覆盖!这只是调度它们的操作之一，程序的行为取决于哪个程序实例首先到达——这就是数据竞争。\par
@@ -33,7 +33,7 @@
 \hspace*{\fill} \par %插入空行
 图19-2 可能的data[i] += x交错并发执行
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-19/images/3}
+	\includegraphics[width=0.6\textwidth]{content/chapter-19/images/3}
 \end{center}
 
 图19-3中的代码和图19-4中的输出展示了并发极易发生。如果M大于或等于N，则每个程序实例中j的值是唯一的;如果不是，j的值将会冲突，更新可能会丢失。我们说可能丢失是因为包含数据竞争的程序，仍然可能在某个时间点产生正确的答案(取决于实现和硬件如何安排工作)。无论编译器还是硬件都不可能知道这个程序要做什么，也不可能知道在运行时N和M的值是多少——作为开发者，有责任了解的程序是否包含数据竞争，以及是否对执行顺序敏感。\par
@@ -80,7 +80,7 @@ data [1] = 0
 \hspace*{\fill} \par %插入空行
 图19-5 data[i] += x的两个实例被栅栏隔开
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-19/images/4}
+	\includegraphics[width=0.6\textwidth]{content/chapter-19/images/4}
 \end{center}
 
 \hspace*{\fill} \par %插入空行
@@ -147,7 +147,7 @@ for (int i = 0; i < N; ++i) {
 \hspace*{\fill} \par %插入空行
 图19-8 与原子操作交错执行的data[i] += x
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-19/images/5}
+	\includegraphics[width=0.8\textwidth]{content/chapter-19/images/5}
 \end{center}
 
 需要注意的是，这仍然只是一个\textbf{可能}的执行顺序。使用原子操作可以保证更新不重叠(如果两个实例使用相同的i值)，但不能保证两个实例中哪一个会先执行。更重要的是，不能保证这些原子操作相对于不同程序实例中的任何非原子操作的执行顺序。\par

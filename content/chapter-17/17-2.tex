@@ -15,7 +15,7 @@ FPGA通常归类为空间架构，其受益于与使用指令集体系结构(ISA
 \hspace*{\fill} \par %插入空行
 图17-2 空间处理:每个操作使用设备的不同区域
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/3}
+	\includegraphics[width=0.6\textwidth]{content/chapter-17/images/3}
 \end{center}
 
 这个描程序过于简单，但在空间架构、程序的不同部分的不同设备上执行，而不是随着时间变化而变化。\par
@@ -41,7 +41,7 @@ FPGA通常归类为空间架构，其受益于与使用指令集体系结构(ISA
 \hspace*{\fill} \par %插入空行
 图17-3 空间计算实现的传播时间
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/3}
+	\includegraphics[width=0.6\textwidth]{content/chapter-17/images/3}
 \end{center}
 
 图17-3所示的空间实现非常低效，大多数硬件只在一小部分时间内执行有用的工作。大多数情况下，像乘法这样的操作要么等待加载中的新数据，要么保持其输出，以便让后续操作使用其结果。大多数空间编译器和实现通过流水线处理这种低效操作，这样单个程序的执行分散在多个时钟周期中。这是通过在一些操作之间插入寄存器(硬件中的数据存储原语)实现的，其中每个寄存器在一个时钟周期内保存一个二进制值。通过保存操作的输出结果，以便让下一个操作可以看到并对所保存的值进行操作，前一个操作可以自由地对不同的计算进行操作，而不会影响后续操作的输入。\par
@@ -51,7 +51,7 @@ FPGA通常归类为空间架构，其受益于与使用指令集体系结构(ISA
 \hspace*{\fill} \par %插入空行
 图17-4 计算流水线:各个阶段并行执行
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/5}
+	\includegraphics[width=0.8\textwidth]{content/chapter-17/images/5}
 \end{center}
 
 实现流水线化时，类似工厂装配线的方式就会让工作变得非常高效。每个管道阶段只执行总体工作的一小部分，执行得很快，然后立即开始处理下一个工作单元。管道从开始到结束处理单个计算需要许多时钟周期，但是管道可以同时计算不同数据上的不同计算实例。\par
@@ -76,7 +76,7 @@ FPGA通常归类为空间架构，其受益于与使用指令集体系结构(ISA
 \hspace*{\fill} \par %插入空行
 图17-5 同一个FPGA二进制文件中的多个内核:内核可以并发运行
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-17/images/6}
+	\includegraphics[width=0.8\textwidth]{content/chapter-17/images/6}
 \end{center}
 
 内核在设备上使用自己的区域，不同的内核可以并发执行。当内核正在等待内存访问之类的操作，FPGA上的其他内核可以继续执行，因为芯片上有其他独立的管道。这种思想形式上描述为内核之间的前向进程，是FPGA空间计算的关键。\par

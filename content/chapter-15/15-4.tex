@@ -18,7 +18,7 @@
 \hspace*{\fill} \par %插入空行
 图15-17 对matrixA的访问是高度跨越和低效的
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/13}
+	\includegraphics[width=0.8\textwidth]{content/chapter-15/images/13}
 \end{center}
 
 如果选择并行处理结果矩阵的列，则访问模式具有更好的局部性。图15-18中的内核在结构上与图15-5中相似，唯一的区别是图15-18中的每个工作项操作的是结果矩阵的一列，而不是结果矩阵的一行。\par
@@ -44,7 +44,7 @@ h.parallel_for(N, [=](item<1> idx) {
 \hspace*{\fill} \par %插入空行
 图15-19 对matrixB的访问是连续的和有效的
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/14}
+	\includegraphics[width=0.8\textwidth]{content/chapter-15/images/14}
 \end{center}
 
 对连续数据的访问通常非常有效。根据经验，访问一组工作项的全局内存的性能取决于访问的GPU缓存行的数量有访问都在一个缓存行内，访问将以最高性能执行。一个访问需要两条缓存线，比如通过访问每个其他元素或者从缓存不对齐的地址开始，访问可能会以一半的性能运行。组中的每个工作项访问唯一的高速缓存行，例如：对于非常频繁的或随机的访问，就可能以最低的性能运行。\par
@@ -77,7 +77,7 @@ h.parallel_for(N, [=](item<1> idx) {
 \hspace*{\fill} \par %插入空行
 图15-20 对于不同的访问模式，全局和本地内存可能的性能情况
 \begin{center}
-	\includegraphics[width=1.0\textwidth]{content/chapter-15/images/15}
+	\includegraphics[width=0.8\textwidth]{content/chapter-15/images/15}
 \end{center}
 
 \hspace*{\fill} \par %插入空行

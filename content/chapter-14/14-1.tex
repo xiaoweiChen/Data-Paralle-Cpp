@@ -23,7 +23,7 @@
 \hspace*{\fill} \par %插入空行
 图14-2 映射模式
 \begin{center}
-	\includegraphics[width=1.\textwidth]{content/chapter-14/images/2}
+	\includegraphics[width=0.6\textwidth]{content/chapter-14/images/2}
 \end{center}
 
 由于每个应用程序的函数都完全独立，所以映射的表达式通常非常简单，依赖于编译器和/或运行时来做大部分工作。写入映射模式的内核应该能够适用于任何设备，并且这些内核的性能能根据可用的硬件并行度进行很好地扩展。\par
@@ -38,7 +38,7 @@
 \hspace*{\fill} \par %插入空行
 图14-3 模具模式
 \begin{center}
-	\includegraphics[width=1.\textwidth]{content/chapter-14/images/3}
+	\includegraphics[width=0.4\textwidth]{content/chapter-14/images/3}
 \end{center}
 
 当模具模式在不同的地方执行时(例如，将输出写入一个单独的存储位置)，该函数可以独立地应用于每个输入。现实中调度模板通常比这更复杂:计算相邻的输出需要相同的数据，并且多次从内存中加载该数据会降低性能；我们可能希望就地应用模板(即，重写原始输入值)，以减少应用程序的内存占用。\par
@@ -61,7 +61,7 @@
 \hspace*{\fill} \par %插入空行
 图14-4 归约模式
 \begin{center}
-	\includegraphics[width=1.\textwidth]{content/chapter-14/images/4}
+	\includegraphics[width=0.6\textwidth]{content/chapter-14/images/4}
 \end{center}
 
 图14-4显示了通过树归约实现的归约模式，需要对N个输入元素的范围进行log2(N)组合操作。尽管树型归约很常见，但是其他的实现也是可能的——归约一个以特定的顺序组合值。\par
@@ -82,7 +82,7 @@
 \hspace*{\fill} \par %插入空行
 图14-5 扫描模式
 \begin{center}
-	\includegraphics[width=1.\textwidth]{content/chapter-14/images/5}
+	\includegraphics[width=0.8\textwidth]{content/chapter-14/images/5}
 \end{center}
 
 因为在扫描操作中并行性的机会是有限的，所以执行扫描的最佳设备高度依赖于问题的大小:较小的问题更适合CPU，因为只有较大的问题才会包含足够的数据并行性使GPU饱和。对于FPGA和其他架构来说，问题的大小不太重要，因为扫描本身就有助于管道并行性。处理归约的一个经验法则是，在产生数据的设备上执行扫描操作——考虑在优化期间扫描操作适合应用程序的位置和方式——通常会比专注于单独优化扫描操作产生更好的结果。\par
@@ -100,7 +100,7 @@
 \hspace*{\fill} \par %插入空行
 图14-6 打包模式
 \begin{center}
-	\includegraphics[width=1.\textwidth]{content/chapter-14/images/6}
+	\includegraphics[width=0.6\textwidth]{content/chapter-14/images/6}
 \end{center}
 
 与扫描一样，打包操作具有串行性。给定要打包/复制的输入元素，计算在输出范围中的位置需要关于有多少先前的元素也打包/复制到输出中的信息。这个信息相当于对布尔条件的独占性扫描。\par
@@ -113,7 +113,7 @@
 \hspace*{\fill} \par %插入空行
 图14-7 解包模式
 \begin{center}
-	\includegraphics[width=1.\textwidth]{content/chapter-14/images/7}
+	\includegraphics[width=0.6\textwidth]{content/chapter-14/images/7}
 \end{center}
 
 

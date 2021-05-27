@@ -12,7 +12,7 @@ SPMD编程模型的最大优点，允许同一个“程序”映射到多个级�
 \hspace*{\fill} \par %插入空行
 图4-4 并行内核的执行空间，显示为2D范围内的64项
 \begin{center}
-	\includegraphics[width=1.\textwidth]{content/chapter-4/images/3}
+	\includegraphics[width=0.6\textwidth]{content/chapter-4/images/3}
 \end{center}
 
 数据并行内核的执行模型非常简单:允许完全并行执行。工作项可以以任何顺序执行，包括在单个硬件线程上顺序执行(即，没有任何并行性)!假设所有工作项都并行执行的内核(例如，尝试同步工作项)，则很容易导致程序挂起。\par

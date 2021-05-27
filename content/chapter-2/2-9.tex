@@ -155,8 +155,9 @@ handler类包含一组成员函数，这些函数定义了在执行任务图节�
 
 代码异步执行，这就是主机程序一部分运行在CPU上和满足依赖关系时运行的设备代码之间的关键区别。命令组通常包含来自每种类别的代码，其中的代码定义了作为主机程序运行的依赖项(以便运行时知道这些依赖项是什么)，以及在满足这些依赖项后在将要运行的设备代码。\par
 
+\hspace*{\fill} \par %插入空行
 图2-21 调用设备代码或执行显式内存的操作
-\begin{table}[]
+\begin{table}[H]
 	\begin{tabular}{|m{32mm}|c|p{6cm}|}
 		\hline
 		\multicolumn{1}{|l|}{\textbf{工作类型}}            & \multicolumn{1}{|c|}{\textbf{行为(handler类的成员函数)}} & \textbf{总结}                                                                                                                                   \\ \hline

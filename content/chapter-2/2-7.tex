@@ -32,6 +32,7 @@ virtual int operator()(const device &dev) const {
 
 例如，选择Intel Arria族中FPGA设备的一种方式如图2-15所示。\par
 
+\hspace*{\fill} \par %插入空行
 图2-15 Intel Arria FPGA设备的自定义选择器
 \begin{lstlisting}[caption={}]
 class my_selector : public device_selector {
