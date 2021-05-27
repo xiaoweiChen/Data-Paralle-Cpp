@@ -56,5 +56,5 @@ SYCL和DPC++的发展仍在继续。在学习了如何使用DPC++为使用SYCL�
 ## 本书相关
 
 * github翻译地址：https://github.com/xiaoweiChen/Data-Paralle-Cpp
-* 英文原版PDF：https://zh.1lib.us/book/6128259/365e5d
+* 英文原版PDF：https://www.apress.com/gp/book/9781484255735
 * 相关教程：https://github.com/jeffhammond/dpcpp-tutorial
